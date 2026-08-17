@@ -1,0 +1,67 @@
+﻿# Local/session files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# R environments/libraries
+renv/library/
+**/renv/library/
+packrat/lib*/
+**/packrat/lib*/
+
+# Data files not tracked in GitHub
+Datos/
+*.dta
+*.sav
+*.zsav
+*.por
+*.rdata
+*.RData
+*.rds
+*.RDS
+*.xlsx
+*.xls
+*.csv
+
+# Large/compressed files
+*.7z
+*.zip
+*.rar
+
+# Media files
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.m4a
+*.mp3
+*.wav
+*.avi
+
+# Sensitive/admin folders
+Ética/
+Etica/
+
+# Large documents kept out by default
+*.pdf
+*.docx
+*.pptx
+*.ai
+
+# Google Drive placeholders
+*.gsheet
+*.gdoc
+*.gslides
+*.gdraw
+
+# Existing nested repo; keep out of root repo
+Encuesta Demanda/
+
+# Local AI/tooling settings
+.claude/
+**/.claude/
+
