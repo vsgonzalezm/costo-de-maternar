@@ -1,0 +1,64 @@
+<style>
+  .cover-logos {
+    position: absolute;
+    left: 92px;
+    bottom: 56px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .cover-logos img {
+    height: 104px;
+    width: auto;
+    display: block;
+  }
+
+  .cover-logos .funding-label {
+    color: var(--muted, #66717d);
+    font-size: 15px;
+    line-height: 1.4;
+    max-width: 190px;
+    border-left: 3px solid var(--accent-2, #d89c45);
+    padding-left: 14px;
+  }
+
+  @media (max-width: 1200px) {
+    .cover-logos { left: 48px; bottom: 34px; gap: 14px; }
+    .cover-logos img { height: 72px; }
+    .cover-logos .funding-label { display: none; }
+  }
+</style>
+
+<script>
+  (function () {
+    function addCoverLogos() {
+      var cover = document.querySelector('#title-slide');
+      if (!cover || cover.querySelector('.cover-logos')) return;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'cover-logos';
+
+      var img = document.createElement('img');
+      img.src = 'funding_logo.jpeg';
+      img.alt = 'ANID — Agencia Nacional de Investigacion y Desarrollo, Ministerio de Ciencia, Tecnologia, Conocimiento e Innovacion, Gobierno de Chile';
+
+      var label = document.createElement('div');
+      label.className = 'funding-label';
+      label.textContent = 'Funded by ANID FONDECYT';
+
+      wrap.appendChild(img);
+      wrap.appendChild(label);
+      cover.appendChild(wrap);
+    }
+
+    if (window.Reveal && Reveal.isReady && Reveal.isReady()) {
+      addCoverLogos();
+    } else if (window.Reveal) {
+      Reveal.on('ready', addCoverLogos);
+    } else {
+      document.addEventListener('DOMContentLoaded', addCoverLogos);
+    }
+  })();
+</script>

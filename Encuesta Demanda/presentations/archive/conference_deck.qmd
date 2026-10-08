@@ -1,0 +1,498 @@
+---
+title: "Potential Fertility and Motherhood in Hiring Evaluations"
+subtitle: "Evidence from a factorial survey experiment with supervisors in Chile"
+author: "Tania Hutt"
+institute: "Department of Sociology, Pontificia Universidad Católica de Chile"
+date: today
+date-format: "MMMM YYYY"
+format:
+  revealjs:
+    theme: [default, custom.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    incremental: false
+    transition: none
+    fig-align: center
+    code-line-numbers: false
+    preview-links: auto
+execute:
+  echo: false
+  warning: false
+  message: false
+bibliography: references.bib
+---
+
+## Motivation {.section-title}
+
+Motherhood is conceptualised dichotomously in the labour-market penalty
+literature: women either have no children — a role perceived as relatively
+compatible with high expectations of work devotion — or they are mothers.
+
+This study treats motherhood as **bidimensional**. Women may be evaluated not
+only in relation to their current parental status, but also in relation to
+their **potential fertility**: the expectation that a person will have a child
+in the near future.
+
+::: {.callout-note appearance="minimal"}
+Potential fertility applies to men and women, with or without children.
+:::
+
+---
+
+## Why the distinction matters theoretically
+
+Motherhood stereotypes concern **current performance and costs already
+incurred**. Potential fertility concerns **assumptions about future
+behaviour**.
+
+If the two operate through different mechanisms, they should leave different
+signatures across evaluation dimensions:
+
+| Dimension | Motherhood | Potential fertility |
+|---|---|---|
+| Perceived cost | expected | expected |
+| Perceived risk | expected | expected |
+| Growth potential | expected | expected |
+| **Current competence** | **expected** | **not expected** |
+
+The competence dimension is where the two accounts diverge. This is the
+prediction the design is built to test.
+
+---
+
+## Research question
+
+> What stereotypes do employers associate with the potential fertility and the
+> motherhood of labour-market-active women in Chile?
+
+Specific questions for this talk:
+
+- Is there a "pure" gender penalty?
+- Is there a "pure" motherhood penalty?
+  - Is this penalty gendered?
+- Is there a future motherhood penalty?
+  - Is this penalty gendered?
+- Is there an additional child penalty (among mothers)?
+  - Is this penalty gendered?
+
+
+::: {.footer-note}
+Preregistered at AsPredicted #297542 prior to data collection.
+:::
+
+# Design {.section-divider}
+
+---
+
+## Why a factorial survey
+
+The phenomenon is based on **expectations and assumptions about the future**,
+which makes it difficult to observe directly. Because it concerns
+discrimination, direct questioning induces social-desirability bias.
+
+Factorial surveys experimentally manipulate a fictional scenario, which allows
+control over all attributes and causal identification of the effect of each on
+an evaluation outcome.
+
+::: {.columns}
+::: {.column width="50%"}
+**Design**
+
+- Vignette-based, rating outcomes
+- D-efficient fractional design
+- 200 unique profiles, 100 blocks of 2
+- Each block assigned to 8 respondents
+:::
+::: {.column width="50%"}
+**Efficiency**
+
+- D-efficiency = 0.922
+- G-efficiency = 0.925
+:::
+:::
+
+---
+
+## Manipulated attributes
+
+Respondents evaluate applicants for a vacancy presented by a fictional human
+resources firm. Six attributes vary at the profile level:
+
+| Attribute | Levels |
+|---|---|
+| Gender | woman / man |
+| Marital status | single / married |
+| Parental status | no children / one child / two children |
+| Family plans | in 2 years / in 5 years / does not want children |
+| Experience | 6 / 7 / 8 years |
+| Performance on a technical test | 5.8 / 6.0 / 6.3 |
+
+Potential fertility is signalled by the **family plans** attribute, crossed
+with parental status. This separates current motherhood from anticipated
+fertility as distinct experimental factors.
+
+---
+
+## Between- and within-subject structure
+
+**Occupational level is between-subjects.** Each respondent evaluates profiles
+of either professional or technical applicants only, with no overlap.
+
+Each respondent evaluates **two profiles** ($n_d = 2$) drawn from one
+pre-generated block, sequentially and independently.
+
+Presentation order and template version are recorded and controlled in all
+models.
+
+---
+
+## Sample
+
+::: {.columns}
+::: {.column width="50%"}
+| | Professional | Technical |
+|---|---|---|
+| Profile observations | 1,454 | 1,444 |
+| Respondents | 727 | 722 |
+:::
+::: {.column width="50%"}
+Target population: supervisory and managerial workers in Chile.
+
+Fielded through Netquest. Sample size constrained by maximum panel
+availability.
+:::
+:::
+
+Attention checks applied by the panel provider before delivery. A
+task-specific attention check is included; the preregistered protocol analyses
+the full and restricted samples and reports a sensitivity comparison.
+
+---
+
+## Outcomes
+
+**9 items**, all on 7-point scales. Third-order evaluations.
+
+- Hiring recommendation
+- Competence index (2 items: capable and trustworthy)
+- Good investment
+- Growth index (promising, ambitious, take on new challenges, be
+  promoted)
+- Risk index (committed long-term, arrive late or be absent, resign, risky for continuity)
+- Operationally costly
+- Likelihood of requesting accommodations
+- Likelihood of using company benefits
+
+
+::: {.callout-note appearance="minimal"}
+**Preregistered decision rule.** Items aggregate into indices where Cronbach's
+$\alpha \geq .70$; otherwise they are analysed individually.
+:::
+
+---
+
+## Applying the aggregation rule
+
+| Construct | Items | $\alpha$ | Decision |
+|---|---|---|---|
+| Risk | 3 | .756 | aggregated |
+| Growth potential | 4 | .837 | aggregated |
+| Competence | 3 | .807 | aggregated |
+| **Cost** | 4 | **.631** | **analysed by item** |
+
+The cost construct did not meet the threshold. Following the preregistered
+rule, its four items are reported individually rather than forced into an
+index.
+
+::: {.footer-note}
+All individual item analyses are reported regardless of whether indices are used.
+:::
+
+---
+
+## Estimation
+
+**OLS with cluster-robust standard errors (CR2), clustered by respondent.**
+
+::: {.columns}
+::: {.column width="52%"}
+**Why not multilevel**
+
+The D-efficient design already includes each manipulated attribute as a fixed
+effect. With $n_d = 2$ profiles per respondent, random slopes are not
+identified and nesting on anything other than respondent is unstable.
+:::
+::: {.column width="48%"}
+**Why CR2**
+
+Bias-reduced linearisation with Satterthwaite degrees of freedom
+[@pustejovsky2018]. With ~1,449 clusters, well outside the small-sample
+regime; realised $df$ range 430–1,090.
+:::
+:::
+
+Twelve preregistered model sets: main effects, gender interactions with
+parental status, family plans and marital status, three-way combinations, and
+occupational-level moderation.
+
+---
+
+## Reporting quantities
+
+Attributes are coded with **sum contrasts**, so coefficients are deviations
+from the design mean rather than differences from an arbitrary reference level.
+
+Results are reported as **marginal means and contrasts** rather than
+coefficients:
+
+- Differences in coefficients across subgroups are sensitive to reference
+  category, producing subgroup comparisons of arbitrary sign, size and
+  significance [@leeper2020]
+- Marginal means are estimated by G-computation over the observed sample rather
+  than a balanced grid, which keeps every estimate within the support of the
+  D-efficient design
+
+Gender moderation is tested as a **difference-in-differences** with its own
+standard error, not by comparing significance across subgroups.
+
+# Results {.section-divider}
+
+---
+
+## Pooling across occupational conditions
+
+Preregistered moderation tests (SETS 5a–5e) find no evidence that occupational
+level conditions the focal effects.
+
+::: {.columns}
+::: {.column width="55%"}
+- Gender × occupation: no coefficient exceeds $|0.052|$ across 16 outcomes
+- Confidence bounds exclude moderation greater than **0.14 scale points**
+- Direct heterogeneity test across arms: Cochran $Q = 306.2$, $df = 285$,
+  $p = .185$
+:::
+::: {.column width="45%"}
+Pooling reduces standard errors by **29%**.
+
+Results below are pooled, with occupational level as a control. By-condition
+estimates are reported in the appendix.
+:::
+:::
+
+::: {.callout-warning appearance="minimal"}
+**Exception:** H16 is reported by condition. Marriage effects among parents
+diverge significantly across arms ($p_{het} < .01$ on four outcomes).
+:::
+
+---
+
+## The baseline gender contrast
+
+Identical profiles — single, childless, no family plans — differing only in
+gender.
+
+> **[PLACEHOLDER — FIGURE 1]**
+
+
+::: {.footer-note}
+Preregistered as the reference contrast against which the magnitude of
+H1–H3 and H16 effects is compared.
+:::
+
+---
+
+## The baseline gender contrast
+
+| Outcome | Contrast | $\Delta$ P(rated 6–7) |
+|---|---|---|
+| Expected: request accommodations | +0.49*** | +11.8 pts |
+| Expected: late or absent | +0.47*** | +7.7 pts |
+| Risky for job continuity | +0.39*** | +5.2 pts |
+| Expected: quit | +0.28*** | +4.1 pts |
+| Hiring recommendation | −0.05 | −3.1 pts |
+| Competence index | +0.04 | — |
+| Growth potential index | −0.03 | — |
+
+Evaluations of competence, growth potential and hiring do not differ by gender.
+Predicted conduct differs substantially.
+
+---
+
+## Potential motherhood: only when imminent
+
+Childless women, plans in 2 years vs. no plans:
+
+> **[PLACEHOLDER — FIGURE 2]**
+
+
+- Commitment −0.43***, good investment −0.38***, hiring −0.22***
+- Risk index +0.54***, expected quit +0.58***
+- The **5-year** contrast is substantially weaker throughout (commitment
+  −0.23***, risk +0.21*), and does not meet the dominance criterion
+
+---
+
+## Do men experience a future fatherhood penalty?
+
+Difference-in-differences: the 2-year contrast for women minus the same
+contrast for men.
+
+| Outcome | Women − men | $q$ |
+|---|---|---|
+| Expected: quit | +0.62*** | <.001 |
+| Risk index | +0.50*** | <.001 |
+| Risky for continuity | +0.44** | .007 |
+| Expected: late or absent | +0.43** | .006 |
+| Committed long-term | −0.29** | .016 |
+| Hiring recommendation | −0.19* | .045 |
+
+The 5-year difference-in-differences is null on all 19 outcomes.
+
+---
+## Additional child penalty for mothers
+
+---
+## Do fathers experience an additional child penalty?
+
+---
+
+## "Pure" motherhood penalty: a threshold at two children
+
+> **[PLACEHOLDER — FIGURE 3]**
+> Marginal means by parental status (none / one / two children), separately for
+> women and men, on hiring recommendation and the expected late-or-absent item.
+> Shows the flat one-child step and the drop at two children, wider for women.
+
+- **Two children vs. childless, women:** hiring −0.33***, late/absent +0.91***,
+  accommodations +0.74***, growth index −0.21***
+- **One child:** hiring null (−0.03), effects confined to the behavioural items
+- **Gendered (H9):** late/absent +0.46**, hiring −0.24**, risk index +0.33*
+
+---
+
+# Discussion {.section-divider}
+
+---
+
+## What the results indicate
+
+**Evaluators produce equivalent bottom-line judgments while holding
+differentiated expectations about conduct.** The gender difference appears in
+predicted behaviour — absence, accommodations, continuity risk, quitting — and
+not in competence, growth potential or hiring recommendation.
+
+**The penalty attaches to anticipated fertility rather than to motherhood as
+such.** The 2-year horizon carries the penalty; the 5-year horizon largely does
+not. Once a woman has children, stating further plans adds less than it does
+for childless women.
+
+**Motherhood and potential fertility leave different signatures.** Motherhood
+at two children moves both conduct and growth-potential measures; the gender
+contrast alone moves only conduct.
+
+---
+
+## Limitations
+
+- Occupational level is between-subjects, so the occupational main effect
+  confounds the profile contrast with any composition difference between the
+  two respondent samples. Balance checks across arms are pending.
+- Realised sample is approximately 9% below the preregistered target per arm.
+- Design attributes explain a modest share of variance ($R^2$ median 0.022),
+  as is typical for factorial surveys with this number of manipulated
+  attributes.
+- The technical condition is an occupational-credential contrast, not a
+  class-position measure.
+
+---
+
+## Next steps
+
+**Committed in the preregistration, pending**
+
+- Attention-check sensitivity analysis: full vs. restricted sample
+- Unadjusted marginal means alongside the model-adjusted estimates
+- Omnibus $F$-test for the pooling decision, in place of the heterogeneity test
+  reported here
+
+**Robustness**
+
+- Ordered-probit estimation for the seven outcomes exceeding 20% at ceiling
+- Formal test of the conduct-versus-evaluation dissociation, by stacking
+  outcomes and interacting attributes with outcome type — currently supported by
+  comparison across separate models rather than by a single estimate
+- Preregistered secondary analyses: moderation by evaluator gender, parental
+  status, hiring experience and workplace-norm attitudes
+
+---
+
+## An open measurement question {.section-title}
+
+For childless women, stating plans to have children in 2 years reduces the
+probability of a top-two-box competence rating by **16.9 points**, while the
+mean shifts by −0.05 ($p = .41$).
+
+The distributional and mean-based results disagree, on the outcome with the
+highest ceiling concentration in the design.
+
+This bears directly on how ordinal evaluation scales should be analysed in
+factorial surveys, and is the first thing I intend to resolve.
+
+::: {.footer-note}
+$n = 323$ observations, 279 respondents. Unadjusted contrast; the
+model-adjusted comparison is pending.
+:::
+
+---
+
+## {.thank-you}
+
+**Thank you**
+
+tania.hutt@uc.cl
+
+Preregistration: AsPredicted #297542
+
+---
+
+## Appendix: model sets {.appendix}
+
+| Set | Specification | Tests |
+|---|---|---|
+| SET 1 | Main effects + controls | — |
+| SET 2a | + Gender × Parental status | H3, H4–H9 |
+| SET 2b | + Gender × Family plans | H1, H2, H4–H9 |
+| SET 3 | + Gender × Marital status | H4–H9 |
+| SET 4a | + Gender × Marital × Parental | H16 |
+| SET 4b | + Gender × Parental × Family plans | H4–H9 |
+| SET 5 | + Occupational level | H10 |
+| SET 5a–5e | Occupational level interactions | H11–H15 |
+
+All sets control for presentation order and template version.
+
+---
+
+## Appendix: response distributions {.appendix}
+
+> **[PLACEHOLDER — FIGURE A1]**
+> Faceted bar chart of response frequencies for all 16 outcomes, 1–7, showing
+> the contrast between compressed evaluative items and symmetric behavioural
+> items.
+
+---
+
+## Appendix: by-condition estimates {.appendix}
+
+> **[PLACEHOLDER — TABLE A1]**
+> Marginal means and contrasts for H1–H16, professional and technical
+> conditions reported separately, with the heterogeneity test for each.
+
+---
+
+## Appendix: dominance detail {.appendix}
+
+> **[PLACEHOLDER — FIGURE A2]**
+> CDF differences by cut point for the gender contrast and the two-children
+> contrast, with bootstrap confidence intervals. Bars entirely on one side of
+> zero indicate dominance.

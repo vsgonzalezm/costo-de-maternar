@@ -1,0 +1,175 @@
+# ==============================================================================
+# DISEÑO FCR — OFERTA
+# N=1470 encuestados, 6 viñetas por persona (8.820 evaluaciones en total).
+# Diseño D-eficiente de 252 perfiles únicos, divididos en 42 bloques de 6 viñetas;
+# cada bloque lo evalúan 35 personas (42 x 35 = 1470).
+# ==============================================================================
+
+if(!require(AlgDesign)) install.packages("AlgDesign"); library(AlgDesign)
+if(!require(dplyr))     install.packages("dplyr");     library(dplyr)
+if(!require(tidyr))     install.packages("tidyr");     library(tidyr)
+if(!require(openxlsx))  install.packages("openxlsx");  library(openxlsx)
+
+options(contrasts = c("contr.sum", "contr.poly"))
+
+# ==============================================================================
+# 0. PARÁMETROS DEL DISEÑO
+# ==============================================================================
+encuestados_totales <- 1470
+n_por_bloque        <- 6     # viñetas por respondente
+total_bloques       <- 42    # 1470 / 42 = 35 personas por bloque (debe dividir exacto a 1470)
+N_final             <- total_bloques * n_por_bloque # 252 perfiles (<= 288 del factorial completo)
+
+stopifnot(encuestados_totales %% total_bloques == 0)
+repeticiones <- encuestados_totales / total_bloques # 35 personas evaluando cada bloque
+
+# ==============================================================================
+# 1. DEFINIR LOS NIVELES Y NOMBRES
+# ==============================================================================
+niveles_oferta <- c(2, 2, 2, 3, 2, 3, 2)
+nombres_oferta <- c("Modalidad", "Flexibilidad", "Carga", "Liderazgo", "Ben_desempeno", "Ben_parentales", "Cuidado")
+cand_uni <- gen.factorial(levels = niveles_oferta, varNames = nombres_oferta, factors = "all")
+
+# ==============================================================================
+# 2. DEFINICIÓN DEL MODELO (CON INTERACCIÓN TEÓRICA)
+# ==============================================================================
+frm_final <- ~ Modalidad * Flexibilidad + Carga + Liderazgo + Ben_desempeno + Ben_parentales + Cuidado
+
+# ==============================================================================
+# 3. CÁLCULO DE N Y OPTIMIZACIÓN
+# ==============================================================================
+set.seed(12345)
+k_final <- ncol(model.matrix(frm_final, cand_uni)) # 10 parámetros
+
+cat("\n[REPORTE] Parámetros (k):", k_final,
+    "| Perfiles candidatos:", nrow(cand_uni),
+    "| Perfiles en el diseño:", N_final,
+    "| Bloques:", total_bloques, "x", n_por_bloque, "viñetas",
+    "| Personas por bloque:", repeticiones, "\n")
+
+opt_diseno <- optFederov(frml = frm_final, data = cand_uni, nTrials = N_final,
+                         criterion = "D", nRepeats = 500, nullify = 1)
+
+diseno_final <- as.data.frame(opt_diseno$design)
+eval_final   <- eval.design(frm_final, diseno_final, X = cand_uni)
+cat(sprintf("[MÉTRICAS] D-Efficiency: %.3f | G-Efficiency: %.3f\n", eval_final$De, eval_final$Ge))
+
+# ==============================================================================
+# 4. GENERACIÓN DE BLOQUES BASE (42 bloques de 6 viñetas)
+# ==============================================================================
+set.seed(999)
+
+bloques_opt <- optBlock(frml = frm_final, withinData = diseno_final,
+                        blocksizes = rep(n_por_bloque, total_bloques), criterion = "D")
+
+df_con_bloques <- do.call(rbind, lapply(seq_along(bloques_opt$Blocks), function(b) {
+  d <- as.data.frame(bloques_opt$Blocks[[b]])
+  d$Block <- b
+  d
+}))
+
+rownames(df_con_bloques) <- NULL
+
+df_con_bloques <- df_con_bloques %>%
+  group_by(Block) %>%
+  mutate(Fila_Base = row_number()) %>%
+  ungroup()
+
+# ==============================================================================
+# 5. 1470 ENCUESTADOS (35 personas por bloque, orden de aparición aleatorio)
+# ==============================================================================
+# Los bloques se asignan en rotación: la persona i evalúa el bloque ((i - 1) %% 42) + 1.
+# Así cada bloque queda con exactamente 35 personas.
+asignacion <- tibble(Respondent_ID = 1:encuestados_totales,
+                     Block         = ((1:encuestados_totales - 1) %% total_bloques) + 1)
+
+df_expandido <- asignacion %>%
+  inner_join(df_con_bloques, by = "Block", relationship = "many-to-many") %>%
+  group_by(Respondent_ID) %>%
+  mutate(Orden_Aparicion = sample(1:n_por_bloque)) %>%
+  ungroup() %>%
+  arrange(Respondent_ID, Orden_Aparicion)
+
+# ==============================================================================
+# 6. INYECCIÓN DE TEXTOS EXACTOS
+# ==============================================================================
+procesar_textos_oferta <- function(df_input) {
+  df_input %>%
+    mutate(
+      Texto_Modalidad = if_else(Modalidad == "1",
+                                "Híbrido, algunos días remoto y otros presencial.",
+                                "Todos los días presencial."),
+      Texto_Flexibilidad = if_else(Flexibilidad == "1",
+                                   "Fijo (de 9 a.m a 6 p.m).",
+                                   "Flexible (puedes modificar el horario según tu preferencia)."),
+      Texto_Carga = if_else(Carga == "1",
+                            "Nunca deberás trabajar horas extra.",
+                            "Frecuentemente deberás trabajar horas extra."),
+      Texto_Liderazgo = case_when(
+        Liderazgo == "1" ~ "Tu jefe se enfoca en potenciar las fortalezas de tu equipo.",
+        Liderazgo == "2" ~ "Tu jefe se enfoca en los resultados de sus trabajadores.",
+        Liderazgo == "3" ~ "Tu jefe se enfoca en la organización de los procesos en el equipo."
+      ),
+      Texto_Desempeno = if_else(Ben_desempeno == "1",
+        "No hay bonos por desempeño.",
+        "Hay bonos anuales por desempeño."
+      ),
+      Texto_Parentales = case_when(
+        Ben_parentales == "1" ~ "5 meses y medio para las madres y 5 días para los padres.",
+        Ben_parentales == "2" ~ "12 meses para las madres y 1 mes para los padres.",
+        Ben_parentales == "3" ~ "6 meses para las madres y 6 meses para los padres."
+      ),
+      Texto_Cuidado = if_else(Cuidado == "1",
+        "Sala cuna para menores de 2 años, solo para las madres.",
+        "Sala cuna para menores de 2 años, para madres y padres."
+      )
+    ) %>%
+    select(Respondent_ID, Block, Orden_Aparicion, Texto_Modalidad, Texto_Flexibilidad,
+           Texto_Carga, Texto_Liderazgo, Texto_Desempeno, Texto_Parentales, Texto_Cuidado)
+}
+
+df_long_final <- procesar_textos_oferta(df_expandido)
+
+# ==============================================================================
+# 7. AUDITORÍA DEL DISEÑO EXPERIMENTAL
+# ==============================================================================
+chk_duplicados <- df_long_final %>%
+  group_by(Respondent_ID) %>%
+  summarise(perfiles_unicos = n_distinct(paste(Texto_Modalidad, Texto_Flexibilidad, Texto_Carga, Texto_Liderazgo, Texto_Desempeno, Texto_Parentales, Texto_Cuidado))) %>%
+  filter(perfiles_unicos < n_por_bloque)
+
+cat(sprintf("(a) Encuestados que ven ofertas repetidas: %d %s\n",
+            nrow(chk_duplicados), ifelse(nrow(chk_duplicados) == 0, "(✓ PERFECTO, cero duplicados)", "(! ERROR)")))
+
+chk_eval <- df_long_final %>% count(Respondent_ID)
+cat(sprintf("\n(b) Verificación final: %d encuestados evaluando exactamente %d viñetas cada uno.\n",
+            n_distinct(chk_eval$Respondent_ID), unique(chk_eval$n)))
+
+chk_bloques <- df_long_final %>% distinct(Respondent_ID, Block) %>% count(Block)
+cat(sprintf("(c) Personas por bloque: min = %d, max = %d (esperado: %d)\n",
+            min(chk_bloques$n), max(chk_bloques$n), repeticiones))
+
+# ==============================================================================
+# 8. OUTPUT APILADO EN FORMATO ANCHO (1470 filas)
+# ==============================================================================
+cols_vineta <- c("Texto_Modalidad", "Texto_Flexibilidad", "Texto_Carga", "Texto_Liderazgo",
+                 "Texto_Desempeno", "Texto_Parentales", "Texto_Cuidado")
+
+df_wide_final <- df_long_final %>%
+  pivot_wider(
+    id_cols     = c(Respondent_ID, Block),
+    names_from  = Orden_Aparicion,
+    values_from = all_of(cols_vineta),
+    names_glue  = "V{Orden_Aparicion}_{.value}"
+  ) %>%
+  arrange(Respondent_ID)
+
+# ==============================================================================
+# 9. EXPORTACIÓN DE ARCHIVOS
+# ==============================================================================
+write.csv(df_long_final, "Netquest_Oferta_Long_1470.csv", row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(df_wide_final, "Netquest_Oferta_Wide_1470.csv", row.names = FALSE, fileEncoding = "UTF-8")
+
+# openxlsx escribe en UTF-8 de forma nativa (a diferencia del paquete xlsx, que
+# depende de Java y suele corromper tildes/ñ), por lo que los acentos quedan intactos.
+write.xlsx(df_wide_final, "Netquest_Oferta_Wide_1470.xlsx", overwrite = TRUE)

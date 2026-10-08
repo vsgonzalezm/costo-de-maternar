@@ -1,0 +1,15 @@
+Ética/
+Difusión/
+Proyecto propuesto/
+Cotizaciones Netquest/
+Avanza UC 2026/
+Otros/
+*.gdoc
+*.gsheet
+*.gslides
+*.csv
+*.rds
+*.RData
+*.Rhistory
+*.RDataTmp
+venv/

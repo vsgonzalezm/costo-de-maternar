@@ -1,0 +1,39 @@
+<div class="image-zoom-overlay" id="image-zoom-overlay" aria-hidden="true">
+  <img alt="" id="image-zoom-target" />
+</div>
+
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    const titleSlide = document.getElementById("title-slide");
+    if (titleSlide && !titleSlide.querySelector(".title-orbit-bg")) {
+      const orbit = document.createElement("div");
+      orbit.className = "title-orbit-bg";
+      const stars = document.createElement("div");
+      stars.className = "title-stars-bg";
+      titleSlide.prepend(stars);
+      titleSlide.prepend(orbit);
+    }
+    const overlay = document.getElementById("image-zoom-overlay");
+    const target = document.getElementById("image-zoom-target");
+
+    function closeZoom() {
+      overlay.classList.remove("is-active");
+      overlay.setAttribute("aria-hidden", "true");
+      target.removeAttribute("src");
+    }
+
+    document.querySelectorAll(".reveal img.click-zoom, .reveal .figure-frame img").forEach(function (img) {
+      img.addEventListener("click", function () {
+        target.src = img.src;
+        target.alt = img.alt || "";
+        overlay.classList.add("is-active");
+        overlay.setAttribute("aria-hidden", "false");
+      });
+    });
+
+    overlay.addEventListener("click", closeZoom);
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeZoom();
+    });
+  });
+</script>

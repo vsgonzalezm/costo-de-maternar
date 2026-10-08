@@ -1,0 +1,81 @@
+## Reframing the motherhood penalty
+
+Most research conceptualises motherhood **dichotomously**: women are either
+childless — a role seen as relatively compatible with ideal-worker norms — or
+they are mothers.
+
+This overlooks a forward-looking dimension. Employers do not only assess who a
+candidate is now; they forecast who she is likely to become.
+
+::: {.callout-note appearance="minimal"}
+**Future childbearing risk (FCR)**: the perceived likelihood that a woman will
+have children in the near future — independent of whether she is already a
+mother.
+:::
+
+FCR is not the abstract possibility of childbearing but its perceived
+**imminence**. And unlike current motherhood, it is prospective and
+unverifiable: a judgment about anticipated rather than observed behaviour, which
+women cannot easily contest.
+
+---
+
+## Four penalties, not one
+
+Crossing current motherhood with future childbearing risk yields four statuses,
+and four distinct comparisons:
+
+|  | **Low FCR** | **High FCR** |
+|---|---|---|
+| **Childless** | reference | *future motherhood penalty* (P1) |
+| **Mother** | *pure motherhood penalty* (P3) | *additional child penalty* (P2) |
+
+::: {.callout-important appearance="minimal"}
+**P4, the double penalty**: high-FCR mothers vs. low-FCR childless women —
+the compounded disadvantage of current motherhood and anticipated childbearing.
+:::
+
+Separating these analytically distinguishes what is attributable to **current
+caregiving** from what is attributable to **anticipated childbearing**. Not all
+childless women benefit equally from not being mothers, and not all mothers are
+penalised equally for motherhood.
+
+---
+
+## Two logics, two signatures
+
+FCR can operate through two analytically distinct mechanisms, which predict
+different stereotype profiles.
+
+::: {.columns}
+::: {.column width="50%"}
+**Anticipatory statistical discrimination**
+
+[@phelps1972; @aigner1977]
+
+Employers forecast the expected costs and risks of anticipated childbearing —
+leave, disruption, turnover — and attach them to individual women.
+
+→ Penalties on **cost** and **risk**, regardless of current motherhood status.
+:::
+::: {.column width="50%"}
+**Status-based devaluation**
+
+[@ridgeway2004; @correll2007]
+
+Motherhood operates as a status characteristic. Where anticipated childbearing
+is layered onto current motherhood, it activates diffuse expectations about
+professional standing.
+
+→ Penalties on **growth potential** and **competence**, concentrated where high
+FCR compounds motherhood.
+:::
+:::
+
+::: {.callout-important appearance="minimal"}
+If FCR operates through the statistical-discrimination logic alone, penalties
+are confined to cost and risk. If it also carries status implications, penalties
+among high-FCR mothers extend to growth potential and competence.
+:::
+
+**The competence dimension is what distinguishes the two accounts.**

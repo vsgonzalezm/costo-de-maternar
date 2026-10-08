@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m pip install reportlab --quiet)",
+      "Bash(python3 *)"
+    ]
+  }
+}

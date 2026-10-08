@@ -1,0 +1,732 @@
+[1] ""
+[1] "=== BASE STRUCTURE ==="
+[1] 2898  136
+[1] 1449
+# A tibble: 2 × 2
+  pantalla_orden     n
+           <dbl> <int>
+1              1  1449
+2              2  1449
+# A tibble: 1 × 2
+  n_rows respondents
+   <int>       <int>
+1      2        1449
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Gender ==="
+# A tibble: 3 × 3
+  value                   n   pct
+  <chr>               <int> <dbl>
+1 Masculino             727  50.2
+2 Femenino              714  49.3
+3 Prefiero no decirlo     8   0.6
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Socioeconomic status ==="
+# A tibble: 7 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 C1b     453  31.3
+2 C2      396  27.3
+3 C3      232  16  
+4 C1a     154  10.6
+5 D       141   9.7
+6 AB       41   2.8
+7 E        32   2.2
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Region/zone ==="
+# A tibble: 16 × 3
+   value                                                        n   pct
+   <chr>                                                    <int> <dbl>
+ 1 XIII Región Metropolitana                                  782  54  
+ 2 V Región de Valparaíso                                     181  12.5
+ 3 VIII Región del Bío Bío                                    114   7.9
+ 4 IX Región de La Araucanía                                   61   4.2
+ 5 VI Región del Libertador General Bernardo O&apos;Higgins    54   3.7
+ 6 VII Región del Maule                                        51   3.5
+ 7 IV Región de Coquimbo                                       47   3.2
+ 8 X Región de los Lagos                                       46   3.2
+ 9 XIV Región Los Ríos                                         27   1.9
+10 II Región de Antofagasta                                    20   1.4
+11 XVI Región Ñuble                                            19   1.3
+12 III Región de Atacama                                       15   1  
+13 I Región de Tarapacá                                        12   0.8
+14 XII Región de Magallanes y la Antártica Chilena              9   0.6
+15 XV Región Arica y Parinacota                                 8   0.6
+16 XI Región de Aysén del General Carlos Ibañez del Campo       3   0.2
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Age ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  45.1  9.97    25    37     45    53    65
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Marital status ==="
+# A tibble: 8 × 3
+  value                             n   pct
+  <chr>                         <int> <dbl>
+1 Casado(a)                       525  36.2
+2 Soltero(a)                      373  25.7
+3 Conviviente o pareja de hecho   317  21.9
+4 Divorciado(a)                   122   8.4
+5 Separado(a)                      68   4.7
+6 Conviviente civil (AUC)          23   1.6
+7 Viudo(a)                         16   1.1
+8 Anulado(a)                        5   0.3
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Has children ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 Sí     1015    70
+2 No      434    30
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Number of children ==="
+# A tibble: 7 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 (NA)    434  30  
+2 2       398  27.5
+3 1       375  25.9
+4 3       181  12.5
+5 4        40   2.8
+6 5        19   1.3
+7 7         2   0.1
+[1] ""
+[1] "=== RESPONDENT CHARACTERISTICS: Education ==="
+# A tibble: 5 × 3
+  value                                            n   pct
+  <chr>                                        <int> <dbl>
+1 Profesional (Carreras 4 o más años)            717  49.5
+2 Técnico Nivel Superior (Carreras 1 a 3 años)   336  23.2
+3 Magíster o maestría                            242  16.7
+4 Educación Media o menos                        131   9  
+5 Doctorado                                       23   1.6
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Attention check ==="
+# A tibble: 4 × 3
+  value               n   pct
+  <chr>           <int> <dbl>
+1 RUT              1145  79  
+2 Último cargo      201  13.9
+3 Número de hijos    93   6.4
+4 Nombre             10   0.7
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Failed attention check ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 0      1145    79
+2 1       304    21
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Decision-making frequency ==="
+# A tibble: 4 × 3
+  value                    n   pct
+  <chr>                <int> <dbl>
+1 Ocasionalmente         647  44.7
+2 Frecuentemente         331  22.8
+3 Nunca he participado   245  16.9
+4 Siempre                226  15.6
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Current job title ==="
+# A tibble: 6 × 3
+  value                               n   pct
+  <chr>                           <int> <dbl>
+1 Jefe/a o supervisor/a             587  40.5
+2 Dueño/a o socio/a de la empresa   292  20.2
+3 Administrativo o asistente        208  14.4
+4 Otro cargo. Especifique           174  12  
+5 Gerente o director/a               94   6.5
+6 Subgerente                         94   6.5
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Years of experience ==="
+# A tibble: 4 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 Más de 6 años      648  44.7
+2 Entre 1 y 3 años   338  23.3
+3 Entre 4 y 6 años   279  19.3
+4 Menos de 1 año     184  12.7
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Industry sector ==="
+# A tibble: 12 × 3
+   value                                            n   pct
+   <chr>                                        <int> <dbl>
+ 1 Comercio                                       253  17.5
+ 2 Otro. Especificar                              207  14.3
+ 3 Servicios                                      178  12.3
+ 4 Educación                                      140   9.7
+ 5 Construcción e inmobiliario                    125   8.6
+ 6 Salud                                          116   8  
+ 7 Sector público / ONG                            90   6.2
+ 8 Tecnología y telecomunicaciones                 86   5.9
+ 9 Transporte y logística                          75   5.2
+10 Industria / manufactura                         73   5  
+11 Agroindustria / minería / recursos naturales    61   4.2
+12 Finanzas y seguros                              45   3.1
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: People management role ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 Sí      991  68.4
+2 No      458  31.6
+[1] ""
+[1] "=== ATTENTION AND SCREENERS: Weekly hours ==="
+# A tibble: 58 × 3
+   value     n   pct
+   <chr> <int> <dbl>
+ 1 40      322  22.2
+ 2 42      245  16.9
+ 3 45      166  11.5
+ 4 44      151  10.4
+ 5 50      111   7.7
+ 6 48       37   2.6
+ 7 30       35   2.4
+ 8 60       33   2.3
+ 9 8        32   2.2
+10 43       23   1.6
+# ℹ 48 more rows
+[1] ""
+[1] "=== PROFILE STRUCTURE: Order ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 1      1449    50
+2 2      1449    50
+[1] ""
+[1] "=== PROFILE STRUCTURE: Block ==="
+# A tibble: 100 × 3
+   value     n   pct
+   <chr> <int> <dbl>
+ 1 39       34   1.2
+ 2 48       34   1.2
+ 3 6        34   1.2
+ 4 97       34   1.2
+ 5 15       32   1.1
+ 6 44       32   1.1
+ 7 45       32   1.1
+ 8 53       32   1.1
+ 9 58       32   1.1
+10 7        32   1.1
+# ℹ 90 more rows
+[1] ""
+[1] "=== PROFILE STRUCTURE: Context template ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 A      1449    50
+2 B      1449    50
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Gender ==="
+# A tibble: 2 × 3
+  value      n   pct
+  <chr>  <int> <dbl>
+1 Mujer   1450    50
+2 Hombre  1448    50
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Occupation ==="
+# A tibble: 2 × 3
+  value                       n   pct
+  <chr>                   <int> <dbl>
+1 asociado/a financiero/a  1454  50.2
+2 analista contable        1444  49.8
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Education ==="
+# A tibble: 2 × 3
+  value                                          n   pct
+  <chr>                                      <int> <dbl>
+1 título profesional en ingeniería comercial  1454  50.2
+2 título técnico en contabilidad              1444  49.8
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Experience ==="
+# A tibble: 3 × 3
+  value      n   pct
+  <chr>  <int> <dbl>
+1 8 años   973  33.6
+2 7 años   970  33.5
+3 6 años   955  33  
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Performance ==="
+# A tibble: 3 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 6.3     973  33.6
+2 5.8     971  33.5
+3 6       954  32.9
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Marital status ==="
+# A tibble: 2 × 3
+  value         n   pct
+  <chr>     <int> <dbl>
+1 soltero/a  1482  51.1
+2 casado/a   1416  48.9
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Parental status ==="
+# A tibble: 3 × 3
+  value                          n   pct
+  <chr>                      <int> <dbl>
+1 tiene un hijo                983  33.9
+2 tiene dos hijos              966  33.3
+3 actualmente no tiene hijos   949  32.7
+[1] ""
+[1] "=== PROFILE ATTRIBUTES: Fertility plans ==="
+# A tibble: 3 × 3
+  value         n   pct
+  <chr>     <int> <dbl>
+1 no quiere   978  33.7
+2 en 2 anos   968  33.4
+3 en 5 anos   952  32.9
+[1] ""
+[1] "=== PROFILE SCALE: Recommendation probability ==="
+# A tibble: 7 × 3
+  value                         n   pct
+  <chr>                     <int> <dbl>
+1 6                          1309  45.2
+2 5                           702  24.2
+3 7 Extremadamente probable   656  22.6
+4 4                           176   6.1
+5 3                            36   1.2
+6 2                            14   0.5
+7 1 Nada probable               5   0.2
+[1] ""
+[1] "=== PROFILE SCALE: Ambitious ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1176  40.6
+2 7 Extremadamente   713  24.6
+3 5                  659  22.7
+4 4                  261   9  
+5 3                   57   2  
+6 2                   22   0.8
+7 1 Nada              10   0.3
+[1] ""
+[1] "=== PROFILE SCALE: Trustworthy ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1230  42.4
+2 5                  746  25.7
+3 7 Extremadamente   566  19.5
+4 4                  273   9.4
+5 3                   52   1.8
+6 2                   25   0.9
+7 1 Nada               6   0.2
+[1] ""
+[1] "=== PROFILE SCALE: Competent ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1355  46.8
+2 7 Extremadamente   723  24.9
+3 5                  580  20  
+4 4                  189   6.5
+5 3                   35   1.2
+6 2                   12   0.4
+7 1 Nada               4   0.1
+[1] ""
+[1] "=== PROFILE SCALE: Risky in job continuity ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 5                  575  19.8
+2 6                  505  17.4
+3 4                  503  17.4
+4 2                  449  15.5
+5 3                  372  12.8
+6 1 Nada             273   9.4
+7 7 Extremadamente   221   7.6
+[1] ""
+[1] "=== PROFILE SCALE: Costly in salary terms ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 5                  852  29.4
+2 4                  656  22.6
+3 6                  625  21.6
+4 3                  264   9.1
+5 7 Extremadamente   220   7.6
+6 2                  157   5.4
+7 1 Nada             124   4.3
+[1] ""
+[1] "=== PROFILE SCALE: Costly operationally ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 5                  798  27.5
+2 4                  634  21.9
+3 6                  577  19.9
+4 3                  332  11.5
+5 2                  213   7.3
+6 7 Extremadamente   198   6.8
+7 1 Nada             146   5  
+[1] ""
+[1] "=== PROFILE SCALE: Committed long term ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1122  38.7
+2 5                  712  24.6
+3 7 Extremadamente   657  22.7
+4 4                  297  10.2
+5 3                   76   2.6
+6 2                   26   0.9
+7 1 Nada               8   0.3
+[1] ""
+[1] "=== PROFILE SCALE: Promising labor market potential ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1278  44.1
+2 5                  671  23.2
+3 7 Extremadamente   633  21.8
+4 4                  229   7.9
+5 3                   67   2.3
+6 2                   14   0.5
+7 1 Nada               6   0.2
+[1] ""
+[1] "=== PROFILE SCALE: Good investment ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1142  39.4
+2 5                  736  25.4
+3 7 Extremadamente   530  18.3
+4 4                  354  12.2
+5 3                   93   3.2
+6 2                   33   1.1
+7 1 Nada              10   0.3
+[1] ""
+[1] "=== EXPECTED BEHAVIOR: Arrive late / be absent ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 2                  629  21.7
+2 4                  515  17.8
+3 5                  473  16.3
+4 3                  420  14.5
+5 6                  364  12.6
+6 1 Nada             361  12.5
+7 7 Extremadamente   136   4.7
+[1] ""
+[1] "=== EXPECTED BEHAVIOR: Use company benefits ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1072  37  
+2 7 Extremadamente   708  24.4
+3 5                  703  24.3
+4 4                  302  10.4
+5 3                   68   2.3
+6 2                   29   1  
+7 1 Nada              16   0.6
+[1] ""
+[1] "=== EXPECTED BEHAVIOR: Request accommodations ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 4                  627  21.6
+2 5                  613  21.2
+3 6                  547  18.9
+4 3                  387  13.4
+5 2                  327  11.3
+6 7 Extremadamente   286   9.9
+7 1 Nada             111   3.8
+[1] ""
+[1] "=== EXPECTED BEHAVIOR: Quit or stop working ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 2                  603  20.8
+2 4                  567  19.6
+3 3                  472  16.3
+4 5                  412  14.2
+5 1 Nada             366  12.6
+6 6                  337  11.6
+7 7 Extremadamente   141   4.9
+[1] ""
+[1] "=== EXPECTED BEHAVIOR: Take on new challenges ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1246  43  
+2 7 Extremadamente   696  24  
+3 5                  620  21.4
+4 4                  261   9  
+5 3                   48   1.7
+6 2                   23   0.8
+7 1 Nada               4   0.1
+[1] ""
+[1] "=== EXPECTED BEHAVIOR: Be promoted ==="
+# A tibble: 7 × 3
+  value                n   pct
+  <chr>            <int> <dbl>
+1 6                 1141  39.4
+2 5                  789  27.2
+3 7 Extremadamente   505  17.4
+4 4                  351  12.1
+5 3                   73   2.5
+6 2                   30   1  
+7 1 Nada               9   0.3
+[1] ""
+[1] "=== OPEN-ENDED RAW RESPONSES: Costly ==="
+# A tibble: 1,444 × 3
+   value                                                                 n   pct
+   <chr>                                                             <int> <dbl>
+ 1 En su desempeño                                                       6   0.2
+ 2 En el salario mensual                                                 4   0.1
+ 3 Presupuesto de la empresa                                             4   0.1
+ 4 licencias medicas                                                     4   0.1
+ 5 - - - . . . . .                                                       2   0.1
+ 6 - Que ambas son mujeres jóvenes en edad reproductiva, lo cual pu…     2   0.1
+ 7 A ambas se les pregunto si querían ser madre lo cual no se deber…     2   0.1
+ 8 A largo plazo debe ser caro                                           2   0.1
+ 9 A los años de servicio                                                2   0.1
+10 A mayor experiencia se requiere un sueldo más elevado para mante…     2   0.1
+# ℹ 1,434 more rows
+[1] ""
+[1] "=== OPEN-ENDED RAW RESPONSES: Investment ==="
+# A tibble: 1,447 × 3
+   value                                                                 n   pct
+   <chr>                                                             <int> <dbl>
+ 1 Buen elemento para la empresa                                         4   0.1
+ 2 En sus habilidades                                                    4   0.1
+ 3 -.-.-.- . . .- -. -.                                                  2   0.1
+ 4 A futuro es muy rentable para la empresa.                             2   0.1
+ 5 A la experiencia que tiene cada una y los conocimiento que pueda…     2   0.1
+ 6 A la larga sera conveniente para la empresa tener todo en orden …     2   0.1
+ 7 A largo 0lazo el postulante le dará beneficios a la empresa recl…     2   0.1
+ 8 A largo plazo se ven buenos resultados                                2   0.1
+ 9 A largo plazo será más beneficio que inversión, a medida que vay…     2   0.1
+10 A largo plazo será un gran aporte a la empresa.                       2   0.1
+# ℹ 1,437 more rows
+[1] ""
+[1] "=== OPEN-ENDED THEMES: Costly ==="
+# A tibble: 6 × 3
+  value                            n   pct
+  <chr>                        <int> <dbl>
+1 Other                          854  29.5
+2 Cost / salary                  698  24.1
+3 Training / experience          612  21.1
+4 Leave / absences / maternity   534  18.4
+5 Performance / productivity     162   5.6
+6 Trust / commitment              38   1.3
+[1] ""
+[1] "=== OPEN-ENDED THEMES: Investment ==="
+# A tibble: 5 × 3
+  value                           n   pct
+  <chr>                       <int> <dbl>
+1 Other                         976  33.7
+2 Contribution / productivity   870  30  
+3 Skills / experience           788  27.2
+4 Workload / complexity         174   6  
+5 Commitment / trust             90   3.1
+[1] ""
+[1] "=== OTHER OPEN FIELDS: Job title ==="
+# A tibble: 132 × 3
+   value             n   pct
+   <chr>         <int> <dbl>
+ 1 (NA)           2550  88  
+ 2 Independiente    18   0.6
+ 3 Supervisor       12   0.4
+ 4 Cesante          10   0.3
+ 5 independiente     8   0.3
+ 6 Empleado          6   0.2
+ 7 Estoy cesante     6   0.2
+ 8 No trabajo        6   0.2
+ 9 Operario          6   0.2
+10 Pensionado        6   0.2
+# ℹ 122 more rows
+[1] ""
+[1] "=== OTHER OPEN FIELDS: Industry sector ==="
+# A tibble: 177 × 3
+   value           n   pct
+   <chr>       <int> <dbl>
+ 1 (NA)         2484  85.7
+ 2 Minería        10   0.3
+ 3 Seguridad      10   0.3
+ 4 Publicidad      8   0.3
+ 5 Turismo         8   0.3
+ 6 Consultoría     6   0.2
+ 7 Mineria         6   0.2
+ 8 Agricultura     4   0.1
+ 9 Agrícola        4   0.1
+10 Derecho         4   0.1
+# ℹ 167 more rows
+[1] ""
+[1] "=== OTHER OPEN FIELDS: Cleaned job title ==="
+# A tibble: 98 × 3
+   value                            n   pct
+   <chr>                        <int> <dbl>
+ 1 (NA)                          2550  88  
+ 2 Independiente                   38   1.3
+ 3 Profesional y Administrativo    30   1  
+ 4 Sin trabajo / Cesante           28   1  
+ 5 Operativo y Mantenimiento       26   0.9
+ 6 Jefatura y Direccion            20   0.7
+ 7 Operario                         6   0.2
+ 8 Pensionado                       6   0.2
+ 9 Analista                         4   0.1
+10 Ingeniero                        4   0.1
+# ℹ 88 more rows
+[1] ""
+[1] "=== OTHER OPEN FIELDS: Cleaned industry sector ==="
+# A tibble: 141 × 3
+   value                             n   pct
+   <chr>                         <int> <dbl>
+ 1 (NA)                           2484  85.7
+ 2 Consultoria, RRHH y Asesorias    32   1.1
+ 3 Mineria y Recursos Naturales     22   0.8
+ 4 Mantenimiento y Servicios        18   0.6
+ 5 Turismo y Eventos                14   0.5
+ 6 Ingenieria y Tecnologia          12   0.4
+ 7 Arte, Diseno e Impresion         10   0.3
+ 8 Publicidad                        8   0.3
+ 9 Comercio y Alimentos              6   0.2
+10 Independiente                     6   0.2
+# ℹ 131 more rows
+[1] ""
+[1] "=== OTHER OPEN FIELDS: Simplified job title ==="
+# A tibble: 7 × 3
+  value                             n   pct
+  <chr>                         <int> <dbl>
+1 (NA)                           2550  88  
+2 Professional / administrative    86   3  
+3 Technical / operational          70   2.4
+4 Independent                      60   2.1
+5 Management / leadership          58   2  
+6 Unemployed                       48   1.7
+7 Other                            26   0.9
+[1] ""
+[1] "=== OTHER OPEN FIELDS: Simplified industry sector ==="
+# A tibble: 10 × 3
+   value                                   n   pct
+   <chr>                               <int> <dbl>
+ 1 (NA)                                 2484  85.7
+ 2 Other                                 114   3.9
+ 3 Professional services                 100   3.5
+ 4 Industry / technology / agriculture    66   2.3
+ 5 Retail / food                          36   1.2
+ 6 Maintenance / security                 34   1.2
+ 7 Tourism / events                       26   0.9
+ 8 Unemployed                             22   0.8
+ 9 Independent                            12   0.4
+10 Public sector / mutual societies        4   0.1
+[1] ""
+[1] "=== BEHAVIOR: Pop-it click ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 (NA)   2830  97.7
+2 1        68   2.3
+[1] ""
+[1] "=== BEHAVIOR: Pop-it time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1    64  23.1  28.0     1     6     11  27.5   117
+[1] ""
+[1] "=== BEHAVIOR: Profile screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  2898  49.1  51.3    10    27     40    56  1275
+[1] ""
+[1] "=== BEHAVIOR: Career screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  38.6  53.7    10    14     28    47  1221
+[1] ""
+[1] "=== BEHAVIOR: Task screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1448  29.5  45.2    10    12     21    34   879
+[1] ""
+[1] "=== BEHAVIOR FLAGS: Under p10 in all 3 timing tasks ==="
+# A tibble: 1 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 FALSE  1449   100
+[1] ""
+[1] "=== BEHAVIOR FLAGS: Time capture error count ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 0      1448  99.9
+2 1         1   0.1
+[1] ""
+[1] "=== BEHAVIOR FLAGS: Time capture error 2+ ==="
+# A tibble: 1 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 FALSE  1449   100
+[1] ""
+[1] "=== BEHAVIOR FLAGS: Duration below 6 minutes ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 FALSE  1413  97.5
+2 TRUE     36   2.5
+[1] ""
+[1] "=== BEHAVIOR FLAGS: Duration above p75 ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 FALSE  1087    75
+2 TRUE    362    25
+[1] ""
+[1] "=== BEHAVIOR FLAGS: Netquest extra block ==="
+# A tibble: 2 × 3
+  value     n   pct
+  <chr> <int> <dbl>
+1 FALSE  1381  95.3
+2 TRUE     68   4.7
+[1] ""
+[1] "=== BEHAVIOR: Postulante 1 screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  49.9  41.9    10    27     42    59   722
+[1] ""
+[1] "=== BEHAVIOR: Postulante 2 screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  48.3  59.3    20    26     37    52  1275
+[1] ""
+[1] "=== NUMERIC SUMMARY: Duration ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  829.  414.   252   580    752   976  7492
+[1] ""
+[1] "=== NUMERIC SUMMARY: Age ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  45.1  9.97    25    37     45    53    65
+[1] ""
+[1] "=== NUMERIC SUMMARY: Pop-it time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1    64  23.1  28.0     1     6     11  27.5   117
+[1] ""
+[1] "=== NUMERIC SUMMARY: Profile screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  2898  49.1  51.3    10    27     40    56  1275
+[1] ""
+[1] "=== NUMERIC SUMMARY: Career screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1449  38.6  53.7    10    14     28    47  1221
+[1] ""
+[1] "=== NUMERIC SUMMARY: Task screen time ==="
+# A tibble: 1 × 8
+      n  mean    sd   min   p25 median   p75   max
+  <int> <dbl> <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
+1  1448  29.5  45.2    10    12     21    34   879

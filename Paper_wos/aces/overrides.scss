@@ -1,0 +1,1456 @@
+/*-- scss:rules --*/
+
+/* ACES presentation refinements: cover, typography, and chart layouts */
+
+:root {
+  --caption-size: 1.02em;
+  --figure-max-height: 365px;
+}
+
+/* Light animated cover with small project and ANID logos. */
+.cover-slide,
+.reveal #title-slide {
+  color: var(--ink);
+  background: linear-gradient(135deg, #f7f5ef 0%, #e7efed 48%, #e9dfd3 100%) !important;
+}
+
+.cover-slide::before,
+.reveal #title-slide::before,
+.reveal #title-slide .title-orbit-bg {
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.18) 52%, rgba(47, 111, 115, 0.16) 100%),
+    linear-gradient(135deg, #f7f5ef 0%, #e7efed 48%, #e9dfd3 100%) !important;
+  animation: coverWash 16s ease-in-out infinite alternate !important;
+}
+
+.cover-slide::after,
+.reveal #title-slide::after,
+.reveal #title-slide .title-stars-bg {
+  opacity: 1 !important;
+  background-image:
+    linear-gradient(90deg, transparent 0%, transparent 61%, rgba(31, 41, 51, 0.18) 61%, rgba(31, 41, 51, 0.18) 100%),
+    radial-gradient(circle, rgba(47, 111, 115, 0.28) 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(157, 79, 69, 0.18) 1px, transparent 1.5px) !important;
+  background-size: 100% 100%, 92px 92px, 154px 154px !important;
+  background-position: center, 0 0, 32px 58px !important;
+  background-repeat: no-repeat, repeat, repeat !important;
+  animation: coverDots 24s linear infinite !important;
+}
+
+@keyframes coverWash {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.05) translate3d(-1.5%, 1%, 0); }
+}
+
+@keyframes coverDots {
+  from { background-position: center, 0 0, 32px 58px; }
+  to { background-position: center, 130px 66px, -108px 180px; }
+}
+
+.cover-slide h2,
+.reveal #title-slide h1,
+.reveal #title-slide .title,
+.reveal #title-slide .subtitle,
+.reveal #title-slide .author,
+.reveal #title-slide .institute,
+.reveal #title-slide .date,
+.cover-kicker,
+.cover-footer,
+.cover-claim {
+  color: var(--ink) !important;
+}
+
+.reveal #title-slide .subtitle,
+.reveal #title-slide .author,
+.reveal #title-slide .institute,
+.reveal #title-slide .date,
+.cover-kicker,
+.cover-footer {
+  color: #43515c !important;
+}
+
+/* Larger explanatory notes and figure captions. */
+.note-line,
+.slide-caption,
+.sources {
+  color: #46535e !important;
+  font-size: var(--caption-size) !important;
+  line-height: 1.35 !important;
+}
+
+.dim-note {
+  color: #3d4a55 !important;
+  font-size: 1em !important;
+  line-height: 1.38 !important;
+}
+
+.origin-main {
+  max-width: 1100px !important;
+  font-size: 0.76em !important;
+  line-height: 1.42 !important;
+}
+
+.origin-grid {
+  margin-top: 28px !important;
+}
+
+.origin-card {
+  font-size: 0.67em !important;
+  line-height: 1.38 !important;
+}
+
+/* Question and objectives slide. */
+.guiding-question {
+  max-width: 1160px;
+  border-left: 8px solid var(--accent);
+  padding: 10px 0 12px 30px;
+  color: var(--ink);
+  font-size: 0.8em;
+  font-weight: 600;
+  line-height: 1.28;
+}
+
+.objectives-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 46px;
+  max-width: 1160px;
+  margin-top: 34px;
+}
+
+.objective-item {
+  border-top: 4px solid var(--accent-2);
+  padding-top: 16px;
+  color: #3d4a55;
+  font-size: 0.78em;
+  line-height: 1.38;
+}
+
+.objective-item:nth-child(2),
+.objective-item:nth-child(3) {
+  border-color: var(--accent);
+}
+
+.objective-item strong {
+  display: block;
+  margin-bottom: 0.45em;
+  font-size: 1.07em;
+}
+
+/* Tables paired with rate charts. */
+.comparison-layout,
+.country-rate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.7fr);
+  gap: 34px;
+  align-items: center;
+}
+
+.comparison-layout .figure-frame,
+.country-rate-layout .figure-frame {
+  margin: 0;
+}
+
+.comparison-layout .figure-frame img,
+.country-rate-layout .figure-frame img {
+  max-height: 350px;
+}
+
+.comparison-table,
+.country-output-table {
+  border-top: 5px solid var(--accent-2);
+  background: #fbfaf6;
+  padding: 20px 22px;
+  color: #3d4a55;
+  font-size: 0.7em;
+  line-height: 1.34;
+}
+
+.comparison-table strong,
+.country-output-table strong {
+  display: block;
+  margin-bottom: 0.9em;
+  color: var(--ink);
+  font-size: 1.12em;
+}
+
+.comparison-table table,
+.country-output-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.comparison-table th,
+.comparison-table td,
+.country-output-table th,
+.country-output-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 7px 0;
+}
+
+/* Keep the corpus explanation substantial, but not as large as its metrics. */
+.corpus-metrics .metric {
+  font-size: 0.76em !important;
+}
+
+.corpus-metrics .metric strong {
+  font-size: 1.92em !important;
+}
+
+@media (max-width: 900px) {
+  .objectives-grid,
+  .comparison-layout,
+  .country-rate-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .cover-slide::before,
+  .cover-slide::after,
+  .reveal #title-slide::before,
+  .reveal #title-slide::after,
+  .reveal #title-slide .title-orbit-bg,
+  .reveal #title-slide .title-stars-bg {
+    animation: none !important;
+  }
+}
+
+/* Final readability and cover adjustments. */
+.reveal #title-slide::before,
+.reveal #title-slide .title-orbit-bg {
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.18) 55%, rgba(47, 111, 115, 0.12) 100%),
+    linear-gradient(135deg, #f7f5ef 0%, #e7efed 50%, #e9dfd3 100%) !important;
+  animation: coverWashVisible 11s ease-in-out infinite alternate !important;
+}
+
+.reveal #title-slide::after,
+.reveal #title-slide .title-stars-bg {
+  opacity: 0.95 !important;
+  background-image:
+    linear-gradient(112deg, transparent 0%, transparent 42%, rgba(47, 111, 115, 0.08) 42%, rgba(47, 111, 115, 0.08) 44%, transparent 44%, transparent 100%),
+    radial-gradient(circle, rgba(47, 111, 115, 0.38) 1.2px, transparent 1.7px),
+    radial-gradient(circle, rgba(157, 79, 69, 0.24) 1px, transparent 1.5px) !important;
+  background-size: 340px 340px, 92px 92px, 154px 154px !important;
+  background-position: 0 0, 0 0, 32px 58px !important;
+  background-repeat: repeat !important;
+  animation: coverDotsVisible 15s linear infinite !important;
+}
+
+@keyframes coverWashVisible {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.09) translate3d(-2.8%, 1.6%, 0); }
+}
+
+@keyframes coverDotsVisible {
+  from { background-position: 0 0, 0 0, 32px 58px; }
+  to { background-position: 170px 90px, 125px 70px, -95px 170px; }
+}
+
+.cover-logos {
+  position: absolute;
+  z-index: 6;
+  top: 34px;
+  right: 46px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(31, 41, 51, 0.16);
+  box-shadow: 4px 4px 0 rgba(47, 111, 115, 0.15);
+}
+
+.cover-logos img {
+  display: block;
+  width: auto;
+  object-fit: contain;
+}
+
+.cover-logos .project-logo { height: 42px; }
+.cover-logos .anid-logo { height: 35px; }
+
+.origin-main {
+  max-width: 1160px !important;
+  font-size: 1.06em !important;
+  line-height: 1.38 !important;
+}
+
+.origin-card {
+  font-size: 0.96em !important;
+  line-height: 1.36 !important;
+}
+
+.guiding-question {
+  background: #e8f1ee;
+  border: 2px solid #2f6f73;
+  box-shadow: 7px 7px 0 rgba(47, 111, 115, 0.18);
+  padding: 24px 30px !important;
+}
+
+.objective-item {
+  font-size: 1.02em !important;
+  line-height: 1.36 !important;
+  padding-top: 20px !important;
+}
+
+.engine-layout {
+  font-size: 1em !important;
+  line-height: 1.34 !important;
+}
+
+.engine-panel {
+  min-height: 170px !important;
+}
+
+.dimension-card {
+  font-size: 0.94em !important;
+}
+
+.dim-note {
+  font-size: 0.98em !important;
+}
+
+.corpus-metrics .metric {
+  font-size: 0.94em !important;
+}
+
+.corpus-metrics .metric strong {
+  font-size: 2.45em !important;
+}
+
+.comparison-table,
+.country-output-table {
+  font-size: 0.92em !important;
+  line-height: 1.36 !important;
+}
+
+.early-rate-note {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 2px solid var(--line);
+  color: #46535e;
+  font-size: 0.84em;
+  line-height: 1.34;
+}
+
+.discipline-slide .figure-frame img {
+  max-height: 410px !important;
+}
+
+.sociology-callout {
+  max-width: 1080px;
+  margin: 10px auto 0 auto;
+  border-left: 6px solid var(--accent-3);
+  padding: 10px 0 10px 20px;
+  color: #3d4a55;
+  font-size: 0.8em;
+  line-height: 1.34;
+}
+
+.closing-box {
+  font-size: 0.82em !important;
+  line-height: 1.32 !important;
+}
+
+.closing-box ul {
+  margin: 0.6em 0 0.9em 1.1em;
+}
+
+.closing-box li {
+  margin-bottom: 0.34em;
+}
+
+.thank-you-box {
+  max-width: 860px;
+  margin: auto;
+  border-left: 8px solid var(--accent);
+  background: #fbfaf6;
+  padding: 46px 54px;
+  color: #3d4a55;
+  font-size: 0.94em;
+  line-height: 1.55;
+  box-shadow: 8px 8px 0 var(--accent-soft);
+}
+
+.thank-you-box strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.34em;
+  margin-bottom: 0.6em;
+}
+/* Cover and logo placement refinements. */
+.cover-logos {
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  top: 30px !important;
+  right: 38px !important;
+  gap: 20px !important;
+  padding: 12px 16px !important;
+  animation: logoFloat 6s ease-in-out infinite alternate;
+}
+
+.cover-logos .project-logo { height: 58px !important; }
+.cover-logos .anid-logo { height: 48px !important; }
+
+.persistent-logos {
+  position: fixed;
+  z-index: 30;
+  top: 15px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  max-width: none;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(31, 41, 51, 0.14);
+  box-shadow: 3px 3px 0 rgba(47, 111, 115, 0.12);
+}
+
+.persistent-logos.is-hidden { display: none; }
+.persistent-logos img { display: block; width: auto; object-fit: contain; }
+.persistent-logos .project-logo { height: 26px; }
+.persistent-logos .anid-logo { height: 22px; }
+
+.coauthor-line {
+  margin-top: 0.3em;
+  color: #52616d;
+  font-size: 0.46em;
+  line-height: 1.25;
+}
+
+@keyframes logoFloat {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -6px, 0); }
+}
+
+.reveal #title-slide::before,
+.reveal #title-slide .title-orbit-bg {
+  animation: coverWashVisible 7s ease-in-out infinite alternate !important;
+}
+
+.reveal #title-slide::after,
+.reveal #title-slide .title-stars-bg {
+  animation: coverDotsVisible 8s linear infinite !important;
+}
+
+.comparison-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(350px, 0.95fr) !important;
+  gap: 28px !important;
+}
+
+.comparison-table {
+  font-size: 0.78em !important;
+  padding: 18px 18px !important;
+  overflow: hidden;
+}
+
+.comparison-table table {
+  table-layout: fixed;
+}
+
+.comparison-table th,
+.comparison-table td {
+  overflow-wrap: anywhere;
+  padding: 6px 4px !important;
+}
+
+.thank-slide {
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.thank-slide h2 {
+  width: auto !important;
+  margin: 0 auto 0.6em auto !important;
+  text-align: center;
+  font-size: 1.7em !important;
+}
+
+.thank-slide .thank-you-box {
+  margin: 0 auto !important;
+  text-align: center;
+  font-size: 1.06em !important;
+  padding: 56px 72px !important;
+}
+
+.thank-slide .thank-you-box strong {
+  font-size: 1.42em !important;
+}
+/* Final PDF-safe logo and table fixes. */
+.reveal .slides > section#title-slide > .cover-logos,
+.reveal .slides > section > .cover-logos,
+.reveal .slides > section > .persistent-logos,
+.cover-logos,
+.persistent-logos {
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+.reveal #title-slide .cover-logos,
+.reveal .slides > section#title-slide > .cover-logos {
+  position: absolute !important;
+  top: 26px !important;
+  right: 34px !important;
+  left: auto !important;
+  bottom: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 18px !important;
+  padding: 12px 16px !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  border: 1px solid rgba(31, 41, 51, 0.16) !important;
+  box-shadow: 5px 5px 0 rgba(47, 111, 115, 0.14) !important;
+}
+
+.reveal #title-slide .cover-logos .project-logo { height: 82px !important; }
+.reveal #title-slide .cover-logos .anid-logo { height: 64px !important; }
+
+.persistent-logos {
+  top: 14px !important;
+  right: 18px !important;
+  gap: 10px !important;
+  padding: 7px 10px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.persistent-logos .project-logo { height: 44px !important; }
+.persistent-logos .anid-logo { height: 35px !important; }
+
+.comparison-layout {
+  grid-template-columns: minmax(0, 1.08fr) minmax(440px, 0.92fr) !important;
+  gap: 30px !important;
+}
+
+.comparison-table {
+  font-size: 0.9em !important;
+  padding: 24px 22px !important;
+  overflow: visible !important;
+  min-width: 440px !important;
+}
+
+.comparison-table table {
+  table-layout: auto !important;
+  width: 100% !important;
+}
+
+.comparison-table th,
+.comparison-table td {
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  white-space: normal !important;
+  padding: 9px 8px !important;
+}
+
+.comparison-table th:nth-child(1),
+.comparison-table td:nth-child(1) { width: 30%; }
+.comparison-table th:nth-child(2),
+.comparison-table td:nth-child(2) { width: 22%; }
+.comparison-table th:nth-child(3),
+.comparison-table td:nth-child(3) { width: 28%; }
+.comparison-table th:nth-child(4),
+.comparison-table td:nth-child(4) { width: 20%; }
+
+.thank-slide .thank-you-box {
+  font-size: 1.14em !important;
+}
+
+.thank-slide .thank-you-box a {
+  color: #2f6f73 !important;
+  text-decoration: none !important;
+}
+
+@media print {
+  .cover-logos {
+    display: none !important;
+  }
+
+  .persistent-logos,
+  .persistent-logos.is-hidden {
+    display: flex !important;
+    position: fixed !important;
+    top: 12px !important;
+    right: 16px !important;
+    z-index: 9999 !important;
+    opacity: 1 !important;
+  }
+
+  .persistent-logos .project-logo { height: 42px !important; }
+  .persistent-logos .anid-logo { height: 34px !important; }
+
+  .comparison-layout,
+  .country-rate-layout {
+    overflow: visible !important;
+  }
+}
+
+/* Wider slide canvas use for HTML and PDF export. */
+:root {
+  --slide-pad-x: 46px;
+  --slide-pad-y: 34px;
+  --content-max-width: 1368px;
+  --figure-max-height: 500px;
+  --caption-size: 1.08em;
+}
+
+.reveal .slides > section {
+  padding: var(--slide-pad-y) var(--slide-pad-x) !important;
+}
+
+.reveal .slides > section > h1,
+.reveal .slides > section > h2,
+.reveal .slides > section > h3 {
+  max-width: 1240px !important;
+  margin-bottom: 0.46em !important;
+}
+
+.figure-frame {
+  padding: 10px !important;
+  max-width: 1280px !important;
+}
+
+.figure-frame img {
+  max-height: 500px !important;
+}
+
+.comparison-layout,
+.country-rate-layout {
+  max-width: 1288px !important;
+  grid-template-columns: minmax(0, 1.18fr) minmax(430px, 0.82fr) !important;
+  gap: 24px !important;
+}
+
+.comparison-layout .figure-frame,
+.country-rate-layout .figure-frame {
+  min-height: 430px !important;
+}
+
+.comparison-layout .figure-frame img,
+.country-rate-layout .figure-frame img {
+  max-height: 440px !important;
+}
+
+.comparison-table,
+.country-output-table {
+  font-size: 0.96em !important;
+  padding: 24px 22px !important;
+}
+
+.comparison-table {
+  min-width: 430px !important;
+}
+
+.comparison-table th,
+.comparison-table td,
+.country-output-table th,
+.country-output-table td {
+  padding: 9px 8px !important;
+}
+
+.discipline-slide .figure-frame img {
+  max-height: 500px !important;
+}
+
+.method-note {
+  max-width: 1220px !important;
+  margin: 8px auto 0 auto !important;
+  color: #52616d !important;
+  font-size: 0.78em !important;
+  line-height: 1.28 !important;
+}
+
+.reveal #title-slide .cover-logos,
+.reveal .slides > section#title-slide > .cover-logos {
+  top: 18px !important;
+  right: 22px !important;
+}
+
+.persistent-logos {
+  top: 10px !important;
+  right: 12px !important;
+}
+
+@media print {
+  :root {
+    --slide-pad-x: 42px;
+    --slide-pad-y: 32px;
+    --figure-max-height: 500px;
+  }
+
+  .reveal .slides > section {
+    overflow: hidden !important;
+  }
+
+  .figure-frame img {
+    max-height: 492px !important;
+  }
+
+  .comparison-layout .figure-frame img,
+  .country-rate-layout .figure-frame img {
+    max-height: 430px !important;
+  }
+
+  .persistent-logos,
+  .persistent-logos.is-hidden {
+    top: 8px !important;
+    right: 10px !important;
+  }
+}
+
+/* Final compact layout pass: reduce side margins and enlarge key text. */
+:root {
+  --slide-pad-x: 22px;
+  --slide-pad-y: 24px;
+  --content-max-width: 1420px;
+  --figure-max-height: 535px;
+  --caption-size: 1.1em;
+}
+
+.reveal .slides > section {
+  padding: var(--slide-pad-y) var(--slide-pad-x) !important;
+}
+
+.reveal .slides > section > * {
+  max-width: 1420px !important;
+}
+
+.reveal .slides > section > h1,
+.reveal .slides > section > h2,
+.reveal .slides > section > h3 {
+  max-width: 1250px !important;
+  margin-bottom: 0.34em !important;
+}
+
+.figure-frame {
+  width: calc(100% - 4px) !important;
+  max-width: 1368px !important;
+  padding: 8px !important;
+}
+
+.figure-frame img {
+  max-height: 535px !important;
+}
+
+.comparison-layout,
+.country-rate-layout {
+  width: 100% !important;
+  max-width: 1368px !important;
+  grid-template-columns: minmax(0, 1.26fr) minmax(400px, 0.74fr) !important;
+  gap: 18px !important;
+}
+
+.comparison-layout .figure-frame,
+.country-rate-layout .figure-frame {
+  min-height: 455px !important;
+}
+
+.comparison-layout .figure-frame img,
+.country-rate-layout .figure-frame img {
+  max-height: 465px !important;
+}
+
+.comparison-table,
+.country-output-table {
+  font-size: 1em !important;
+  padding: 20px 18px !important;
+}
+
+.guiding-question {
+  font-size: 1.48em !important;
+  line-height: 1.22 !important;
+  padding: 30px 36px !important;
+}
+
+.objective-item {
+  font-size: 1.12em !important;
+}
+
+.corpus-metrics .metric {
+  font-size: 1.42em !important;
+  line-height: 1.22 !important;
+  color: #27313a !important;
+}
+
+.corpus-metrics .metric strong {
+  font-size: 3.35em !important;
+  line-height: 0.95 !important;
+}
+
+.corpus-metrics .metric p,
+.corpus-metrics .metric div {
+  color: #27313a !important;
+}
+
+.discipline-slide .figure-frame img,
+.reveal .slides > section:has(img[src*="methods_discipline"]) .figure-frame img {
+  max-height: 535px !important;
+}
+
+.method-note {
+  font-size: 0.82em !important;
+  max-width: 1280px !important;
+}
+
+.reveal #title-slide .cover-logos,
+.reveal .slides > section#title-slide > .cover-logos {
+  top: 10px !important;
+  right: 10px !important;
+}
+
+.persistent-logos {
+  top: 6px !important;
+  right: 6px !important;
+  transform: scale(0.92);
+  transform-origin: top right;
+}
+
+@media print {
+  :root {
+    --slide-pad-x: 20px;
+    --slide-pad-y: 22px;
+    --figure-max-height: 530px;
+  }
+
+  .figure-frame img {
+    max-height: 528px !important;
+  }
+
+  .comparison-layout .figure-frame img,
+  .country-rate-layout .figure-frame img {
+    max-height: 455px !important;
+  }
+
+  .persistent-logos,
+  .persistent-logos.is-hidden {
+    top: 5px !important;
+    right: 5px !important;
+    transform: scale(0.9);
+    transform-origin: top right;
+  }
+}
+
+/* =========================================================
+   QUICK FONT CONTROLS
+   Change only these values when adapting to a smaller screen.
+   ========================================================= */
+:root {
+  --aces-slide-font: 1.18em;
+  --aces-title-font: 1.58em;
+  --aces-caption-font: 1.28em;
+  --aces-note-font: 1.24em;
+  --aces-card-font: 1.16em;
+  --aces-question-font: 1.72em;
+  --aces-metric-label-font: 1.7em;
+  --aces-metric-number-font: 3.7em;
+  --aces-table-font: 1.14em;
+}
+
+.reveal .slides > section:not(#title-slide) {
+  font-size: var(--aces-slide-font) !important;
+}
+
+.reveal .slides > section:not(#title-slide) > h1,
+.reveal .slides > section:not(#title-slide) > h2,
+.reveal .slides > section:not(#title-slide) > h3 {
+  font-size: var(--aces-title-font) !important;
+  line-height: 1.08 !important;
+}
+
+.slide-caption,
+.note-line,
+.sources,
+.method-note,
+.dim-note {
+  font-size: var(--aces-caption-font) !important;
+  line-height: 1.28 !important;
+}
+
+.origin-card,
+.engine-panel,
+.dimension-card,
+.objective-item,
+.agenda-item,
+.closing-box,
+.sociology-callout {
+  font-size: var(--aces-card-font) !important;
+  line-height: 1.28 !important;
+}
+
+.guiding-question {
+  font-size: var(--aces-question-font) !important;
+  line-height: 1.18 !important;
+}
+
+.corpus-metrics .metric {
+  font-size: var(--aces-metric-label-font) !important;
+  line-height: 1.14 !important;
+  color: #27313a !important;
+}
+
+.corpus-metrics .metric strong {
+  font-size: var(--aces-metric-number-font) !important;
+  line-height: 0.9 !important;
+}
+
+.comparison-table,
+.country-output-table,
+.reveal table {
+  font-size: var(--aces-table-font) !important;
+}
+
+/* Wider graphic area for link-based HTML presentation. */
+:root {
+  --slide-pad-x: 12px;
+  --slide-pad-y: 18px;
+  --content-max-width: 1460px;
+  --figure-max-height: 560px;
+}
+
+.reveal .slides > section {
+  padding: var(--slide-pad-y) var(--slide-pad-x) !important;
+}
+
+.figure-frame {
+  max-width: 1410px !important;
+  padding: 6px !important;
+}
+
+.figure-frame img {
+  max-height: 560px !important;
+}
+
+.comparison-layout,
+.country-rate-layout {
+  max-width: 1410px !important;
+  grid-template-columns: minmax(0, 1.32fr) minmax(390px, 0.68fr) !important;
+}
+
+.reveal #title-slide .cover-logos,
+.reveal .slides > section#title-slide > .cover-logos {
+  top: 6px !important;
+  right: 6px !important;
+}
+
+.persistent-logos,
+.persistent-logos.is-hidden {
+  top: 3px !important;
+  right: 3px !important;
+}
+
+@media print {
+  :root {
+    --aces-slide-font: 1.08em;
+    --aces-title-font: 1.42em;
+    --slide-pad-x: 14px;
+    --slide-pad-y: 18px;
+  }
+}
+
+/* =========================================================
+   FINAL PRESENTATION-SIZE CONTROLS
+   Edit these values first if the room screen is smaller/larger.
+   ========================================================= */
+:root {
+  --aces-slide-font: 1.24em;
+  --aces-title-font: 1.68em;
+  --aces-caption-font: 1.34em;
+  --aces-note-font: 1.30em;
+  --aces-card-font: 1.24em;
+  --aces-question-font: 2.02em;
+  --aces-metric-label-font: 1.92em;
+  --aces-metric-number-font: 4.05em;
+  --aces-table-font: 1.22em;
+  --slide-pad-x: 6px;
+  --slide-pad-y: 12px;
+  --figure-max-height: 620px;
+}
+
+.reveal .slides > section {
+  padding: var(--slide-pad-y) var(--slide-pad-x) !important;
+}
+
+.reveal .slides > section:not(#title-slide) > h1,
+.reveal .slides > section:not(#title-slide) > h2,
+.reveal .slides > section:not(#title-slide) > h3 {
+  margin-bottom: 0.22em !important;
+}
+
+.figure-frame {
+  width: calc(100vw - 42px) !important;
+  max-width: 1510px !important;
+  padding: 4px !important;
+}
+
+.figure-frame img {
+  width: 100% !important;
+  max-height: var(--figure-max-height) !important;
+  object-fit: contain !important;
+}
+
+.slide-caption,
+.note-line,
+.method-note,
+.dim-note,
+.sources {
+  font-size: var(--aces-caption-font) !important;
+  line-height: 1.24 !important;
+}
+
+.origin-card,
+.engine-panel,
+.dimension-card,
+.objective-item,
+.agenda-item,
+.closing-box,
+.sociology-callout {
+  font-size: var(--aces-card-font) !important;
+}
+
+.guiding-question {
+  font-size: var(--aces-question-font) !important;
+  max-width: 1180px !important;
+}
+
+.corpus-metrics .metric {
+  font-size: var(--aces-metric-label-font) !important;
+}
+
+.corpus-metrics .metric strong {
+  font-size: var(--aces-metric-number-font) !important;
+}
+
+.comparison-layout,
+.country-rate-layout {
+  width: calc(100vw - 64px) !important;
+  max-width: 1500px !important;
+  grid-template-columns: minmax(0, 1.42fr) minmax(430px, 0.58fr) !important;
+  gap: 20px !important;
+}
+
+.comparison-table,
+.country-output-table,
+.reveal table {
+  font-size: var(--aces-table-font) !important;
+}
+
+.persistent-logos,
+.persistent-logos.is-hidden {
+  top: 4px !important;
+  right: 4px !important;
+}
+
+@media print {
+  :root {
+    --aces-slide-font: 1.16em;
+    --aces-title-font: 1.52em;
+    --aces-caption-font: 1.20em;
+    --aces-card-font: 1.12em;
+    --aces-question-font: 1.76em;
+    --slide-pad-x: 8px;
+    --slide-pad-y: 12px;
+    --figure-max-height: 590px;
+  }
+
+  .figure-frame {
+    width: calc(100vw - 54px) !important;
+  }
+}
+
+/* =========================================================
+   MANUAL SLIDE CONTROLS
+   Edit only the variables in this section for manual tuning.
+   The layout uses percentages inside the Reveal canvas, so the
+   whole slide scales predictably in HTML, PDF, and small screens.
+   ========================================================= */
+
+.reveal #title-slide .author,
+.reveal #title-slide .quarto-title-author-name {
+  line-height: 1.16 !important;
+}
+
+.title-coauthors {
+  display: block;
+  margin-top: 0.28em;
+  font-size: 0.62em;
+  font-weight: 500;
+}
+
+/* Global stable canvas rules. Avoid 100vw/min-width here. */
+.reveal .slides > section {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.figure-frame {
+  box-sizing: border-box !important;
+  width: 96% !important;
+  max-width: 96% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 4px !important;
+}
+
+.figure-frame img {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+/* Keep this slide as currently tuned. */
+.project-slide {
+  --local-title-size: var(--aces-title-font);
+  --local-card-size: var(--aces-card-font);
+}
+
+.guiding-slide {
+  --local-title-size: 0.80em;
+  --local-question-size: 1.2em;
+  --local-card-size: 1.2em;
+}
+
+.search-slide {
+  --local-title-size: 1.30em;
+  --local-card-size: 1.16em;
+}
+
+.dimensions-slide {
+  --local-title-size: 1.30em;
+  --local-card-size: 1.10em;
+  --local-caption-size: 1.18em;
+}
+
+.corpus-slide {
+  --local-title-size: 1.44em;
+  --metric-number-size: 2.5em;
+  --metric-label-size: 1.50em;
+  --local-caption-size: 1.18em;
+}
+
+.universes-slide {
+  --local-title-size: 0.7em;
+  --local-figure-height: 620px;
+  --local-caption-size: 0.82em;
+}
+
+.relative-slide {
+  --local-title-size: 0.8em;
+  --local-figure-height: 560px;
+  --local-caption-size: 1.00em;
+  --local-table-size: 0.78em;
+  --local-layout-gap: 10px;
+  --local-figure-share: 70%;
+  --local-table-share: 28%;
+}
+
+.country-slide {
+  --local-title-size: 0.60em;
+  --local-figure-height: 500px;
+  --local-caption-size: 1.08em;
+  --local-table-size: 0.72em;
+  --local-layout-gap: 14px;
+  --local-figure-share: 70%;
+  --local-table-share: 28%;
+}
+
+.discipline-slide {
+  --local-title-size: 0.62em;
+  --local-figure-height: 560px;
+  --local-caption-size: 0.84em;
+  --local-card-size: 0.82em;
+}
+
+.methods-slide {
+  --local-title-size: 0.62em;
+  --local-figure-height: 545px;
+  --local-caption-size: 0.82em;
+  --local-note-size: 0.76em;
+}
+
+.takeaways-slide {
+  --local-title-size: 0.72em;
+  --local-card-size: 0.90em;
+}
+
+.appendix-absolute-slide,
+.appendix-country-slide,
+.appendix-status-slide {
+  --local-title-size: 1.20em;
+  --local-figure-height: 585px;
+  --local-caption-size: 1.05em;
+}
+
+.guiding-slide > h2,
+.search-slide > h2,
+.dimensions-slide > h2,
+.corpus-slide > h2,
+.universes-slide > h2,
+.relative-slide > h2,
+.country-slide > h2,
+.discipline-slide > h2,
+.methods-slide > h2,
+.takeaways-slide > h2,
+.appendix-absolute-slide > h2,
+.appendix-country-slide > h2,
+.appendix-status-slide > h2 {
+  font-size: var(--local-title-size) !important;
+  line-height: 1.08 !important;
+  margin-bottom: 0.20em !important;
+}
+
+.guiding-slide .guiding-question {
+  font-size: var(--local-question-size) !important;
+  line-height: 1.12 !important;
+  padding: 18px 24px !important;
+}
+
+.guiding-slide .objective-item,
+.search-slide .engine-panel,
+.dimensions-slide .dimension-card,
+.takeaways-slide .closing-box,
+.discipline-slide .sociology-callout {
+  font-size: var(--local-card-size) !important;
+}
+
+.corpus-slide .corpus-metrics .metric {
+  font-size: var(--metric-label-size) !important;
+  line-height: 1.12 !important;
+}
+
+.corpus-slide .corpus-metrics .metric strong {
+  font-size: var(--metric-number-size) !important;
+  line-height: 0.92 !important;
+}
+
+.universes-slide .figure-frame,
+.discipline-slide .figure-frame,
+.methods-slide .figure-frame,
+.appendix-absolute-slide .figure-frame,
+.appendix-country-slide .figure-frame,
+.appendix-status-slide .figure-frame {
+  width: 96% !important;
+  max-width: 96% !important;
+}
+
+.universes-slide .figure-frame img,
+.discipline-slide .figure-frame img,
+.methods-slide .figure-frame img,
+.appendix-absolute-slide .figure-frame img,
+.appendix-country-slide .figure-frame img,
+.appendix-status-slide .figure-frame img {
+  max-height: var(--local-figure-height) !important;
+}
+
+.relative-slide .comparison-layout,
+.country-slide .country-rate-layout {
+  width: 96% !important;
+  max-width: 96% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: grid !important;
+  gap: var(--local-layout-gap) !important;
+  align-items: start !important;
+}
+
+.relative-slide .comparison-layout,
+.country-slide .country-rate-layout {
+  grid-template-columns: minmax(0, var(--local-figure-share)) minmax(0, var(--local-table-share)) !important;
+}
+
+.relative-slide .figure-frame,
+.country-slide .figure-frame {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.relative-slide .figure-frame img,
+.country-slide .figure-frame img {
+  max-height: var(--local-figure-height) !important;
+}
+
+.relative-slide .comparison-table,
+.country-slide .country-output-table {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  font-size: var(--local-table-size) !important;
+  padding: 12px 10px !important;
+  overflow: hidden !important;
+}
+
+.relative-slide .comparison-table table,
+.country-slide .country-output-table table {
+  table-layout: auto !important;
+  width: 100% !important;
+}
+
+.relative-slide .comparison-table th,
+.relative-slide .comparison-table td,
+.country-slide .country-output-table th,
+.country-slide .country-output-table td {
+  white-space: nowrap !important;
+  word-break: normal !important;
+}
+
+.relative-slide .slide-caption,
+.country-slide .slide-caption,
+.universes-slide .slide-caption,
+.discipline-slide .slide-caption,
+.methods-slide .slide-caption,
+.appendix-absolute-slide .slide-caption,
+.appendix-country-slide .slide-caption,
+.appendix-status-slide .slide-caption,
+.corpus-slide .note-line,
+.dimensions-slide .slide-caption {
+  font-size: var(--local-caption-size) !important;
+  line-height: 1.22 !important;
+}
+
+.methods-slide .method-note {
+  font-size: var(--local-note-size) !important;
+  line-height: 1.18 !important;
+}
+
+/* Small browser windows: keep the slide scaled, but avoid local overflow. */
+@media screen and (max-width: 900px) {
+  .relative-slide,
+  .country-slide {
+    --local-title-size: 0.60em;
+    --local-figure-height: 440px;
+    --local-table-size: 0.66em;
+    --local-layout-gap: 8px;
+    --local-figure-share: 70%;
+    --local-table-share: 28%;
+  }
+
+  .methods-slide {
+    --local-figure-height: 460px;
+    --local-caption-size: 0.94em;
+    --local-note-size: 0.86em;
+  }
+}
+
+@media print {
+  .relative-slide,
+  .country-slide {
+    --local-title-size: 0.62em;
+    --local-figure-height: 465px;
+    --local-table-size: 0.78em;
+    --local-layout-gap: 8px;
+  }
+
+  .methods-slide {
+    --local-title-size: 0.62em;
+    --local-figure-height: 500px;
+    --local-caption-size: 1.02em;
+    --local-note-size: 0.92em;
+  }
+}
+/* Stable snapshot cards for the relative-output slide. */
+.relative-slide .comparison-table {
+  font-size: var(--local-table-size) !important;
+  padding: 14px 16px !important;
+}
+
+.relative-slide .comparison-table > strong {
+  display: block;
+  font-size: 0.92em !important;
+  margin-bottom: 0.65em !important;
+}
+
+.relative-slide .snapshot-row {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  grid-template-areas:
+    "region rate"
+    "detail detail" !important;
+  gap: 2px 10px !important;
+  align-items: baseline !important;
+  padding: 9px 0 !important;
+  border-top: 1px solid rgba(39, 49, 58, 0.45) !important;
+}
+
+.relative-slide .snapshot-row span {
+  grid-area: region !important;
+  white-space: nowrap !important;
+  font-weight: 700 !important;
+}
+
+.relative-slide .snapshot-row strong {
+  grid-area: rate !important;
+  font-size: 1.28em !important;
+  color: var(--accent) !important;
+}
+
+.relative-slide .snapshot-row small {
+  grid-area: detail !important;
+  white-space: nowrap !important;
+  font-size: 0.78em !important;
+  color: #536271 !important;
+}
+
+.main-slide {
+  --local-title-size: 0.68em;
+  --local-card-size: 0.82em;
+}
+
+.main-slide > h2 {
+  font-size: var(--local-title-size) !important;
+}
+
+.main-slide .agenda-item {
+  font-size: var(--local-card-size) !important;
+  line-height: 1.16 !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.takeaways-slide .closing-box li {
+  margin-bottom: 0.18em !important;
+}
+
+.takeaways-slide .closing-box p,
+.takeaways-slide .closing-box ul {
+  margin-top: 0.28em !important;
+  margin-bottom: 0.42em !important;
+}
+/* Final safety pass for PDF/HTML stability. Keep titles one-line and compact. */
+.universes-slide { --local-title-size: 0.54em; --local-caption-size: 0.72em; }
+.relative-slide { --local-title-size: 0.56em; --local-caption-size: 0.76em; --local-table-size: 0.78em; --local-figure-share: 70%; --local-table-share: 28%; }
+.country-slide { --local-title-size: 0.52em; --local-caption-size: 0.76em; --local-table-size: 0.70em; --local-figure-share: 68%; --local-table-share: 30%; }
+.discipline-slide { --local-title-size: 0.56em; --local-caption-size: 0.72em; --local-card-size: 0.74em; }
+.methods-slide { --local-title-size: 0.52em; --local-caption-size: 0.72em; --local-note-size: 0.68em; }
+.main-slide { --local-title-size: 0.54em; --local-card-size: 0.76em; }
+.takeaways-slide { --local-title-size: 0.56em; --local-card-size: 0.82em; }
+
+.relative-slide .snapshot-row small { font-size: 0.72em !important; }
+.relative-slide .comparison-table > strong { font-size: 0.86em !important; }
+.country-slide .country-output-table > strong { font-size: 0.86em !important; }
+
+@media screen and (max-width: 900px) {
+  .universes-slide,
+  .relative-slide,
+  .country-slide,
+  .discipline-slide,
+  .methods-slide,
+  .main-slide,
+  .takeaways-slide {
+    --local-title-size: 0.46em;
+  }
+
+  .relative-slide { --local-table-size: 0.62em; --local-figure-share: 68%; --local-table-share: 30%; }
+  .country-slide { --local-table-size: 0.60em; --local-figure-share: 66%; --local-table-share: 32%; }
+  .slide-caption,
+  .method-note,
+  .sociology-callout { line-height: 1.12 !important; }
+}
