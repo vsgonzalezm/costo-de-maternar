@@ -1,0 +1,680 @@
+---
+title: "Fertilidad potencial y maternidad en las evaluaciones de contratación"
+subtitle: "Evidencia de un experimento factorial con supervisores en Chile"
+author: "Tania Hutt"
+institute:
+- "Departamento de Sociología, Pontificia Universidad Católica de Chile"
+- "Mini Conferencia de Desigualdades, Observatorio de Desigualdades UDP"
+date: today
+date-format: "MMMM YYYY"
+format:
+  revealjs:
+    theme: [default, theme.scss, custom.scss]
+    slide-number: c/t
+    width: 1600
+    height: 900
+    margin: 0.045
+    center: true
+    hash: true
+    controls: true
+    progress: true
+    incremental: false
+    transition: fade
+    fig-align: center
+    code-line-numbers: false
+    preview-links: auto
+    embed-resources: true
+    include-after-body:
+      - cover-logos.html
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+## Motivación {.section-title}
+
+En la investigación sobre mercado laboral, la maternidad suele conceptualizarse como una dicotomía: se comparan las evaluaciones y resultados laborales de mujeres sin hijos/as con los de las madres.
+
+Esto omite una **dimensión prospectiva**. Los empleadores no solo evalúan quién es una candidata en el presente; anticipan en quién es probable que se convierta.
+
+**Fertilidad futura y planes familiares:** las mujeres podrían ser evaluadas no solo en función de su situación parental actual, sino también en función de la probabilidad de que tengan un/a hijo/a en el futuro cercano.
+
+::: incremental
+- Oferta: las expectativas de fertilidad moldean las aspiraciones laborales y familiares de las mujeres [(e.g. Bass 2015; Thébaud y Taylor 2021)]{.cite}.
+
+- Demanda: las expectativas de fertilidad de los empleadores podrían configurar preferencias de contratación en contra de mujeres con mayor probabilidad de tener un/a hijo/a en el corto plazo [(e.g, Becker et al. 2019; Peterson et al. 2022)]{.cite}.
+  - Y a diferencia de la maternidad actual, es prospectiva e inverificable: un juicio sobre comportamiento anticipado y no observado, que las mujeres no pueden rebatir fácilmente.
+
+:::
+
+::: notes
+Como dicotomía: las mujeres o no tienen hijos/as o son madres.
+
+La fertilidad potencial aplica a hombres y mujeres, con o sin hijos/as: por ejemplo, las madres que se perciben como que "ya no tendrán más" podrían ser evaluadas de manera diferente que las madres de un/a hijo/a que se perciben como propensas a tener otro/a.
+:::
+
+------------------------------------------------------------------------
+
+## Por qué la distinción importa teóricamente
+
+Distingue lo atribuible al **cuidado actual** de lo atribuible a la **maternidad anticipada**.
+
+Los estereotipos de maternidad conciernen al **desempeño actual y los costos ya incurridos**. La fertilidad potencial concierne a **supuestos sobre comportamiento futuro**.
+
+::::: two-col
+::: {.claim .fragment}
+**Discriminación estadística anticipatoria**
+
+[(Phelps 1972; Aigner y Cain 1977)]{.cite}
+
+Los empleadores proyectan los costos y riesgos esperados de la maternidad anticipada —licencias, disrupción, rotación— y los atribuyen a mujeres individuales.
+
+→ Penalizaciones en cuán **costosas** y **riesgosas** se percibe a las postulantes, independientemente de su maternidad actual.
+:::
+
+::: {.claim .fragment}
+**Devaluación basada en estatus**
+
+[(Ridgeway y Correll 2004; Correll et al. 2007)]{.cite}
+
+La maternidad opera como una característica de estatus: activa expectativas difusas sobre la posición profesional.
+
+→ Penalizaciones en el **potencial de crecimiento** y la **competencia**, que podrían exacerbarse con la maternidad futura.
+:::
+:::::
+
+::: notes
+No todas las mujeres sin hijos/as se benefician igualmente de no ser madres, y no todas las madres son penalizadas igualmente por la maternidad.
+Estatus:
+Cuando la maternidad anticipada se superpone a la maternidad actual, activa expectativas difusas sobre la posición profesional.
+Esto podría estar ocurriendo a través de dos mecanismos principales:
+:::
+
+------------------------------------------------------------------------
+
+## Preguntas de investigación
+
+> ¿Qué estereotipos asocian los empleadores con la **fertilidad potencial** y la **maternidad actual** de las mujeres postulantes a empleo en Chile?
+
+> ¿Experimentan los hombres penalizaciones similares?
+
+------------------------------------------------------------------------
+
+## El caso de Chile
+
+::: incremental
+- Chile tiene una historia de **políticas maternalistas**: licencia de maternidad extensa, prácticamente sin licencia de paternidad, y provisión de sala cuna vinculada exclusivamente a las trabajadoras.
+
+- La participación laboral femenina se ha estancado en las últimas décadas, situándose actualmente en 53% (hombres: 71,3%). Una tasa de desempleo femenino particularmente alta de 10,3% (hombres: 9,1%).
+
+- Tasa de fecundidad históricamente (y globalmente) baja de 0,99 hijos/as por mujer.
+
+- Debates de política pública actuales en torno al aumento de la fecundidad y la modificación de políticas laborales relativas a la maternidad (como la sala cuna universal y el posnatal).
+
+:::
+
+
+::: notes
+Esfuerzos por incluir mujeres en industrias subrepresentadas, cuotas para cargos de alta dirección como directorios, entre otras iniciativas.
+
+Sala cuna: las empresas con 20 o más trabajadoras deben proveer o financiar sala cuna. El umbral genera un desincentivo discreto a la contratación en el margen, y el costo se asocia a contratar a una mujer, no a ser padre o madre.
+
+El postnatal parental es formalmente transferible a los padres, pero entre 2011 y 2016 solo el 0,24% de los trabajadores hombres elegibles lo utilizó. La licencia de paternidad en sí misma es de cinco días.
+
+Esta es la razón institucional para esperar que los empleadores incorporen la fertilidad anticipada en sus decisiones, y que lo hagan de manera asimétrica. También es la razón por la cual el caso chileno no es simplemente una réplica de hallazgos estadounidenses en un nuevo contexto.
+:::
+
+------------------------------------------------------------------------
+
+## Datos
+
+Experimento factorial de viñetas prerregistrado con 1.449 personas actualmente empleadas en cargos de supervisión o jefatura en Chile.
+
+Los encuestados evaluaron a dos postulantes para una vacante presentada por una consultora de recursos humanos ficticia (2.898 obs).
+
+Seis atributos varían a nivel del perfil:
+
+| Atributo | Niveles |
+|----|----|
+| Género | mujer / hombre |
+| Estado civil | soltera/o / casada/o |
+| Situación parental | sin hijos/as / un/a hijo/a / dos hijos/as |
+| Planes familiares | en 2 años / en 5 años / no desea tener hijos/as |
+| Experiencia | 6 / 7 / 8 años |
+| Desempeño en prueba técnica | 5,8 / 6,0 / 6,3 |
+
+La fertilidad potencial fue señalizada mediante el atributo de **planes familiares**, cruzado con la situación parental. Esto separa la maternidad actual de la fertilidad anticipada como factores experimentales distintos.
+
+::: notes
+La situación parental y los planes familiares se presentaron en una sola oración, de modo que para postulantes que ya tienen hijos/as el plan es explícitamente para otro/a: "tiene un hijo y le gustaría tener otro en 2 años más."
+
+El estado civil también se incorporó en esa oración. Los nombres se extrajeron de un conjunto fijo —dos femeninos, dos masculinos— y se asignaron con un flip por bloque para que un nombre dado no estuviera correlacionado con la posición en que aparecía el perfil.
+:::
+
+---
+
+## Diseño
+
+::::: two-col
+::: {.claim .fragment}
+**Diseño**
+
+- Basado en viñetas, con variables de resultado tipo rating
+- Diseño factorial D-efficient
+- 200 perfiles únicos, 100 bloques de 2
+- Cada bloque asignado a ~14 encuestados
+
+:::
+
+::: {.claim .fragment}
+**Eficiencia**
+
+- D-eficiencia = 0,922
+- G-eficiencia = 0,925
+- 28 parámetros del modelo, todos identificables
+
+:::
+:::::
+
+**El orden de presentación y la redacción del template son intra-sujeto y están completamente cruzados**. Ambos se controlan en todos los modelos.
+
+::: note-line
+Diseño, hipótesis y plan de análisis prerregistrados en AsPredicted #297542 previo a la recolección de datos.
+:::
+
+::: notes
+El diseño se optimizó para un modelo que ya contiene las interacciones de tres vías —género × situación parental × planes familiares, y género × estado civil × situación parental— no solo efectos principales. Son 28 parámetros. El mínimo teórico eran 90 perfiles; se usaron 200, de modo que el diseño está deliberadamente sobre-especificado.
+
+La ortogonalidad se verificó siguiendo a Auspurg y Hinz: la correlación máxima entre términos distintos en la matriz del modelo está por debajo del umbral de 0,05. Las correlaciones dentro de un mismo término son más altas, pero eso es aritmética del sum coding para factores de tres niveles, no confusión entre dimensiones.
+
+Los bloques se formaron con optBlock y son casi ortogonales a los tratamientos, de modo que el par de perfiles que vio un encuestado no está relacionado con el contenido de esos perfiles.
+
+Se obtiene aproximadamente el 92% de la precisión que daría un diseño ideal, así que casi nada se perdió al mostrar 200 perfiles en lugar del conjunto completo de combinaciones posibles.
+G pregunta cuán mala es la predicción estimada con menor precisión. Un G alto significa que ninguna combinación particular de atributos está mal servida.
+:::
+
+------------------------------------------------------------------------
+
+## Estructura entre e intra sujeto
+
+**El tipo de ocupación es entre participantes.** Cada encuestado evaluó perfiles de postulantes exclusivamente profesionales o exclusivamente técnicos.
+
+- Brazo profesional: asociado/a financiero/a, título en Ingeniería Comercial
+- Brazo técnico: analista contable, título técnico en Contabilidad
+- Las pruebas de moderación no encuentran evidencia de que el nivel ocupacional condicione los efectos principales.
+
+**Los resultados presentados aquí corresponden a la muestra agrupada.**
+
+::: notes
+El orden y la redacción están balanceados entre sí y no correlacionados con ninguna dimensión manipulada, de modo que ninguno puede absorber un efecto del tratamiento.
+
+Las dos ocupaciones se eligieron para mantener constante el campo —ambas son roles de contabilidad y finanzas— variando el nivel de credencial. Es un contraste ocupacional-credencial, no una medida de posición de clase.
+:::
+
+------------------------------------------------------------------------
+
+## La tarea que los participantes vieron
+
+::: vignette
+#### POSTULANTE A
+
+#### Antecedentes profesionales
+
+- [Marcela]{.slot} cuenta con [7 años]{.slot} de experiencia laboral continua en el ámbito de la contabilidad y las finanzas.
+- Posee [Título profesional en Ingeniería Comercial]{.slot} y actualmente trabaja como [Asociada financiera]{.slot}.
+
+#### Trayectoria laboral
+
+A lo largo de su trayectoria profesional, se ha desempeñado tanto en el sector público como en el privado, participando en actividades relacionadas con el seguimiento de información financiera, la elaboración de reportes y la participación en procesos de planificación. En sus cargos anteriores, Marcela asumió responsabilidades de complejidad creciente, incluyendo el manejo de información financiera diversa, la comunicación con distintas áreas de la organización y el apoyo a equipos de trabajo.
+
+#### Notas del entrevistador
+
+- Indicó que valora el orden de los procesos internos de la empresa y la posibilidad de continuidad dentro de la organización.
+- En el ámbito personal, Marcela [se encuentra casada, tiene un hijo y le gustaría tener otro en 2 años más]{.slot}.
+- Marcela expresó su interés en integrarse a una organización de gran tamaño, con proyección que le permita continuar desarrollándose laboralmente.
+
+#### Desempeño en test de habilidades técnicas
+
+La nota necesaria para aprobar era un 5.0 y Marcela aprobó con [6.0]{.slot}.
+:::
+
+::: note-line
+El texto destacado marca los atributos manipulados. Todo lo demás se mantuvo constante entre perfiles. Se usaron dos redacciones de este template, cruzadas con el orden de presentación.
+:::
+
+::: notes
+Leer en voz alta uno o dos de los atributos destacados en lugar de la viñeta completa — la audiencia solo necesita ver que la señal familiar está en las notas del entrevistador, junto a material neutro sobre preferencias de procesos e interés profesional, en lugar de ser el foco evidente del perfil.
+
+El texto circundante es deliberadamente neutro e idéntico en todos los perfiles: el objetivo es que los atributos manipulados sean lo único que varía.
+
+Notar que la oración familiar lleva tres manipulaciones a la vez —estado civil, situación parental y planes familiares— lo que permite que la maternidad actual y la fertilidad anticipada se lean como señales distintas en la misma oración.
+:::
+
+------------------------------------------------------------------------
+
+## Variables de resultado
+
+**Nueve variables de resultado**, todas en escalas de 7 puntos. Evaluaciones de tercer orden.
+
+::::: three-claim
+::: {.claim .fragment}
+**Evaluación**
+
+Recomendación de contratación
+
+Buena inversión
+
+**Índice de competencia**
+
+  - Capaz
+
+  - Confiable
+
+  · $\alpha = .76$
+
+**Índice de crecimiento**
+
+  - Prometedora
+
+  - Ambiciosa
+
+  - Asumir nuevos desafíos
+
+  - Ser promovida
+
+  · $\alpha = .84$
+:::
+
+::: {.claim .fragment}
+**Costo**
+
+- Operacionalmente costosa
+
+- Solicita facilidades
+
+- Usa beneficios de la empresa
+
+$\alpha = .51$ — bajo el umbral, analizados como ítems separados
+:::
+
+::: {.claim .fragment}
+**Riesgo**
+
+**Índice de riesgo**
+
+  - Comprometida a largo plazo (invertido)
+
+  - Llegar tarde o ausentarse
+
+  - Renunciar
+
+  - Riesgosa para la continuidad
+
+  · $\alpha = .71$
+:::
+:::::
+
+::: note-line
+**Regla prerregistrada.** Los ítems se agregan en índices cuando el $\alpha$ de Cronbach $\geq .70$; de lo contrario, se analizan individualmente.
+:::
+
+::: notes
+Los ítems de costo no alcanzaron el umbral, por lo que se reportan por separado en lugar de forzarlos en un índice. Esa regla de decisión fue prerregistrada antes de obtener los datos — vale la pena mencionarlo, porque los ítems de costo resultan comportarse de manera diferente entre sí, y analizarlos por separado es lo que hace visible esa diferencia.
+
+Notar que el compromiso a largo plazo está codificado de forma inversa dentro del índice de riesgo, de modo que un valor más alto siempre significa mayor riesgo.
+:::
+
+------------------------------------------------------------------------
+
+## Estimación
+
+**MCO con errores estándar robustos por conglomerado (CR2), agrupados por encuestado.**
+
+Los modelos agrupan ambas condiciones ocupacionales, con el nivel ocupacional como control.
+
+Los resultados se reportan como **medias marginales y contrastes** en lugar de coeficientes [(Leeper, Hobolt y Tilley 2020)]{.cite}.
+
+Si una penalización es **de género** se evalúa mediante una diferencia en diferencias.
+
+::: notes
+
+Se estiman **contrastes suma**, de modo que los coeficientes son desviaciones respecto de la media del diseño, no diferencias respecto de un nivel de referencia particular.
+
+**Errores estándar agrupados.** Cada persona evaluó dos perfiles, por lo que esas evaluaciones no son independientes — un evaluador generoso es generoso dos veces. El agrupamiento trata a cada encuestado como una unidad de información independiente. CR2 es la corrección para muestras pequeñas; con 1.449 conglomerados estamos lejos de necesitarla, lo cual vale la pena mencionar si preguntan.
+
+**¿Por qué no multinivel?** Con solo dos perfiles por encuestado, las pendientes aleatorias no son identificables — no se puede estimar un efecto específico por persona con dos observaciones. Y cada atributo manipulado ya está en el modelo como efecto fijo, de modo que queda poco para que un efecto aleatorio absorba.
+
+**Contrastes suma.** En lugar de comparar cada nivel con una categoría de referencia arbitraria, cada nivel se expresa como una desviación de la media general del diseño. Dos consecuencias: ningún nivel tiene privilegio como "la línea base", y para un factor de dos niveles como género, el coeficiente es LA MITAD de la brecha entre mujeres y hombres. Por eso exactamente reporto medias marginales.
+
+**Medias marginales.** Se toma el dataset completo, se simula que todos los perfiles son hombres, se predice, se promedia. Luego se repite simulando que todos son mujeres. La diferencia es el efecto de género, manteniendo fija la distribución real de todos los demás atributos. No es la evaluación promedio que los hombres efectivamente recibieron — eso mezclaría todo lo demás que coincidió con ser hombre.
+
+Se promedia sobre la muestra observada en lugar de una grilla balanceada, porque el diseño D-eficiente solo contiene 200 de las combinaciones posibles de atributos. Una grilla balanceada predeciría para perfiles que nadie vio jamás.
+
+**Diferencia en diferencias.** "Significativo para mujeres, no para hombres" no es una prueba de si la penalización es de género. La afirmación de género requiere una estimación con su propio error estándar — el contraste de mujeres menos el contraste de hombres.
+:::
+
+------------------------------------------------------------------------
+
+## Cómo se reportan los resultados
+
+Cada figura muestra los mismos cuatro bloques de contrastes, para cada variable de resultado:
+
+| Bloque | Comparación |
+|------------------------------------|------------------------------------|
+| **Género, sin familia** | Mujeres vs. hombres, entre postulantes sin hijos/as que declaran no tener planes — penalización de género "pura" |
+| **Fertilidad inminente, sin hijos/as** | Planes de tener hijos/as en 2 años vs. sin planes — mujeres, hombres, diferencia — penalización por maternidad futura |
+| **Fertilidad inminente, con hijos/as** | Planes de tener hijos/as en 2 años vs. sin planes de tener más — mujeres, hombres, diferencia — penalización por hijo/a adicional |
+| **Maternidad/paternidad, sin planes de fertilidad** | Dos hijos/as vs. ninguno/a — mujeres, hombres, diferencia — penalización por maternidad "pura" |
+
+Los puntos rellenos representan significancia estadística (ajuste de Benjamini-Hochberg).
+
+------------------------------------------------------------------------
+
+## Dos contrastes no presentados en las figuras
+
+Para facilitar la lectura de las figuras, no se presentan dos contrastes que resultan nulos para casi todas las variables de resultado.
+
+**Un horizonte de cinco años no genera penalización** en ninguna variable de resultado, con una única excepción en compromiso a largo plazo.
+
+**Un/a hijo/a no genera penalización.** En general, no hay evidencia de penalizaciones para quienes tienen "un/a hijo/a y no quieren más", salvo en la percepción de que solicitará facilidades.
+
+> Volveré sobre estos hallazgos en la discusión.
+
+::: notes
+Por lo tanto, aquí presento el contraste entre fertilidad inminente (planes en 2 años) y sin planes.
+
+No hay evidencia de penalizaciones para "un/a hijo/a y no más" (entre postulantes sin planes de tener otro/a hijo/a).
+La penalización por maternidad solo aparece claramente entre el/la primer/a hijo/a y el/la segundo/a.
+:::
+------------------------------------------------------------------------
+
+# Evaluaciones del postulante {.section-divider}
+------------------------------------------------------------------------
+
+## Recomendación de contratación {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_recommendation_probability.png){fig-align="center" width="78%"}
+:::
+::: notes
+La recomendación de contratación se reduce por **fertilidad inminente** y por **maternidad con dos hijos/as** — pero no por género solo, ni por un/a primer/a hijo/a.
+
+Ambas penalizaciones son **específicas de las mujeres**. Para los hombres, ni declarar planes inminentes de tener un/a hijo/a ni tener hijos/as existentes modifica la recomendación.
+
+Las percepciones sobre cuán **buena inversión** es el/la postulante se comportan de manera casi idéntica a la recomendación de contratación.
+:::
+
+------------------------------------------------------------------------
+
+## Índice de competencia {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_idx_competencia.png){fig-align="center" width="78%"}
+:::
+::: notes
+No hay evidencia de una penalización por competencia para mujeres, futuras madres o madres. Tampoco hay diferencias de género en estos contrastes.
+
+El único movimiento está en la línea base: sin señal familiar, las mujeres son evaluadas como **ligeramente más competentes** que los hombres. Esto se explica principalmente por percepciones de mayor confiabilidad de las mujeres.
+:::
+
+------------------------------------------------------------------------
+
+## Índice de crecimiento {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_idx_crecimiento.png){fig-align="center" width="78%"}
+:::
+::: notes
+Las mujeres son penalizadas en potencial de crecimiento percibido por fertilidad inminente (tanto entre mujeres sin hijos/as como entre madres), y por maternidad con dos hijos/as. No hay evidencia de estas penalizaciones para los hombres.
+Las diferencias de género **no son estadísticamente significativas** como diferencias en diferencias. Lo que la evidencia sostiene es que el potencial de crecimiento se reduce para las mujeres por ambos mecanismos, no que se reduzca *más* para las mujeres que para los hombres.
+:::
+
+
+# Comportamiento prospectivo {.section-divider}
+
+------------------------------------------------------------------------
+
+## Costo operacional {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_operational_costly_score.png){fig-align="center" width="78%"}
+:::
+::: notes
+La fertilidad inminente entre mujeres sin hijos/as y madres se asocia con mayores costos operacionales.
+
+Ninguno de estos efectos afecta las evaluaciones del costo operacional de los hombres.
+
+Las percepciones de mayor costo organizacional no se activan para las madres que "ya no tendrán más hijos/as".
+:::
+
+------------------------------------------------------------------------
+
+## Solicitud de facilidades {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_expected_accommodations.png){fig-align="center" width="78%"}
+:::
+::: notes
+Cada comparación aumenta la expectativa de que el/la postulante solicitará facilidades: ser mujer, fertilidad inminente entre postulantes sin hijos/as y entre madres/padres, y la situación parental en sí misma.
+Es también la única dimensión donde hay evidencia de penalizaciones para los **hombres**.
+Ninguna diferencia de género aquí es estadísticamente significativa. Tanto para hombres como para mujeres, las señales familiares activan anticipaciones sobre necesidades de facilidades.
+El **uso de beneficios de la empresa** se comporta de manera similar, aunque menos consistente entre comparaciones.
+:::
+
+------------------------------------------------------------------------
+
+## Índice de riesgo {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_idx_riesgo.png){fig-align="center" width="78%"}
+:::
+::: notes
+Las mujeres son evaluadas como más riesgosas por fertilidad inminente —con o sin hijos/as existentes— y por maternidad con dos hijos/as.
+Independientemente de las señales familiares, el riesgo percibido de los hombres es estable.
+En esta dimensión, **cada diferencia de género es estadísticamente significativa**.
+:::
+
+------------------------------------------------------------------------
+
+## Resumen {.figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_summary_matrix.png){fig-align="center" width="88%"}
+:::
+
+::: note-line
+Solo dirección, no magnitud — las variables de resultado se encuentran en escalas distintas.
+:::
+
+::: notes
+LECTURA DE LA TABLA — recorrer las columnas de izquierda a derecha.
+
+Columna 1, género sin señal familiar. Casi vacía. Solo dos celdas: las mujeres son vistas como más propensas a solicitar facilidades, y —en sentido contrario— ligeramente más competentes. Nada en contratación, crecimiento, costo o riesgo. Señalar la celda vacía de contratación: sin información familiar, no hay brecha de género en la recomendación.
+
+Columnas 2 y 3, fertilidad inminente entre mujeres sin hijos/as y entre madres. Estas dos columnas son casi idénticas. Ese es el hallazgo: no importa si ya tiene hijos/as. Cada fila se enciende excepto competencia.
+
+Columna 4, dos hijos/as sin planes de tener más. Misma forma que las columnas 2 y 3, con una celda faltante — costo operacional. La maternidad no aumenta el costo percibido del/la postulante; la maternidad anticipada sí.
+
+La fila de competencia está vacía en todos los casos excepto la primera columna. Ninguna penalización alcanza la competencia.
+La fila de facilidades está llena en todas partes — y es la única fila donde las celdas de los hombres también están llenas.
+Todas las demás columnas de hombres están vacías.
+:::
+
+# Discusión {.section-divider}
+
+------------------------------------------------------------------------
+
+## Conclusiones I — tres penalizaciones, tres patrones
+
+::::::: three-claim
+::: {.claim .fragment}
+**Género solo**
+
+**No** alcanza la recomendación de contratación. Sin señal familiar, la única diferencia es que aún se espera que las mujeres soliciten más facilidades que los hombres.
+:::
+
+::: {.claim .fragment}
+**Fertilidad anticipada**
+
+Penaliza a mujeres sin hijos/as y madres **por igual**, y alcanza todas las variables de resultado excepto la competencia percibida.
+
+Las penalizaciones se activan **solo cuando la fertilidad es inminente** — no se observan penalizaciones claras para planes a más largo plazo (5 años).
+:::
+
+::: {.claim .fragment}
+**Maternidad actual**
+
+Penalizada **solo a partir del/la segundo/a hijo/a**. No hay evidencia de que las madres de un/a solo/a hijo/a sin planes de tener más sean penalizadas.
+
+Un hallazgo notable en un contexto de aumento de familias con hijo/a único/a en Chile.
+:::
+:::::::
+
+::: note-line
+La penalización se vincula al nacimiento anticipado, no a la situación actual del postulante.
+:::
+
+------------------------------------------------------------------------
+
+## Conclusiones II — qué distingue los dos mecanismos
+
+::::: two-col
+::: {.claim .fragment}
+**Costo operacional**
+
+La maternidad **no** aumenta el costo operacional percibido; la fertilidad inminente sí.
+
+→ La preocupación se centra en el **embarazo y la licencia de maternidad**, no en el cuidado continuo.
+:::
+
+::: {.claim .fragment}
+**Competencia**
+
+Los evaluadores **no** juzgan a estas postulantes como menos capaces o menos confiables — no es lo que predice una explicación basada en estatus de la penalización por maternidad [(Correll, Benard y Paik 2007)]{.cite}.
+
+→ La explicación se desplaza desde inferencias sobre la **capacidad** hacia expectativas normativas sobre **quién absorbe los costos del cuidado** — en el Chile actual, los estereotipos de género parecen operar a través de otras percepciones, no a través de la competencia misma.
+:::
+:::::
+
+::: {.takeaway .fragment}
+En el caso chileno, estas expectativas son reforzadas por un régimen de política familiar que vincula las licencias y beneficios primordialmente a las madres.
+:::
+
+------------------------------------------------------------------------
+
+## Conclusiones III — dónde reside la asimetría
+
+Las señales familiares aumentan el uso esperado de facilidades tanto para **mujeres como para hombres**.
+
+::: {.takeaway .fragment}
+Pero las asociaciones negativas que se derivan de esas facilidades recaen **exclusivamente sobre las mujeres** — ser más costosas, tener menor potencial de crecimiento y ser más riesgosas.
+:::
+
+::: notes
+Esta es la forma más precisa de enunciar el resultado de género. No es que los empleadores no noten que los hombres también tienen familias — la fila de facilidades muestra que sí lo hacen. Es que solo para las mujeres una demanda anticipada sobre la organización se convierte en costo, riesgo y potencial de crecimiento disminuido.
+:::
+
+------------------------------------------------------------------------
+
+## Trabajo en proceso — próximos pasos:
+
+::: {.claim .fragment}
+
+- Análisis de sensibilidad con controles de atención: muestra completa vs. restringida
+- Pruebas de robustez adicionales: tiempo de respuesta, tiempo en la tarea, etc.
+- Moderación por características del evaluador: género, situación parental, industria, nivel jerárquico, actitudes sobre normas laborales
+- Interacciones con el estado civil y el test de desempeño de los postulantes
+
+:::
+
+------------------------------------------------------------------------
+
+##  {.thank-you}
+
+**¡Muchas gracias!**
+
+tania.hutt@uc.cl
+
+
+------------------------------------------------------------------------
+
+## Anexo: buena inversión {.appendix .figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_idx_investment.png){fig-align="center" width="78%"}
+:::
+
+------------------------------------------------------------------------
+
+## Anexo: uso de beneficios de la empresa {.appendix .figure-slide}
+
+::: figure-frame
+![](../outputs/11_figures_hypotheses_baseline/by_outcome/11_fig_hiring_expected_benefits_use.png){fig-align="center" width="78%"}
+:::
+
+------------------------------------------------------------------------
+
+## Anexo: ¿modera el nivel ocupacional las penalizaciones? {.appendix}
+
+Las pruebas de moderación prerregistradas no encuentran evidencia de que el nivel ocupacional condicione los efectos focales.
+
+::::: columns
+::: {.column width="55%"}
+- Género × ocupación: ningún coeficiente supera $|0,052|$ a través de las variables de resultado
+- Los intervalos de confianza excluyen una moderación mayor a **0,14 puntos de escala**
+- Heterogeneidad entre brazos: Cochran $Q = 306,2$, $df = 285$, $p = ,185$
+
+:::
+
+::: {.column width="45%"}
+Agrupar reduce los errores estándar en un **29%**.
+:::
+:::::
+
+
+------------------------------------------------------------------------
+
+## Anexo: distribuciones de respuesta {.appendix .figure-slide}
+
+::: figure-frame
+![](../outputs/12_robustness_ceiling/12_response_distributions.png){fig-align="center" width="72%"}
+:::
+
+------------------------------------------------------------------------
+
+## Anexo: conjuntos de modelos {.appendix}
+
+| Conjunto | Especificación | Uso |
+|------------------------|------------------------|------------------------|
+| SET 2a | Género × Situación parental | Contrastes de maternidad |
+| SET 2b | Género × Planes familiares | Contrastes de fertilidad inminente |
+| Combinado | Ambas interacciones de dos vías | Contraste de género sin hijos/as, sin planes |
+| SET 5a–5e | Interacciones con nivel ocupacional | Moderación en anexo |
+
+Todos los conjuntos controlan por estado civil, experiencia, desempeño en la prueba, nivel ocupacional, orden de presentación y versión de la redacción. Estimados sobre la muestra agrupada con errores estándar robustos por conglomerado (CR2).
+------------------------------------------------------------------------
+
+## Referencias {.appendix}
+
+::: references
+Aigner, D. J., and G. G. Cain. 1977. "Statistical Theories of Discrimination in Labor Markets." *Industrial and Labor Relations Review* 30(2): 175–187.
+
+Auspurg, K., and T. Hinz. 2015. *Factorial Survey Experiments*. Thousand Oaks, CA: SAGE.
+
+Bond, T. N., and K. Lang. 2019. "The Sad Truth about Happiness Scales." *Journal of Political Economy* 127(4): 1629–1640.
+
+Correll, S. J., S. Benard, and I. Paik. 2007. "Getting a Job: Is There a Motherhood Penalty?" *American Journal of Sociology* 112(5): 1297–1338.
+
+Hainmueller, J., D. J. Hopkins, and T. Yamamoto. 2014. "Causal Inference in Conjoint Analysis: Understanding Multidimensional Choices via Stated Preference Experiments." *Political Analysis* 22(1): 1–30.
+
+Leeper, T. J., S. B. Hobolt, and J. Tilley. 2020. "Measuring Subgroup Preferences in Conjoint Experiments." *Political Analysis* 28(2): 207–221.
+
+Liddell, T. M., and J. K. Kruschke. 2018. "Analyzing Ordinal Data with Metric Models: What Could Possibly Go Wrong?" *Journal of Experimental Social Psychology* 79: 328–348.
+
+Phelps, E. S. 1972. "The Statistical Theory of Racism and Sexism." *American Economic Review* 62(4): 659–661.
+
+Pustejovsky, J. E., and E. Tipton. 2018. "Small-Sample Methods for Cluster-Robust Variance Estimation and Hypothesis Testing in Fixed Effects Models." *Journal of Business & Economic Statistics* 36(4): 672–683.
+
+Ridgeway, C. L., and S. J. Correll. 2004. "Motherhood as a Status Characteristic." *Journal of Social Issues* 60(4): 683–700.
+:::

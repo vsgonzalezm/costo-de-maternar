@@ -195,16 +195,62 @@ corpus <- corpus |>
 # Esta lista adicional contiene palabras de redaccion muy general que no
 # deberian definir un topic en este corpus: no son conceptos sustantivos.
 # La decision queda explicitada para poder auditarla y modificarla despues.
-generic_terms <- c(
-  # Artefactos HTML/XML que no son conceptos del corpus.
-  "eacute", "aacute", "iacute", "oacute", "uacute", "ntilde",
-  "nbsp", "amp", "rsquo", "ldquo", "rdquo", "ndash",
-  # Palabras de redaccion demasiado generales para definir un topic.
-  "sic", "however", "also", "using", "used", "use",
-  "results", "result", "study", "studies", "paper", "research"
+connector_terms <- c(
+  # Conectores y palabras funcionales que no representan temas sustantivos.
+  "also", "although", "because", "between", "but", "despite", "either",
+  "even", "further", "hence", "however", "moreover", "neither", "nor",
+  "otherwise", "rather", "since", "therefore", "thereby", "though", "thus",
+  "together", "versus", "whether", "while", "whereas", "which", "whose",
+  "using", "used", "use"
 )
 
+methodological_terms <- c(
+  # Lenguaje metodologico que describe el procedimiento, no el fenomeno.
+  "analysis", "analyses", "analyze", "approach", "coefficient", "control",
+  "data", "dataset", "design", "designs", "discrete", "effect", "effects",
+  "empirical", "experiment", "experimental", "experiments", "estimate",
+  "estimates", "evidence", "finding", "findings", "hypothesis", "hypotheses",
+  "impact", "intervention", "interventions", "measure", "measures",
+  "measurement", "method", "methods", "methodology", "methodological",
+  "model", "models", "modeling", "modelling", "observation", "observations",
+  "outcome", "outcomes", "participant", "participants", "procedure",
+  "procedures", "random", "randomized", "regression", "result", "results",
+  "sample", "samples", "survey", "surveys", "treatment", "treatments",
+  "variable", "variables"
+)
 
+generic_adjectives <- c(
+  # Adjetivos academicos generales que suelen aparecer en muchos abstracts y
+  # aportan poca capacidad para distinguir un tema de otro.
+  "available", "common", "different", "general", "higher", "important",
+  "individual", "lower", "main", "necessary", "new", "overall", "particular",
+  "possible", "previous", "recent", "relevant", "same", "several",
+  "significant", "similar", "specific", "substantial", "various"
+)
+
+corpus_generic_terms <- c(
+  # Terminos que siguen siendo demasiado transversales en este corpus.
+  # Se retiran para que los topics se organicen por campos sustantivos y no
+  # por el hecho general de que los papers son experimentales.
+  "based", "behavior", "behaviour", "choice", "choices", "countries",
+  "country", "evidence", "field", "factors", "global", "individuals",
+  "information", "international", "policy", "policies", "preferences",
+  "preference", "public", "role", "social", "support", "willingness"
+)
+artifact_terms <- c(
+  # Artefactos HTML/XML y palabras academicas demasiado generales.
+  "eacute", "aacute", "iacute", "oacute", "uacute", "ntilde",
+  "nbsp", "amp", "rsquo", "ldquo", "rdquo", "ndash", "sic",
+  "study", "studies", "paper", "research"
+)
+
+generic_terms <- unique(c(
+  connector_terms,
+  methodological_terms,
+  generic_adjectives,
+  corpus_generic_terms,
+  artifact_terms
+))
 tokenize_corpus <- function(data, text_column) {
   # Recibe el corpus y el nombre de la columna textual.
   # Devuelve conteos de palabras por paper despues de tokenizar y limpiar.

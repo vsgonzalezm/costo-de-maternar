@@ -549,6 +549,63 @@ affiliation_review_40 <- affiliation_review_authors |>
 if (nrow(affiliation_review_40) != 40L) {
   stop("La hoja de revision no contiene los 40 papers esperados.")
 }
+
+
+# Archivo de consulta para Isidora --------------------------------------------
+# Esta hoja no agrega campos manuales nuevos. Isidora seguira corrigiendo la
+# planilla original base final_Isi.xlsx. Este archivo solo entrega contexto:
+# los 40 papers con afiliaciones no asignables y los casos de nombres completos
+# que requieren confirmacion.
+papers_40_ut <- affiliation_review_40 |>
+  select(UT)
+
+affiliation_review_40_export <- corpus_completo |>
+  semi_join(papers_40_ut, by = 'UT') |>
+  left_join(
+    affiliation_review_40 |>
+      select(
+        UT,
+        n_unassigned_authors,
+        unassigned_authors,
+        n_authors
+      ),
+    by = 'UT'
+  ) |>
+  arrange(UT)
+
+if (nrow(affiliation_review_40_export) != 40L) {
+  stop('El archivo de consulta no contiene exactamente los 40 papers.')
+}
+# Lista simple de variantes para revision manual ------------------------------
+# Se conserva una fila por autor-paper. Los registros incluidos corresponden
+# solo a formas completas candidatas generadas por name_variant_pairs.
+# Todos los campos de nombre provienen directamente de AU y AF de WoS.
+variant_full_names <- bind_rows(
+  name_variant_pairs |>
+    transmute(full_name_key = full_name_key_1),
+  name_variant_pairs |>
+    transmute(full_name_key = full_name_key_2)
+) |>
+  distinct()
+
+name_variants_for_review <- author_paper |>
+  mutate(
+    full_name_key = coalesce(
+      na_if(normalize_name(author_full), ''),
+      na_if(normalize_name(author), '')
+    )
+  ) |>
+  semi_join(variant_full_names, by = 'full_name_key') |>
+  transmute(
+    UT,
+    year = PY,
+    title = TI,
+    journal = SO,
+    author_position,
+    author,
+    author_full
+  ) |>
+  arrange(author, author_full, year, UT, author_position)
 # Tabla separada con una fila por afiliacion atribuible. Permite revisar casos
 # con varias instituciones sin romper la regla de una fila por autor-paper.
 author_affiliation_history <- author_affiliations |>
@@ -712,21 +769,148 @@ authors_summary <- author_paper |>
   ) |>
   arrange(desc(n_papers), author_name)
 
-author_name_variants <- author_paper |>
-  filter(!is.na(author_candidate_key), author_candidate_key != "|") |>
-  group_by(author_candidate_key) |>
-  summarise(
-    n_normalized_names = n_distinct(author_name_normalized),
-    name_forms = collapse_unique(author_name),
-    abbreviated_forms = collapse_unique(author),
-    n_papers = n_distinct(UT),
-    first_year = min(as.integer(PY), na.rm = TRUE),
-    last_year = max(as.integer(PY), na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  filter(n_normalized_names > 1L) |>
-  arrange(desc(n_normalized_names), desc(n_papers), author_candidate_key)
 
+
+# 10a. Variantes de nombres que requieren revision manual --------------------
+# Se comparan formas completas del nombre. Un caso entra solo cuando comparte
+# apellido y al menos un nombre de pila con otra forma completa distinta.
+# Asi, Juan Perez/Juan Carlos Perez queda para revision, mientras que
+# Sebastian Perez/Samuel Perez no se agrupa automaticamente.
+# Las abreviaciones no generan un caso por si solas; quedan como contexto.
+name_forms <- author_paper |>
+  mutate(
+    full_name_key = coalesce(
+      na_if(normalize_name(author_full), ''),
+      na_if(normalize_name(author), '')
+    ),
+    full_name_display = na_if(str_squish(coalesce(author_full, author)), ''),
+    surname_key = normalize_name(author_surname),
+    given_name_text = normalize_name(author_given)
+  ) |>
+  filter(
+    !is.na(full_name_key), full_name_key != '',
+    !is.na(surname_key), surname_key != '',
+    !is.na(given_name_text), given_name_text != ''
+  ) |>
+  distinct(surname_key, full_name_key, full_name_display, given_name_text)
+
+shared_given_tokens <- function(x, y) {
+  # Identifica nombres de pila compartidos entre dos formas completas.
+  x_tokens <- str_split(x, '\\s+')[[1]]
+  y_tokens <- str_split(y, '\\s+')[[1]]
+  shared <- intersect(x_tokens, y_tokens)
+  if (length(shared) == 0L) NA_character_ else str_c(shared, collapse = '; ')
+}
+
+is_initial_only_difference <- function(x, y) {
+  # Excluye pares donde la diferencia consiste solo en iniciales.
+  # Ejemplos excluidos: John/John M.; Brett R./Brett Ryan.
+  x_tokens <- str_split(x, '\\s+')[[1]]
+  y_tokens <- str_split(y, '\\s+')[[1]]
+  x_diff <- setdiff(x_tokens, y_tokens)
+  y_diff <- setdiff(y_tokens, x_tokens)
+  (length(x_diff) > 0L && all(str_length(x_diff) == 1L)) ||
+    (length(y_diff) > 0L && all(str_length(y_diff) == 1L))
+}
+
+name_variant_pairs <- name_forms |>
+  inner_join(
+    name_forms,
+    by = 'surname_key',
+    suffix = c('_1', '_2'),
+    relationship = 'many-to-many'
+  ) |>
+  filter(full_name_key_1 < full_name_key_2) |>
+  mutate(
+    shared_given_names = map2_chr(
+      given_name_text_1,
+      given_name_text_2,
+      shared_given_tokens
+    ),
+    initials_only_difference = map2_lgl(
+      given_name_text_1,
+      given_name_text_2,
+      is_initial_only_difference
+    )
+  ) |>
+  filter(
+    !is.na(shared_given_names),
+    !initials_only_difference
+  ) |>
+  mutate(
+    candidate_group_id = str_c(
+      surname_key, full_name_key_1, full_name_key_2, sep = '__'
+    ),
+    review_reason = paste(
+      'Nombres completos distintos con mismo apellido y nombres de pila compartidos;',
+      'confirmar manualmente si corresponden a la misma persona.'
+    )
+  ) |>
+  select(
+    candidate_group_id,
+    surname_key,
+    full_name_key_1,
+    full_name_display_1,
+    full_name_key_2,
+    full_name_display_2,
+    shared_given_names,
+    review_reason
+  )
+
+author_name_variants <- bind_rows(
+  name_variant_pairs |>
+    transmute(
+      candidate_group_id,
+      review_reason,
+      surname_key,
+      shared_given_names,
+      candidate_full_name = full_name_display_1,
+      other_full_name = full_name_display_2,
+      candidate_side = 'name_1',
+      full_name_key = full_name_key_1,
+      other_full_name_key = full_name_key_2
+    ),
+  name_variant_pairs |>
+    transmute(
+      candidate_group_id,
+      review_reason,
+      surname_key,
+      shared_given_names,
+      candidate_full_name = full_name_display_2,
+      other_full_name = full_name_display_1,
+      candidate_side = 'name_2',
+      full_name_key = full_name_key_2,
+      other_full_name_key = full_name_key_1
+    )
+) |>
+  left_join(
+    author_paper |>
+      mutate(
+        full_name_key = coalesce(
+          na_if(normalize_name(author_full), ''),
+          na_if(normalize_name(author), '')
+        )
+      ) |>
+      select(
+        full_name_key,
+        UT,
+        year = PY,
+        title = TI,
+        journal = SO,
+        author_position,
+        author,
+        author_full,
+        author_name,
+        author_name_normalized,
+        author_addresses,
+        author_countries,
+        author_institutions,
+        affiliation_status
+      ),
+    by = 'full_name_key',
+    relationship = 'many-to-many'
+  ) |>
+  arrange(candidate_group_id, year, UT, author_position)
 author_paper_affiliations <- author_paper |>
   filter(!is.na(author_name_normalized), author_name_normalized != "") |>
   transmute(
@@ -809,6 +993,11 @@ journals_year <- paper_base |>
   count(base, journal, year, name = "n_papers") |>
   arrange(base, journal, year)
 
+# Version de author_paper para el Excel final -------------------------------
+# Las variables tecnicas se mantienen en author_paper para los calculos, pero
+# no se exportan porque no son necesarias para revisar la lista de autores.
+author_paper_export <- author_paper |>
+  select(-any_of(c('author_candidate_key', 'author_surname', 'author_given', 'author_name', 'author_name_normalized')))
 # 12. Diagnosticos y libro de salida -----------------------------------------
 # Diagnostics resume las coberturas criticas. Author_count_audit permite
 # comprobar paper por paper que el numero de filas coincide con AU.
@@ -841,7 +1030,7 @@ diagnostics <- tibble(
     sum(author_paper$affiliation_status == "missing_c1", na.rm = TRUE),
     nrow(paper_address_entries),
     nrow(unmapped_country_entries),
-    nrow(author_name_variants),
+    n_distinct(author_name_variants$candidate_group_id),
     sum(author_affiliation_counts$max_affiliations_same_paper > 1L),
     sum(author_affiliation_counts$n_distinct_addresses > 1L),
     sum(author_affiliation_counts$n_distinct_institutions > 1L),
@@ -860,9 +1049,7 @@ write_xlsx(
     Country_cooccurrence = country_cooccurrence,
     Country_mapping = country_mapping_audit,
     Authors_summary = authors_summary,
-    Author_paper = author_paper,
-    Affiliation_review_40 = affiliation_review_40,
-    Author_name_variants = author_name_variants,
+    Author_paper = author_paper_export,
     Author_affiliations = author_affiliation_history,
     Author_affiliation_counts = author_affiliation_counts,
     Affiliation_multiplicity = affiliation_multiplicity,
@@ -875,6 +1062,18 @@ write_xlsx(
   ),
   file.path(tables_dir, "descriptivos_endogeno_laboratorio.xlsx")
 )
+
+
+# Archivo breve de consulta para Isidora. No reemplaza ni modifica la planilla
+# original que ella debe corregir; tampoco agrega columnas manuales nuevas.
+write_xlsx(
+  list(
+    papers_40 = affiliation_review_40_export,
+    name_variants = name_variants_for_review
+  ),
+  file.path(tables_dir, 'revision_octubre.xlsx')
+)
+
 
 # 13. Figuras descriptivas ----------------------------------------------------
 # Red de coocurrencia con al menos un pais latinoamericano en cada vinculo.
