@@ -72,7 +72,7 @@ corpus_raw <- readRDS(
 )
 
 required <- c(
-  "UT", "TI", "AB", "DE", "DE_manual", "KW_Merged", "PY", "SO",
+  "UT", "TI", "AB", "keywords_analisis", "PY", "SO",
   "base_endogeno", "base_laboratorio", "core_area"
 )
 # Se detiene el script si falta una variable necesaria para identificar el
@@ -108,9 +108,7 @@ corpus <- corpus_raw |>
     title = as.character(TI),
     abstract = as.character(AB),
     journal = as.character(SO),
-    DE = as.character(DE),
-    DE_manual = as.character(DE_manual),
-    KW_Merged = as.character(KW_Merged),
+    keywords_analisis = as.character(keywords_analisis),
     core_area = as.character(core_area)
   ) |>
   group_by(UT) |>
@@ -119,20 +117,16 @@ corpus <- corpus_raw |>
     title = first(title),
     abstract = first(abstract),
     journal = first(journal),
-    DE = first(DE),
-    DE_manual = first(DE_manual),
-    KW_Merged = first(KW_Merged),
+    keywords_analisis = first(keywords_analisis),
     core_area = first(core_area),
     .groups = "drop"
   ) |>
   left_join(base_flags, by = "UT") |>
   mutate(
-    # La jerarquia es la misma de 00: keywords originales, manuales y WoS.
-    keywords_autor = coalesce(na_if(DE, ""), na_if(DE_manual, "")),
-    keywords_analisis = coalesce(
-      na_if(keywords_autor, ""),
-      na_if(KW_Merged, "")
-    )
+    # 00 ya consolida la jerarquia definida para keywords: originales del autor,
+    # correcciones manuales cuando existen y keywords disponibles de WoS.
+    # Aqui se utiliza esa variable final sin reconstruirla nuevamente.
+    keywords_analisis = na_if(str_squish(keywords_analisis), "")
   )
 
 if (anyDuplicated(corpus$UT) > 0L) {
@@ -216,7 +210,9 @@ methodological_terms <- c(
   "outcome", "outcomes", "participant", "participants", "procedure",
   "procedures", "random", "randomized", "regression", "result", "results",
   "sample", "samples", "survey", "surveys", "treatment", "treatments",
-  "variable", "variables"
+  "field", "test", "tests", "testing", "tested", "conjoint", "attribute",
+  "attributes", "respondent", "respondents", "conducted", "report", "reports",
+  "implication", "implications", "variable", "variables"
 )
 
 generic_adjectives <- c(
@@ -229,44 +225,329 @@ generic_adjectives <- c(
 )
 
 corpus_generic_terms <- c(
-  # Terminos que siguen siendo demasiado transversales en este corpus.
-  # Se retiran para que los topics se organicen por campos sustantivos y no
-  # por el hecho general de que los papers son experimentales.
-  "based", "behavior", "behaviour", "choice", "choices", "countries",
-  "country", "evidence", "field", "factors", "global", "individuals",
-  "information", "international", "policy", "policies", "preferences",
-  "preference", "public", "role", "social", "support", "willingness"
+  # Terminos identificados en la lectura de los topics que no representan un
+  # campo sustantivo por si mismos.
+  "affect", "average", "based", "characteristic", "characteristics",
+  "factor", "factors", "global", "improve", "improved", "improvement",
+  "high", "international", "level", "literature", "low", "middle", "negative", "paercived",
+  "perceived", "positive", "product", "products", "set",
+  # Estas formas aisladas fueron revisadas en sus bigramas y trigramas. Se
+  # retiran solo despues de proteger abajo sus combinaciones sustantivas.
+  "quality", "learning", "performance", "market", "strategy", "strategies",
+  "social", "reserved", "lab", "laboratory", "context", "understanding",
+  "decision", "process", "behavior", "behaviors", "behaviour", "behaviours",
+  "identity", "intensity", "article", "randomly", "response", "responses", "receive",
+  "access", "including", "online", "significantly", "share", "compared",
+  "consistent", "status", "light", "question", "questions", "selection",
+  "attention", "increase", "subject", "subjects", "argue", "anti", "shape",
+  "developing", "importance", "influence", "identify", "local", "scale",
+  "willingness", "bias", "right", "game", "games", "participation",
+  "contribution", "contributions", "program", "assigned", "short", "user",
+  "users", "impacts", "practice", "practices", "reduce", "reduced", "reduces",
+  "reducing", "incentive", "theory", "theories", "cross", "suggest",
+  "suggests", "suggested", "suggesting", "dimension", "dimensions",
+  "issue", "issues", "affected", "framing", "people", "causal", "providing",
+  "received", "related", "author", "authors", "type", "types", "existing",
+  "levels", "difference", "differences", "prefer", "prefers", "preferred",
+  "heterogeneity", "role", "roles", "delivery", "choice", "term", "terms",
+  "expectation", "expectations", "expected", "found", "finally", "city",
+  "cities", "alternative", "alternatives", "consequence", "consequences",
+  "contexts", "real", "approaches", "south", "sur", "ios", "relative",
+  "condition", "conditions", "setting", "settings", "mechanism", "mechanisms",
+  "key", "experience", "experiences", "presence", "activity", "activities",
+  "conditional", "chinese", "explore", "explores", "explored", "exploring",
+  "explain", "explains", "explained", "explaining", "include", "includes",
+  "included", "due", "statistical", "adoption", "reduction", "reductions",
+  "insight", "insights", "effort", "efforts", "extent", "provide", "provides",
+  "provided", "providing"
 )
+
 artifact_terms <- c(
   # Artefactos HTML/XML y palabras academicas demasiado generales.
   "eacute", "aacute", "iacute", "oacute", "uacute", "ntilde",
-  "nbsp", "amp", "rsquo", "ldquo", "rdquo", "ndash", "sic",
-  "study", "studies", "paper", "research"
+  "nbsp", "amp", "rsquo", "ldquo", "rdquo", "ndash", "sic", "elsevier",
+  "les", "los", "las", "des", "est", "et", "study", "studies", "paper",
+  "research"
 )
+
+geographic_terms <- c(
+  # Los lugares describen el alcance geografico del paper, pero no su tema.
+  # Se retiran para evitar que los topics reproduzcan el diseno de busqueda.
+  "america", "american", "americans", "argentina", "argentine", "argentinian",
+  "argentinians", "bolivia", "bolivian", "bolivians", "brasil", "brazil",
+  "brazilian", "brazilians", "china", "chinese", "chile", "chilean", "chileans",
+  "colombia", "colombian", "colombians", "costa_rica", "costa_rican",
+  "costa_ricans", "cuba", "cuban", "cubans", "dominican_republic",
+  "dominican", "dominicans", "ecuador", "ecuadorian", "ecuadorians",
+  "guatemala", "guatemalan", "guatemalans", "honduras", "honduran",
+  "hondurans", "latin", "latin_america", "latin_american", "latin_americans",
+  "mexico", "mexican", "mexicans", "nicaragua", "nicaraguan", "nicaraguans",
+  "panama", "panamanian", "panamanians", "paraguay", "paraguayan",
+  "paraguayans", "peru", "peruvian", "peruvians", "puerto_rico",
+  "puerto_rican", "puerto_ricans", "uruguay", "uruguayan", "uruguayans",
+  "usa", "united_states", "venezuela", "venezuelan", "venezuelans",
+  "country", "countries"
+)
+
+compound_terms <- tribble(
+  # Las expresiones se identificaron en bigramas y trigramas del corpus.
+  # TRUE conserva conceptos sustantivos; FALSE retira frases metodologicas o
+  # geograficas completas antes de separar sus palabras.
+  ~phrase, ~token, ~keep_in_model,
+  "technology adoption", "technology_adoption", TRUE,
+  "poverty reduction", "poverty_reduction", TRUE,
+  "risk reductions", "risk_reduction", TRUE,
+  "risk reduction", "risk_reduction", TRUE,
+  "interest rate", "interest_rate", TRUE,
+  "latin americans", "latin_americans", FALSE,
+  "south americans", "south_americans", FALSE,
+  "international organizations ios", "international_organization", TRUE,
+  "political candidates", "political_candidate", TRUE,
+
+  "global south", "global_south", FALSE,
+  "south american", "south_american", FALSE,
+  "mexico city", "mexico_city", FALSE,
+  "recreational activities", "recreational_activity", TRUE,
+  "physical activity", "physical_activity", TRUE,
+  "goal setting", "goal_setting", TRUE,
+  "last mile delivery", "last_mile_delivery", TRUE,
+  "service delivery", "service_delivery", TRUE,
+  "public attitudes", "public_attitude", TRUE,
+  "all rights reserved", "all_rights_reserved", FALSE,
+  "rights reserved", "rights_reserved", FALSE,
+  "human rights", "human_rights", TRUE,
+  "property rights", "property_rights", TRUE,
+  "right-wing", "right_wing", TRUE,
+  "right wing", "right_wing", TRUE,
+  "electoral accountability", "electoral_accountability", TRUE,
+  "resource users", "resource_user", TRUE,
+  "voluntary contributions", "voluntary_contribution", TRUE,
+  "business practices", "business_practice", TRUE,
+  "management practices", "management_practice", TRUE,
+  "prospect theory", "prospect_theory", TRUE,
+  "public goods game", "public_goods_game", FALSE,
+  "trust game", "trust_game", FALSE,
+  "dictator game", "dictator_game", FALSE,
+  "game theory", "game_theory", FALSE,
+  "socioeconomic status", "socioeconomic_status", TRUE,
+  "status quo", "status_quo", TRUE,
+  "presidential election", "presidential_election", TRUE,
+  "municipal elections", "municipal_election", TRUE,
+  "municipal election", "municipal_election", TRUE,
+  "immigration attitudes", "immigration_attitude", TRUE,
+  "anti corruption", "anti_corruption", TRUE,
+  "anti immigrants", "anti_immigration", TRUE,
+  "anti immigrant", "anti_immigration", TRUE,
+  "anti immigration", "anti_immigration", TRUE,
+  "selection bias", "selection_bias", FALSE,
+  "online survey experiment", "online_survey_experiment", FALSE,
+  "social responsibility csr", "social_responsibility", TRUE,
+  "social media platforms", "social_media", TRUE,
+  "labor market discrimination", "market_discrimination", TRUE,
+  "willingness to pay", "willingness_to_pay", TRUE,
+  "willingness to accept", "willingness_to_accept", TRUE,
+  "trust in government", "trust_in_government", TRUE,
+  "political participation", "political_participation", TRUE,
+  "policy preferences", "policy_preferences", TRUE,
+  "collective action", "collective_action", TRUE,
+  "public opinion", "public_opinion", TRUE,
+  "public support", "public_support", TRUE,
+  "labor market", "labor_market", TRUE,
+  "social norms", "social_norms", TRUE,
+  "vote buying", "vote_buying", TRUE,
+  "climate change", "climate_change", TRUE,
+  "tax compliance", "tax_compliance", TRUE,
+  "risk aversion", "risk_aversion", TRUE,
+  "risk preferences", "risk_preferences", TRUE,
+  "voting behavior", "voting_behavior", TRUE,
+  "voter turnout", "voter_turnout", TRUE,
+  "health care", "health_care", TRUE,
+  "food safety", "food_safety", TRUE,
+  "public health", "public_health", TRUE,
+  "quality of life", "quality_of_life", TRUE,
+  "quality of service", "quality_of_service", TRUE,
+  "market discrimination", "market_discrimination", TRUE,
+  "preference heterogeneity", "preference_heterogeneity", TRUE,
+  "communication strategies", "communication_strategy", TRUE,
+  "incumbent party", "incumbent_party", TRUE,
+  "party identification", "party_identification", TRUE,
+  "party system", "party_system", TRUE,
+  "political parties", "political_party", TRUE,
+  "opposition parties", "opposition_party", TRUE,
+  "partisan messages", "partisan_message", TRUE,
+  "social media", "social_media", TRUE,
+  "social capital", "social_capital", TRUE,
+  "social networks", "social_network", TRUE,
+  "social welfare", "social_welfare", TRUE,
+  "social identity", "social_identity", TRUE,
+  "social responsibility", "social_responsibility", TRUE,
+  "national identity", "national_identity", TRUE,
+  "political identity", "political_identity", TRUE,
+  "decision making", "decision_making", TRUE,
+  "investment decisions", "investment_decision", TRUE,
+  "electoral process", "electoral_process", TRUE,
+  "peace process", "peace_process", TRUE,
+  "pro environmental behavior", "pro_environmental_behavior", TRUE,
+  "pro social behavior", "pro_social_behavior", TRUE,
+  "health behaviors", "health_behavior", TRUE,
+  "machine learning", "machine_learning", FALSE,
+  "online experiments", "online_experiments", FALSE,
+  "online experiment", "online_experiment", FALSE,
+  "online survey", "online_survey", FALSE,
+  "laboratory experiments", "laboratory_experiments", FALSE,
+  "laboratory experiment", "laboratory_experiment", FALSE,
+  "lab experiments", "lab_experiments", FALSE,
+  "lab experiment", "lab_experiment", FALSE,
+  "open access", "open_access", FALSE,
+  "access article", "access_article", FALSE,
+  "randomized controlled trial", "randomized_controlled_trial", FALSE,
+  "social desirability bias", "social_desirability_bias", FALSE,
+  "discrete choice experiments", "discrete_choice_experiments", FALSE,
+  "discrete choice experiment", "discrete_choice_experiment", FALSE,
+  "choice based conjoint", "choice_based_conjoint", FALSE,
+  "choice experiments", "choice_experiments", FALSE,
+  "choice experiment", "choice_experiment", FALSE,
+  "mixed logit models", "mixed_logit_models", FALSE,
+  "mixed logit model", "mixed_logit_model", FALSE,
+  "mixed logit", "mixed_logit", FALSE,
+  "stated choice", "stated_choice", FALSE,
+  "stated preferences", "stated_preferences", FALSE,
+  "stated preference", "stated_preference", FALSE,
+  "nationally representative", "nationally_representative", FALSE,
+  "latin american", "latin_american", FALSE,
+  "latin america", "latin_america", FALSE,
+  "united states", "united_states", FALSE,
+  "costa rica", "costa_rica", FALSE,
+  "dominican republic", "dominican_republic", FALSE,
+  "puerto rico", "puerto_rico", FALSE
+)
+term_normalization <- tribble(
+  # Diccionario auditable para unificar variantes sin producir stems ilegibles.
+  ~variant, ~normalized,
+  "attitudes", "attitude",
+  "beliefs", "belief",
+  "benefits", "benefit",
+  "choices", "choice",
+  "citizens", "citizen",
+  "decisions", "decision",
+  "farmers", "farmer",
+  "households", "household",
+  "incentives", "incentive",
+  "institutions", "institution",
+  "candidates", "candidate",
+  "leaders", "leader",
+  "leadership", "leader",
+  "uncertain", "uncertainty",
+  "children", "child",
+  "effective", "effectiveness",
+  "migration", "immigration",
+  "migrant", "immigration",
+  "migrants", "immigration",
+  "female", "woman",
+  "females", "woman",
+  "educational", "education",
+  "individuals", "individual",
+  "increased", "increase",
+  "increases", "increase",
+  "resources", "resource",
+  "rates", "rate",
+  "voting", "voter",
+  "vote", "voter",
+  "votes", "voter",
+  "electoral", "election",
+  "elections", "election",
+  "immigrant", "immigration",
+  "immigrants", "immigration",
+  "firms", "firm",
+  "parties", "party_politics",
+  "party", "party_politics",
+  "partisan", "party_politics",
+  "markets", "market",
+  "policies", "policy",
+  "preferences", "preference",
+  "programs", "program",
+  "rights", "right",
+  "services", "service",
+  "students", "student",
+  "taxes", "tax",
+  "voters", "voter",
+  "women", "woman",
+  "wtp", "willingness_to_pay"
+)
+
+apply_compounds <- function(text) {
+  # Sustituye primero las frases mas largas y conserva conectores internos como
+  # "to" en willingness_to_pay.
+  reduce2(
+    compound_terms$phrase,
+    compound_terms$token,
+    .init = str_to_lower(replace_na(text, "")),
+    .f = function(current_text, phrase, token) {
+      str_replace_all(current_text, fixed(phrase), token)
+    }
+  )
+}
 
 generic_terms <- unique(c(
   connector_terms,
   methodological_terms,
   generic_adjectives,
   corpus_generic_terms,
-  artifact_terms
+  artifact_terms,
+  geographic_terms,
+  compound_terms |> filter(!keep_in_model) |> pull(token),
+  "consumer", "consumers", "support"
 ))
-tokenize_corpus <- function(data, text_column) {
-  # Recibe el corpus y el nombre de la columna textual.
-  # Devuelve conteos de palabras por paper despues de tokenizar y limpiar.
-  data |>
+
+extract_ngrams <- function(data, text_column, n_gram) {
+  # Cuenta en cuantos papers y cuantas veces aparece cada frase antes de
+  # eliminar stopwords. Asi se detectan conceptos dependientes del corpus.
+  occurrences <- data |>
     select(UT, text = all_of(text_column)) |>
     mutate(text = str_to_lower(replace_na(text, ""))) |>
+    unnest_tokens(ngram, text, token = "ngrams", n = n_gram) |>
+    filter(!is.na(ngram), str_squish(ngram) != "") |>
+    count(ngram, name = "occurrences")
+
+  documents <- data |>
+    select(UT, text = all_of(text_column)) |>
+    mutate(text = str_to_lower(replace_na(text, ""))) |>
+    unnest_tokens(ngram, text, token = "ngrams", n = n_gram) |>
+    filter(!is.na(ngram), str_squish(ngram) != "") |>
+    distinct(UT, ngram) |>
+    count(ngram, name = "n_documents")
+
+  occurrences |>
+    left_join(documents, by = "ngram") |>
+    mutate(ngram_size = n_gram, .before = 1L)
+}
+
+ngram_candidates <- bind_rows(
+  extract_ngrams(corpus, "text_ti_ab", 2L),
+  extract_ngrams(corpus, "text_ti_ab", 3L)
+) |>
+  filter(n_documents >= min_document_frequency) |>
+  group_by(ngram_size) |>
+  slice_max(n_documents, n = 500L, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(ngram_size, desc(n_documents), desc(occurrences))
+tokenize_corpus <- function(data, text_column) {
+  # Recibe el corpus y el nombre de la columna textual. Primero conserva las
+  # expresiones compuestas, luego normaliza variantes y finalmente limpia.
+  data |>
+    select(UT, text = all_of(text_column)) |>
+    mutate(text = apply_compounds(text)) |>
     unnest_tokens(word, text) |>
     anti_join(stop_words, by = "word") |>
+    left_join(term_normalization, by = c("word" = "variant")) |>
+    mutate(word = coalesce(normalized, word)) |>
     filter(
-      str_detect(word, "^[a-z]+$"),
+      str_detect(word, "^[a-z]+(?:_[a-z]+)*$"),
       str_length(word) > 2L,
       !word %in% generic_terms
     ) |>
     count(UT, word, name = "n")
 }
-
 filter_tokens <- function(tokens, n_corpus_documents) {
   # Calcula en cuantos documentos aparece cada palabra y aplica los filtros
   # de rareza y universalidad definidos en la seccion de parametros.
@@ -287,6 +568,71 @@ filter_tokens <- function(tokens, n_corpus_documents) {
 
 tokens_primary_raw <- tokenize_corpus(corpus, "text_ti_ab")
 # Tokens del modelo principal antes de quitar terminos raros o universales.
+# Esta auditoria conserva los conteos antes y despues de unificar variantes y
+# expresiones compuestas. Las figuras usan los terminos consolidados, pero esta
+# hoja permite rastrear cuanto aportaba cada forma original.
+raw_unigram_counts <- corpus |>
+  select(UT, text = text_ti_ab) |>
+  unnest_tokens(original_form, text) |>
+  count(UT, original_form, name = "n") |>
+  group_by(original_form) |>
+  summarise(
+    raw_n_documents = n_distinct(UT),
+    raw_occurrences = sum(n),
+    .groups = "drop"
+  )
+
+model_term_counts <- tokens_primary_raw |>
+  group_by(model_form = word) |>
+  summarise(
+    model_n_documents = n_distinct(UT),
+    model_occurrences = sum(n),
+    .groups = "drop"
+  )
+
+normalization_audit_map <- bind_rows(
+  term_normalization |>
+    transmute(original_form = variant, model_form = normalized),
+  term_normalization |>
+    distinct(normalized) |>
+    transmute(original_form = normalized, model_form = normalized)
+) |>
+  distinct()
+
+normalization_counts <- normalization_audit_map |>
+  left_join(raw_unigram_counts, by = "original_form") |>
+  left_join(model_term_counts, by = "model_form") |>
+  mutate(
+    mapping_type = "normalized word",
+    keep_in_model = !model_form %in% generic_terms,
+    across(where(is.numeric), ~ replace_na(.x, 0)),
+    .before = 1L
+  )
+
+raw_text_for_audit <- str_to_lower(replace_na(corpus$text_ti_ab, ""))
+
+compound_counts <- pmap_dfr(
+  compound_terms,
+  function(phrase, token, keep_in_model) {
+    tibble(
+      mapping_type = "compound phrase",
+      original_form = phrase,
+      model_form = token,
+      keep_in_model = keep_in_model,
+      raw_n_documents = sum(str_detect(raw_text_for_audit, fixed(phrase))),
+      raw_occurrences = sum(str_count(raw_text_for_audit, fixed(phrase)))
+    )
+  }
+) |>
+  left_join(model_term_counts, by = "model_form") |>
+  mutate(across(where(is.numeric), ~ replace_na(.x, 0)))
+
+term_counts_audit <- bind_rows(normalization_counts, compound_counts) |>
+  select(
+    mapping_type, original_form, model_form, keep_in_model,
+    raw_n_documents, raw_occurrences, model_n_documents, model_occurrences
+  ) |>
+  arrange(mapping_type, model_form, original_form)
 
 common_terms_audit <- tokens_primary_raw |>
   group_by(word) |>
@@ -619,6 +965,10 @@ write_xlsx(
     Coverage = coverage,
     Token_audit = token_audit,
     Common_terms_audit = common_terms_audit,
+    Ngram_candidates = ngram_candidates,
+    Compound_terms = compound_terms,
+    Term_normalization = term_normalization,
+    Term_counts_audit = term_counts_audit,
     Model_selection = model_selection,
     Labels_k4 = outputs_k4$labels,
     Top_terms_k4 = outputs_k4$terms,

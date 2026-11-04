@@ -42,7 +42,18 @@ denominadores_disciplina_year <- archivos_denominadores |>
     year = as.integer(`Publication Years`),
     n = as.integer(`Record Count`)
   ) |>
-  arrange(discipline, country, year)
+  arrange(discipline, country, year) |>
+  mutate(
+    region = case_when(
+      country == "USA" ~ "USA",
+      country == "Europa" ~ "Europe",
+      country %in% c("Argentina", "Bolivia", "Brazil", "Chile", "Colombia",
+                     "Costa Rica", "Cuba", "Dominican Rep", "Ecuador",
+                     "Guatemala", "Mexico", "Peru", "Uruguay", "Venezuela", "Brasil") ~ "Latin America",
+      TRUE ~ "Other"
+    ),
+    overlap_note = "Puede haber overlap entre disciplinas: un paper puede aparecer en mas de una disciplina."
+  )
 
 # Cargar produccion experimental total de USA por year
 usa_exp_dir <- list.dirs(raw_dir, recursive = FALSE, full.names = TRUE) |>
@@ -61,6 +72,23 @@ usa_exp_year <- list.files(usa_exp_dir, pattern = "\\.txt$", full.names = TRUE) 
 
 # Cargar produccion experimental endogena de America Latina por year
 endogeno <- readRDS(here("Paper_wos", "data", "intermediate", "endogeno_inicial.rds"))
+laboratorio <- readRDS(here("Paper_wos", "data", "intermediate", "laboratorio_inicial.rds"))
+
+# Endogenous y Laboratory pueden compartir papers; sus conteos no son disjuntos.
+universes_experimental_year <- bind_rows(
+  endogeno |> transmute(UT, year = as.integer(PY), universe = "Endogenous"),
+  laboratorio |> transmute(UT, year = as.integer(PY), universe = "Laboratory"),
+  inner_join(
+    endogeno |> distinct(UT, year = as.integer(PY)),
+    laboratorio |> distinct(UT, year = as.integer(PY)),
+    by = c("UT", "year")
+  ) |> mutate(universe = "Shared")
+) |>
+  distinct(universe, UT, year) |>
+  count(universe, year, name = "n") |>
+  complete(universe = c("Endogenous", "Laboratory", "Shared"), year = 1990:2026, fill = list(n = 0)) |>
+  mutate(overlap_note = "Endogenous y Laboratory pueden superponerse; Shared identifica papers presentes en ambos.") |>
+  arrange(universe, year)
 # Crear tabla anual solo para la produccion endogena
 tab_year <- endogeno |>
   count(year = as.integer(PY), name = "n") |>
@@ -151,7 +179,7 @@ conteos_wos_year <- bind_rows(
 # Calcular tasas por pais latinoamericano con los denominadores por disciplina
 # Las disciplinas WoS pueden solaparse; estas tasas son indicadores bibliometricos.
 latam_total_country_year <- denominadores_disciplina_year |>
-  filter(country != "USA") |>
+  filter(region == "Latin America") |>
   group_by(country, year) |>
   summarise(total_n = sum(n), .groups = "drop")
 
@@ -224,7 +252,26 @@ rate_latam_chile_usa_year <- bind_rows(
 ) |>
   arrange(series, year)
 
-# Guardar las dos bases necesarias para los graficos y tablas
+# Identificar overlap entre los dos universos experimentales.
+overlap_papers <- full_join(
+  endogeno |> distinct(UT) |> mutate(in_endogenous = TRUE),
+  laboratorio |> distinct(UT) |> mutate(in_laboratory = TRUE),
+  by = "UT"
+) |>
+  mutate(
+    in_endogenous = replace_na(in_endogenous, FALSE),
+    in_laboratory = replace_na(in_laboratory, FALSE),
+    universe_overlap = case_when(
+      in_endogenous & in_laboratory ~ "Shared",
+      in_endogenous ~ "Endogenous only",
+      in_laboratory ~ "Laboratory only"
+    ),
+    overlap_note = "La pertenencia a Endogenous y Laboratory puede superponerse; no son universos disjuntos."
+  )
+
+# Guardar las bases necesarias para los graficos y tablas.
+saveRDS(universes_experimental_year, here("Paper_wos", "data", "intermediate", "universes_experimental_year.rds"))
+saveRDS(overlap_papers, here("Paper_wos", "data", "intermediate", "overlap_papers.rds"))
 saveRDS(conteos_wos_year, here("Paper_wos", "data", "intermediate", "conteos_wos_year.rds"))
 saveRDS(
   list(
@@ -241,6 +288,8 @@ write_csv(latam_rate_country_year, here("Paper_wos", "outputs", "tables", "latam
 write_csv(discipline_2025, here("Paper_wos", "outputs", "tables", "discipline_2025_latam_chile.csv"))
 write_csv(rate_latam_chile_usa_year, here("Paper_wos", "outputs", "tables", "rate_latam_chile_usa_year.csv"))
 write_csv(tab_year, here("Paper_wos", "outputs", "tables", "endogeno_year.csv"))
+write_csv(universes_experimental_year, here("Paper_wos", "outputs", "tables", "universes_experimental_year.csv"))
+write_csv(overlap_papers, here("Paper_wos", "outputs", "tables", "overlap_papers.csv"))
 
 # Mostrar resumen basico en consola
 print(count(conteos_wos_year, type, country))

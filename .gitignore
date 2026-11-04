@@ -13,3 +13,6 @@ Otros/
 *.Rhistory
 *.RDataTmp
 venv/
+.DS_Store
+desktop.ini
+~$*

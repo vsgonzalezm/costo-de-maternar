@@ -57,15 +57,26 @@ high_scale    <- "log"
 high_iqr_mult <- 1.5
 stopifnot(high_scale %in% c("log", "raw"))
  
-#A respondent is "fast on screens" if at least this many of the 4 screens are below the low cut
-min_fast_screens <- 2
- 
+#A respondent is "fast on screens" if at least this many of the 4 screens are below the low cut.
+#Raised from 2 to 3: requires fast in a strong majority of screens (3 of 4) — one incidentally
+#fast screen no longer triggers the flag.
+min_fast_screens <- 3
+
 #A respondent is low quality if they meet at least this many red-flag combinations
 min_red_flags_low_quality <- 1
- 
+
 #Section 2b: wrong answer to the attention check whose validity is questioned.
 #Must match the label in the data. It only sets the display order of the groups.
 ac_weak_option <- "Último cargo"
+
+#Attention-check options that unambiguously indicate inattention. Used in section 6
+#(scenario table) for the "strict" AC definition. "Último cargo" is excluded because
+#its timing profile is indistinguishable from those who passed (see section 2b).
+ac_strong_options <- c("Número de hijos", "Nombre")
+
+#A respondent is "consistently fast" if they are fast on >= min_consistent_fast of the 5
+#time measures. Default = 5 means fast on ALL measures — the most extreme inattention profile.
+min_consistent_fast <- 5
  
 #Section 2b (descriptive only, nobody is excluded with these): a respondent is
 #"extreme" on a time measure if at or below this percentile (<= because times pile
@@ -92,6 +103,12 @@ stopifnot(all(count(base_long_final, numericalId)$n == 2))
 resp <- base_long_final %>% distinct(numericalId, .keep_all = TRUE)
 n_total <- nrow(resp)
 cat(sprintf("Respondents: %d | profiles: %d\n", n_total, nrow(base_long_final)))
+
+sample_summary <- bind_rows(
+  resp %>% count(arm = VISITAS_1_BRAZO),
+  tibble(arm = "Total", n = n_total)
+)
+write_csv(sample_summary, out_path("descriptives", "sample_summary.csv"))
  
 #Every column whose name suggests timing
 time_cols <- names(base_long_final)[
@@ -266,9 +283,14 @@ ggsave(out_path("descriptives", "time_histograms.pdf"), p_hist,
 # failing through it is weak evidence of inattention.
 # ==============================================================================
  
-resp <- resp %>% mutate(ac_fail = FAILED_ATTENTION_CHECK == 1)
+resp <- resp %>% mutate(
+  ac_fail        = FAILED_ATTENTION_CHECK == 1,
+  ac_fail_strict = FAILED_ATTENTION_CHECK == 1 &
+    check_atencion_memoria_label %in% ac_strong_options
+)
 stopifnot(!anyNA(resp$ac_fail))
 stopifnot(ac_weak_option %in% resp$check_atencion_memoria_label[resp$ac_fail])
+stopifnot(all(ac_strong_options %in% resp$check_atencion_memoria_label[resp$ac_fail]))
  
 ac_levels <- c(
   "Passed", ac_weak_option,
@@ -508,23 +530,108 @@ low_quality_by_condition <- map_dfr(names(fast_defs), function(tag) {
 cat("\n--- Low quality by occupational condition, by definition ---\n")
 print(low_quality_by_condition)
 write_csv(low_quality_by_condition, out_path("flags", "low_quality_by_condition.csv"))
- 
+
 # ==============================================================================
-# 5. RESPONDENT-LEVEL FLAG TABLE (who is flagged and why; both definitions)
+# 5. CONSISTENTLY INATTENTIVE RESPONDENTS
+#    A respondent is "consistently fast" if they are fast on >= min_consistent_fast
+#    of the 5 time measures. Default = 5: fast on ALL measures — the most extreme
+#    inattention profile.  Computed for each fast definition (Q1 and P10).
 # ==============================================================================
- 
+
+for (tag in names(fast_defs)) {
+  all_fast_cols <- paste0("low_", names(flag_vars), "_", tag)
+  n_fast_all    <- rowSums(as.matrix(resp[, all_fast_cols]))
+  resp[[paste0("n_fast_all_", tag)]]      <- n_fast_all
+  resp[[paste0("consistent_fast_", tag)]] <- n_fast_all >= min_consistent_fast
+}
+
+consistent_summary <- map_dfr(names(fast_defs), function(tag) {
+  col <- paste0("consistent_fast_", tag)
+  bind_rows(
+    tibble(definition     = toupper(tag),
+           group          = "Total",
+           n_total        = n_total,
+           n_consistent   = sum(resp[[col]]),
+           pct_consistent = round(100 * mean(resp[[col]]), 1)),
+    resp %>%
+      group_by(group = VISITAS_1_BRAZO) %>%
+      summarise(n_total        = n(),
+                n_consistent   = sum(.data[[col]]),
+                pct_consistent = round(100 * mean(.data[[col]]), 1),
+                .groups = "drop") %>%
+      mutate(definition = toupper(tag))
+  )
+})
+cat(sprintf("\n=== 5. CONSISTENTLY INATTENTIVE (fast on >= %d of 5 measures, both definitions) ===\n",
+            min_consistent_fast))
+print(consistent_summary, n = Inf, width = Inf)
+write_csv(consistent_summary, out_path("flags", "consistent_fast_by_condition.csv"))
+
+n_fast_all_dist <- map_dfr(names(fast_defs), function(tag) {
+  resp %>%
+    count(n_fast_all = .data[[paste0("n_fast_all_", tag)]]) %>%
+    mutate(definition = toupper(tag), pct = round(100 * n / n_total, 1)) %>%
+    select(definition, n_fast_all, n, pct)
+})
+cat("\nDistribution of fast measures per respondent:\n")
+print(n_fast_all_dist, n = Inf)
+write_csv(n_fast_all_dist, out_path("flags", "n_fast_all_distribution.csv"))
+
+# ==============================================================================
+# 6. SCENARIO TABLE
+#    Crosses fast definition (Q1 / P10) with two AC definitions:
+#      "all"    = any wrong AC answer counts as a fail
+#      "strict" = only ac_strong_options count (excludes ac_weak_option)
+#    Shows how the size and arm balance of the low-quality group change.
+# ==============================================================================
+
+scenario_rows <- list()
+for (tag in names(fast_defs)) {
+  ft <- resp[[paste0("low_duration_", tag)]]
+  fs <- resp[[paste0("n_fast_screens_", tag)]] >= min_fast_screens
+  for (ac_def in c("all", "strict")) {
+    ac   <- if (ac_def == "all") resp$ac_fail else resp$ac_fail_strict
+    n_rf <- (ac & ft) + (ac & fs) + (ft & fs)
+    lq   <- n_rf >= min_red_flags_low_quality
+    prof  <- resp$VISITAS_1_BRAZO == "profesional"
+    tec   <- resp$VISITAS_1_BRAZO == "tecnico"
+    scenario_rows[[length(scenario_rows) + 1]] <- tibble(
+      definition      = toupper(tag),
+      ac_definition   = if (ac_def == "all") "Todas las opciones incorrectas"
+                        else paste0("Solo: ", paste(ac_strong_options, collapse = " + ")),
+      n_total         = sum(lq),
+      pct_total       = round(100 * mean(lq), 1),
+      n_profesional   = sum(lq & prof),
+      pct_profesional = round(100 * mean(lq[prof]), 1),
+      n_tecnico       = sum(lq & tec),
+      pct_tecnico     = round(100 * mean(lq[tec]), 1),
+      diff_pp         = round(100 * mean(lq[prof]) - 100 * mean(lq[tec]), 1)
+    )
+  }
+}
+scenario_table_out <- bind_rows(scenario_rows)
+cat("\n=== 6. SCENARIO TABLE (fast definition × AC definition) ===\n")
+print(scenario_table_out, n = Inf, width = Inf)
+write_csv(scenario_table_out, out_path("flags", "scenarios_low_quality.csv"))
+
+# ==============================================================================
+# 7. RESPONDENT-LEVEL FLAG TABLE (who is flagged and why; both definitions)
+# ==============================================================================
+
 flag_table <- resp %>%
   select(numericalId, VISITAS_1_BRAZO, all_of(unname(flag_vars)),
          starts_with("low_"), starts_with("high_"),
-         starts_with("n_fast_screens"), n_slow_screens, ac_fail,
+         starts_with("n_fast_screens"), starts_with("n_fast_all_"),
+         n_slow_screens, ac_fail, ac_fail_strict,
+         starts_with("consistent_fast_"),
          starts_with("fast_total"), starts_with("fast_screens"),
          starts_with("rf_"), starts_with("n_red_flags"))
- 
+
 write_csv(flag_table, out_path("flags", "quality_flags_by_respondent.csv"))
 cat(sprintf("\nRespondent-level flags saved (%d rows).\n", nrow(flag_table)))
- 
+
 # ==============================================================================
-# 6. FIGURE: respondents per red flag, by fast definition
+# 8. FIGURE: respondents per red flag, by fast definition
 # ==============================================================================
  
 p_rules <- rules_table %>%

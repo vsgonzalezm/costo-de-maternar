@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(python3 -m pip install reportlab --quiet)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(mkdir -p _stale_root)",
+      "Bash(mv 05_flag_counts_by_variable.csv 05_flag_cutoffs.csv 05_low_quality_by_condition.csv 05_quality_flags_by_respondent.csv 05_red_flag_counts.csv 05_red_flag_patterns.csv 05_time_descriptives.csv 05_time_spearman.csv 05_time_variable_inventory.csv _stale_root/)",
+      "mcp__positron__list_sessions",
+      "mcp__positron__execute_code"
     ]
   }
 }

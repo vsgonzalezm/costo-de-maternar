@@ -34,7 +34,7 @@ corpus_completo <- readRDS(
 # solo para recuperar ese vinculo; el universo de papers siempre lo define el
 # corpus ya depurado por 00.
 revision_manual <- read_excel(
-  file.path(data_dir, "intermediate", "base final_Isi.xlsx")
+  file.path(data_dir, "intermediate", "base_octubre.xlsx")
 )
 
 # Version compacta a nivel paper para los descriptivos. C1 ya incorpora las
@@ -465,6 +465,19 @@ country_mapping_audit <- paper_address_entries |>
 paper_countries <- paper_address_entries |>
   distinct(UT, country)
 
+# Casos revisados por Isi en base_octubre donde el autor no tenia una
+# institucion afiliada en el momento de la publicacion. No son errores de
+# asignacion: se conserva la fila del autor y se deja explicitamente sin afiliacion.
+confirmed_no_affiliation <- tribble(
+  ~UT, ~author_position, ~affiliation_note,
+  "WOS:000324740600002", 1L, "Isi: investigador independiente; solo figura Ensenada, Baja California, sin institucion.",
+  "WOS:000379962400003", 3L, "Isi: Parker no tenia afiliacion al momento de la publicacion.",
+  "WOS:000632971700002", 5L, "Isi: Sharma es disenadora independiente y no tiene institucion.",
+  "WOS:000632971700002", 10L, "Isi: Morris es investigador independiente y no tiene institucion.",
+  "WOS:000796681800001", 1L, "Isi: Arias firma como investigador independiente.",
+  "WOS:001491371500001", 19L, "Isi: Kandrik es investigador independiente.",
+  "WOS:001541599500001", 5L, "Isi: Phimister firma como investigador independiente."
+)
 # 8. Base larga autor-paper ---------------------------------------------------
 # author_paper contiene exactamente una fila por autor y paper. Conserva todas
 # las variables del paper, los nombres WoS sin desambiguar y las afiliaciones
@@ -494,6 +507,7 @@ author_paper <- authors |>
     paper_C3 = C3
   ) |>
   left_join(author_affiliation_summary, by = c("UT", "author_position")) |>
+  left_join(confirmed_no_affiliation, by = c("UT", "author_position")) |>
   mutate(
     n_author_affiliations = replace_na(n_author_affiliations, 0L),
     author_institutions = coalesce(c3_manual, institutions_from_address),
@@ -504,6 +518,7 @@ author_paper <- authors |>
       TRUE ~ "missing"
     ),
     affiliation_status = case_when(
+      !is.na(affiliation_note) ~ "confirmed_independent_no_affiliation",
       !is.na(c1_manual) ~ "manual_c1",
       n_author_affiliations > 0L ~ affiliation_sources,
       !is.na(paper_C1) & str_squish(paper_C1) != "" ~ "paper_c1_unassigned",
@@ -512,100 +527,6 @@ author_paper <- authors |>
   ) |>
   arrange(UT, author_position)
 
-# 8a. Hoja de revision para papers con afiliaciones no asignables -----------
-# Estos papers si tienen C1 y C3, pero una parte de sus autores no aparece
-# vinculada a una direccion. Se entrega una fila por paper con los autores
-# pendientes y los campos originales para revision manual.
-affiliation_review_authors <- author_paper |>
-  filter(affiliation_status == "paper_c1_unassigned") |>
-  group_by(UT) |>
-  summarise(
-    n_unassigned_authors = n(),
-    unassigned_authors = collapse_unique(author_name),
-    .groups = "drop"
-  )
-
-affiliation_review_40 <- affiliation_review_authors |>
-  left_join(
-    corpus |> select(UT, year, title, journal),
-    by = "UT"
-  ) |>
-  left_join(
-    revision_manual |>
-      select(any_of(c("UT", "AU", "AF", "C1", "C1raw", "C3", "review_status", "review_notes"))),
-    by = "UT"
-  ) |>
-  mutate(
-    n_authors = str_count(AU, fixed(";")) + 1L,
-    c1raw_has_brackets = str_detect(C1raw, fixed("[")),
-    review_scope = if_else(
-      c1raw_has_brackets,
-      "Revisar autores sin vinculo en C1raw",
-      "Revisar asignacion de todos los autores"
-    )
-  ) |>
-  arrange(desc(c1raw_has_brackets), UT)
-
-if (nrow(affiliation_review_40) != 40L) {
-  stop("La hoja de revision no contiene los 40 papers esperados.")
-}
-
-
-# Archivo de consulta para Isidora --------------------------------------------
-# Esta hoja no agrega campos manuales nuevos. Isidora seguira corrigiendo la
-# planilla original base final_Isi.xlsx. Este archivo solo entrega contexto:
-# los 40 papers con afiliaciones no asignables y los casos de nombres completos
-# que requieren confirmacion.
-papers_40_ut <- affiliation_review_40 |>
-  select(UT)
-
-affiliation_review_40_export <- corpus_completo |>
-  semi_join(papers_40_ut, by = 'UT') |>
-  left_join(
-    affiliation_review_40 |>
-      select(
-        UT,
-        n_unassigned_authors,
-        unassigned_authors,
-        n_authors
-      ),
-    by = 'UT'
-  ) |>
-  arrange(UT)
-
-if (nrow(affiliation_review_40_export) != 40L) {
-  stop('El archivo de consulta no contiene exactamente los 40 papers.')
-}
-# Lista simple de variantes para revision manual ------------------------------
-# Se conserva una fila por autor-paper. Los registros incluidos corresponden
-# solo a formas completas candidatas generadas por name_variant_pairs.
-# Todos los campos de nombre provienen directamente de AU y AF de WoS.
-variant_full_names <- bind_rows(
-  name_variant_pairs |>
-    transmute(full_name_key = full_name_key_1),
-  name_variant_pairs |>
-    transmute(full_name_key = full_name_key_2)
-) |>
-  distinct()
-
-name_variants_for_review <- author_paper |>
-  mutate(
-    full_name_key = coalesce(
-      na_if(normalize_name(author_full), ''),
-      na_if(normalize_name(author), '')
-    )
-  ) |>
-  semi_join(variant_full_names, by = 'full_name_key') |>
-  transmute(
-    UT,
-    year = PY,
-    title = TI,
-    journal = SO,
-    author_position,
-    author,
-    author_full
-  ) |>
-  arrange(author, author_full, year, UT, author_position)
 # Tabla separada con una fila por afiliacion atribuible. Permite revisar casos
 # con varias instituciones sin romper la regla de una fila por autor-paper.
 author_affiliation_history <- author_affiliations |>
@@ -993,11 +914,18 @@ journals_year <- paper_base |>
   count(base, journal, year, name = "n_papers") |>
   arrange(base, journal, year)
 
-# Version de author_paper para el Excel final -------------------------------
-# Las variables tecnicas se mantienen en author_paper para los calculos, pero
-# no se exportan porque no son necesarias para revisar la lista de autores.
+# Version compacta de la base larga autor-paper para el Excel final.
+# Hay una fila por autor y paper. Se conserva solo la afiliacion atribuible
+# a ese autor; paper_C1 y paper_C3 completos no se repiten en esta hoja.
 author_paper_export <- author_paper |>
-  select(-any_of(c('author_candidate_key', 'author_surname', 'author_given', 'author_name', 'author_name_normalized')))
+  select(any_of(c(
+    "UT", "year", "title", "journal", "base_endogeno", "base_laboratorio",
+    "paper_shared", "core_area", "des_exp", "author_position", "author",
+    "author_full", "author_name", "author_addresses", "author_countries",
+    "author_institutions", "n_author_affiliations", "affiliation_sources",
+    "affiliation_note",
+    "affiliation_status", "institution_source"
+  )))
 # 12. Diagnosticos y libro de salida -----------------------------------------
 # Diagnostics resume las coberturas criticas. Author_count_audit permite
 # comprobar paper por paper que el numero de filas coincide con AU.
@@ -1044,34 +972,19 @@ diagnostics <- tibble(
 write_xlsx(
   list(
     Summary = summary_base,
-    Papers_LatAm = papers_latam,
+    Papers_country = papers_country_summary,
     Countries = country_participation,
     Country_cooccurrence = country_cooccurrence,
     Country_mapping = country_mapping_audit,
     Authors_summary = authors_summary,
-    Author_paper = author_paper_export,
-    Author_affiliations = author_affiliation_history,
-    Author_affiliation_counts = author_affiliation_counts,
-    Affiliation_multiplicity = affiliation_multiplicity,
+    Authors_long = author_paper_export,
+    Author_affiliation_detail = author_affiliation_history,
     Affiliation_changes = affiliation_changes,
     Repeated_coauthor_pairs = coauthor_pairs,
     Journals = journals,
-    Journals_by_year = journals_year,
-    Author_count_audit = author_count_audit,
-    Diagnostics = diagnostics
+    Journals_by_year = journals_year
   ),
   file.path(tables_dir, "descriptivos_endogeno_laboratorio.xlsx")
-)
-
-
-# Archivo breve de consulta para Isidora. No reemplaza ni modifica la planilla
-# original que ella debe corregir; tampoco agrega columnas manuales nuevas.
-write_xlsx(
-  list(
-    papers_40 = affiliation_review_40_export,
-    name_variants = name_variants_for_review
-  ),
-  file.path(tables_dir, 'revision_octubre.xlsx')
 )
 
 

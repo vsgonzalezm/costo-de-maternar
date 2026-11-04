@@ -1,0 +1,150 @@
+# Paper experimental methods in Latam
+
+## Introduction
+
+The use of experimental methods in the social sciences has increased in the past few decades:
+
+- Explain what experimental methods are and what we include under this umbrella definition.
+
+- When did they emerge globally and some examples.
+
+- Mention a few substantive areas where they have been widely used, including some key paper examples.
+
+Experimental methods open multiple research opportunities in the social sciences, including questions that remain open in Latin America:
+
+- Position Latin America in the global expansion of experimental methods, based on what the sociology of science and global south knowledge production literatures say. Do not assume a lag; this is what our data will show.
+
+- One illustrative substantive example (e.g., audit studies of discrimination in hiring, with the U.S. and European meta-analyses as reference) to show the potential of the method.
+
+This is part of a broader discussion on how knowledge is produced in the global south:
+
+- Review here the sociology of science literature on global south knowledge production and identify the key ideas that frame this paper in the following section.
+
+In this paper, our goal is to examine the academic production in the social sciences that uses experimental methods and is produced in Latin America, that is, by authors affiliated with Latin American institutions. We benchmark this production against the U.S. and Europe, examine how it has changed over time (1990–2025), how it varies by discipline, country and type of experimental design, who leads and with whom it is produced, and what the main substantive topics are. We broadly define social sciences as xxx and examine these patterns by core disciplines: political science, economics, sociology, psychology, business/administration, and other social sciences (e.g., education, communication).
+
+Research questions (revise after finishing the theoretical framework):
+
+RQ1. How has the production of experimental research by Latin American-affiliated authors evolved between 1990 and 2025, relative to the U.S. and Europe, and how does it vary across disciplines, countries and types of experimental design?
+
+RQ2. How is this production organized in terms of authorship and collaboration (leadership by first or corresponding authors, collaboration with U.S. and European institutions), and which substantive topics does it address?
+
+This paper allows us to quantify and make visible the use of experimental methods in the social sciences in Latin America, which is key to understanding the disciplines that have moved this forward, the ones that are lagging behind, and the areas where there is much potential to examine the utility of these methods.
+
+## Framework and literature review
+
+Experimental methods:
+
+- Brief description of the different types, maybe include a summary table. (Models: typology tables in Kovács and Veselý 2026).
+
+- Describe the benefits and opportunities of experimental methods.
+
+Sociology of science and the production of knowledge in the global south:
+
+- Brief review of the literature on academic dependency, center–periphery relations and the global division of academic labor (e.g., Alatas, Connell, Beigel, Kreimer, Collyer; verify exact references).
+
+- Scientific production in and about the global south, and the role of Latin America in it.
+
+- How these ideas apply to the expansion of experimental methods: who produces, who leads, with whom, in which disciplines and on which topics.
+
+- Justify the focus on production, defined by institutional affiliation: papers with at least one author affiliated with a Latin American institution.
+
+- Justify how we define Latin America in the corpus and why production is the main unit of analysis.
+
+- Note that research about Latin America without Latin American affiliation is a related but different question, explored in the appendix.
+
+- Derive expectations or guiding questions from this literature that the results sections will address.
+
+Overview of production by discipline in the global north if there are any papers that do this review, and by type of experimental methods, to frame the results we will present for Latam.
+
+Summary of results and contributions.
+
+## Data and methods
+
+Approach
+
+- WoS, and how this differs from most review papers on the method, which define a few key journals (cite them).
+
+- A large database like WoS allows a broader, systematic and reproducible coverage across disciplines and countries, although it is not the universe of production (see limitations).
+
+Data
+
+- Detailed description of the selection of WoS (Core Collection indexes), queries, delimitation of disciplines and countries and regions, period 1990–2025.
+
+- The three main corpora are defined by affiliation: at least one author affiliated with an institution in Latin America, the U.S., or Europe.
+
+- Each uses the same experimental-method terms and filters.
+
+- 2026 (data available until June) is reported as exploratory in the appendix, not in the main analyses.
+
+- Use relative measures (experimental papers relative to total WoS production by region, year and discipline) as the main indicators. Counts are secondary.
+
+- Robustness (appendix): all main results excluding ESCI.
+
+Figure 1. Flow diagram (PRISMA type)
+
+Table 1. Queries, n total, n after different filtering stages.
+
+Methods
+
+- Detailed description of the data cleaning processes, creation of key variables, and topic modeling strategy and decisions. Mention that records were deduplicated across queries and that only research papers and early access records are counted.
+
+- Definition of experimental methods in the queries: which designs are included and excluded (survey, field, laboratory, conjoint, vignette, audit; treatment of quasi- and natural experiments).
+
+- Classification of the type of method: procedure and validation (hand-coded sample, precision/recall or inter-coder agreement).
+
+- Classification of disciplines: use of WoS categories, treatment of papers in multiple categories, definition of the denominators.
+
+- Definition of Latin America (countries included) and Europe.
+
+- Affiliation and authorship rules: whole vs. fractional counting, multiple affiliations, overlap between regions (papers with authors from several regions), identification of first and corresponding author (address and reprint fields, and their coverage in earlier years).
+
+- Document types included.
+
+- Topic modeling: text used (title, abstract, keywords), language, preprocessing, choice of k, validation, and whether covariates are used.
+
+Explain that the paper focuses on the origin of production, but we also looked at Latam-focused papers with no Latam affiliation (country mentioned in title, abstract or keywords), and present them in the appendix. Describe that this second search is based on mentions and not on the study site, and how it was validated.
+
+## Results
+
+In text: Number of experimental methods publications total and in the last decade, by region (U.S., Europe and Latam-affiliated corpus). Consider adding a disclaimer here that WoS began including ESCI in 2015.
+
+Table 2. Total production of EM papers Latam by discipline, 5-year ranges (e.g., 1990–94, 1995–99, 2000–04, etc.).
+
+Table 3. Total production of EM papers Latam by country mention, total over time and accumulated by decade (might move it to the appendix later). Not mutually exclusive by country.
+
+Table 4. Type of experimental method by discipline, over time (to make it more current). See figure 4 for details.
+
+Table 5. Top three topics by discipline, or all if there are not so many topics (and a full one in the appendix) in the Latam-affiliated corpus. Note: test doing it by dominant topic of the paper and by average proportion.
+
+Figure 2. Relative production of papers using experimental methods, relative to total social science production, by region of affiliation and year, 1990–2025 (U.S., Europe and Latam). Notes: total mentions, so it is not mutually exclusive. TBD: If the counts in the first few years is too low and distorts the figure, start later (e.g., 1995 or 2000) or use smoothing.
+
+Figure 3. Relative production of papers by discipline, relative to the discipline total, over time.
+
+Figure 4. Number of papers by type of method over time. Total mention of specific method word, plus a "other" or "not classified" category. Note: not mutually exclusive; a paper can be classified in more than one method.
+
+Figure 5. Origin of experimental papers relative to total experimental papers over time: Latam production only, collaboration Latam–Europe, collaboration Latam–U.S. (at least one author), collaboration Latam–other (including both Europe and the U.S.; report the n of these cases in the text).
+
+Figure 6. Leadership: first or corresponding author affiliation (combined, but report separately in the text) (Latin America vs. U.S./Europe) among Latam-affiliated experimental papers, over time and by discipline.
+
+Figure 7. Topic model resulting substantive topics and top words (total) in the Latam-affiliated corpus.
+
+## Discussion and conclusion
+
+- Main findings in relation to the research questions and to the sociology of science framework.
+- Strengths and weaknesses of experimental methods in Latin America, based on this review.
+- Limitations:
+  - Database coverage: WoS only; Spanish- and Portuguese-language journals and regional journals may be underrepresented; changes in coverage over time (inclusion of ESCI), addressed with the robustness analysis in the appendix.
+  - Publications are not the same as the use of the method (unpublished experiments, publication bias) and depend on how papers are tagged by the database.
+  - Affiliation as a proxy of production: multiple affiliations, mobility of authors, and possible incomplete address fields in earlier records (report n).
+  - Automated classification of disciplines, methods and topics, and its validation.
+  - The focus-on-Latin-America search is based on mentions in the title, abstract or keywords and does not identify the study site.
+
+## Appendix
+
+Table A1. Latam-focused experimental papers over time, total and excluding Latam-affiliated. \[Add: overlap between the affiliation-based and the focus-based corpora; validation of the focus search.\]
+
+Robustness:
+
+- Main results (Figures 2–3 and Table 2) excluding ESCI.
+
+- Exploratory: 2026 data (until June), flagged as partial.

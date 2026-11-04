@@ -1,0 +1,435 @@
+---
+title: "Flags de calidad por tiempos de respuesta"
+subtitle: "Encuesta Demanda — Costo de Maternar"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output:
+  word_document:
+    toc: true
+    toc_depth: 3
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile,
+      encoding = encoding,
+      output_file = file.path(path.expand("~"), "Desktop", "Informe_flags.docx"))
+  })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(knitr)
+library(here)
+
+proj  <- if (dir.exists(here::here("Encuesta Demanda", "data"))) here::here("Encuesta Demanda") else here::here()
+out05 <- file.path(proj, "outputs", "05_response_time_metrics")
+
+flags_dir       <- file.path(out05, "flags")
+desc_dir        <- file.path(out05, "descriptives")
+ac_dir          <- file.path(out05, "ac_option")
+
+# --- Cargar todos los outputs del script ---
+sample_summary      <- read_csv(file.path(desc_dir, "05_sample_summary.csv"),        show_col_types = FALSE)
+time_desc           <- read_csv(file.path(desc_dir, "05_time_descriptives.csv"),      show_col_types = FALSE)
+cutoffs             <- read_csv(file.path(flags_dir, "05_flag_cutoffs.csv"),          show_col_types = FALSE)
+flag_counts_var     <- read_csv(file.path(flags_dir, "05_flag_counts_by_variable.csv"), show_col_types = FALSE)
+red_flag_counts     <- read_csv(file.path(flags_dir, "05_red_flag_counts.csv"),       show_col_types = FALSE)
+red_flag_patterns   <- read_csv(file.path(flags_dir, "05_red_flag_patterns.csv"),     show_col_types = FALSE)
+lq_by_condition     <- read_csv(file.path(flags_dir, "05_low_quality_by_condition.csv"), show_col_types = FALSE)
+consistent_fast     <- read_csv(file.path(flags_dir, "05_consistent_fast_by_condition.csv"), show_col_types = FALSE)
+n_fast_all_dist     <- read_csv(file.path(flags_dir, "05_n_fast_all_distribution.csv"), show_col_types = FALSE)
+scenarios           <- read_csv(file.path(flags_dir, "05_scenarios_low_quality.csv"), show_col_types = FALSE)
+ac_timing           <- read_csv(file.path(ac_dir,   "05_ac_option_timing.csv"),       show_col_types = FALSE)
+ac_summary          <- read_csv(file.path(ac_dir,   "05_ac_option_summary.csv"),      show_col_types = FALSE)
+
+# Parámetros que se leen del script (se sincronizan manualmente si cambian)
+min_fast_screens    <- 3
+min_consistent_fast <- 5
+ac_strong_options   <- c("Número de hijos", "Nombre")
+ac_weak_option      <- "Último cargo"
+
+# Helpers
+fmt_n   <- function(x) format(x, big.mark = ".")
+fmt_pct <- function(x) paste0(x, "%")
+fmt_np  <- function(n, p) paste0(fmt_n(n), " (", fmt_pct(p), ")")
+
+n_total     <- sample_summary %>% filter(arm == "Total") %>% pull(n)
+n_prof      <- sample_summary %>% filter(arm == "profesional") %>% pull(n)
+n_tec       <- sample_summary %>% filter(arm == "tecnico") %>% pull(n)
+```
+
+---
+
+**Script de origen:** `code/05_response_time_metrics.R`
+**Base:** `r fmt_n(n_total)` encuestados (`r fmt_n(n_prof)` profesional / `r fmt_n(n_tec)` técnico), 2 perfiles por encuestado.
+
+---
+
+# Resumen ejecutivo
+
+```{r resumen-ejecutivo}
+lq_q1_all  <- scenarios %>% filter(definition == "Q1",  str_detect(ac_definition, "Todas"))
+lq_p10_all <- scenarios %>% filter(definition == "P10", str_detect(ac_definition, "Todas"))
+lq_p10_str <- scenarios %>% filter(definition == "P10", str_detect(ac_definition, "Solo"))
+
+n_ac_fail_total  <- red_flag_counts %>% filter(definition == "P10", str_detect(rule, "Failed")) %>% pull(n)
+```
+
+- **Definición recomendada (propuesta):** P10 + fallo de AC contando solo _«`r paste(ac_strong_options, collapse = "» y «")`»_. Esto marca **`r fmt_np(lq_p10_str$n_total, lq_p10_str$pct_total)`** encuestados como baja calidad (`r fmt_np(lq_p10_str$n_profesional, lq_p10_str$pct_profesional)` profesional / `r fmt_np(lq_p10_str$n_tecnico, lq_p10_str$pct_tecnico)` técnico, diferencia de `r abs(lq_p10_str$diff_pp)` pp).
+
+- **Elección de la definición de «rápido» importa:** con Q1 se marcan `r fmt_np(lq_q1_all$n_total, lq_q1_all$pct_total)` encuestados; con P10 bajan a `r fmt_np(lq_p10_all$n_total, lq_p10_all$pct_total)`.
+
+- **El attention check no es homogéneo:** de los `r fmt_n(n_ac_fail_total)` que lo fallan, quienes eligieron _«`r ac_weak_option`»_ tienen tiempos idénticos a quienes aprobaron — no hay evidencia de inatención. Contarlos como fallo infla el grupo de baja calidad sin respaldo empírico.
+
+- **La baja calidad está balanceada entre brazos** con la definición propuesta (`r abs(lq_p10_str$diff_pp)` pp de diferencia). Excluir estos casos no debería desbalancear la comparación entre condiciones.
+
+- **Pantallas rápidas ahora requiere ≥ `r min_fast_screens` de 4:** se sube el umbral (antes 2) para exigir evidencia más consistente de respuesta apresurada.
+
+---
+
+# 1. Datos y variables de tiempo analizadas
+
+La encuesta registra cinco variables de tiempo a nivel de encuestado (una por encuesta completa, no por perfil). Estas variables se usan para detectar respuestas anormalmente rápidas que podrían indicar falta de atención.
+
+```{r tabla-descriptivos}
+time_desc %>%
+  select(variable, n, min, p10, q1, median, q3, p90, max, n_at_min, pct_at_min) %>%
+  rename(
+    Variable = variable, N = n,
+    Mín = min, P10 = p10, Q1 = q1, Mediana = median,
+    Q3 = q3, P90 = p90, Máx = max,
+    `N en mín` = n_at_min, `% en mín` = pct_at_min
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 1))) %>%
+  kable(caption = "Tabla 1. Descriptivos de las variables de tiempo (nivel de encuestado)")
+```
+
+_Nota: los valores de cada fila están en la unidad indicada en el nombre de la variable — «Total duration (min)» en minutos, las cuatro pantallas en segundos. No comparar valores entre filas sin tener esto en cuenta._
+
+**Cómo leer esta tabla:** «N en mín» y «% en mín» informan cuántos encuestados tienen exactamente el valor más bajo registrado por la plataforma. Cuando muchos comparten el mínimo, es probable que la plataforma registre un _piso_ (el tiempo real puede ser menor pero no se captura). Esto afecta cómo se calculan los cortes de rapidez (ver sección 3).
+
+---
+
+# 2. Cómo se define «rápido»
+
+## 2.1. La lógica general: definiciones relativas, no umbrales absolutos
+
+«Rápido» no significa _menos de X segundos_. Se define de forma **relativa a la distribución de cada variable**: un encuestado es «rápido» si está en la cola inferior de quienes respondieron la misma encuesta. Esta decisión tiene ventajas y limitaciones:
+
+- **Ventaja:** es robusta a diferencias en el contenido o la longitud de las pantallas — cada pantalla se compara consigo misma.
+- **Limitación:** siempre se marca una proporción fija de encuestados, incluso si todos respondieron con atención. Por eso conviene validar los cortes contra un mínimo de lectura plausible (ver sección 10).
+
+## 2.2. Dos definiciones en paralelo: Q1 y P10
+
+Se calculan dos cortes para cada variable:
+
+| Definición | Corte | Regla | Descripción |
+|---|---|---|---|
+| **Q1** | Percentil 25 | `<` (estricto) | El 25% más veloz. Definición amplia — replica la corrida anterior. |
+| **P10** | Percentil 10 | `≤` (inclusivo) | El 10% más veloz. Definición más conservadora. |
+
+La regla `≤` en P10 (en lugar de `<`) se usa porque los tiempos se acumulan en el piso de registro de la plataforma. En la pantalla tarea, el P10 es igual al mínimo (10 s): con `<` no se marcaría a nadie, lo cual sería un error.
+
+## 2.3. Los cortes por variable
+
+```{r tabla-cortes}
+cutoffs %>%
+  select(label, q_low_q1, q_low_p10, median, q3, q_high, lowest) %>%
+  rename(
+    Variable = label,
+    `Corte Q1 (P25)` = q_low_q1,
+    `Corte P10` = q_low_p10,
+    Mediana = median,
+    Q3 = q3,
+    `Cerca lento (Tukey log)` = q_high,
+    `Mínimo registrado` = lowest
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 1))) %>%
+  kable(caption = "Tabla 2. Cortes de rapidez y lentitud por variable")
+```
+
+## 2.4. Por qué «Pantalla cargo» supera el 10% con P10
+
+```{r cargo-p10, results='asis'}
+cut_cargo <- cutoffs %>% filter(short == "cargo")
+cnt_cargo <- flag_counts_var %>% filter(definition == "P10", variable == "Career screen (s)")
+desc_cargo <- time_desc %>% filter(variable == "Career screen (s)")
+```
+
+El corte P10 de la pantalla cargo es **`r cut_cargo$q_low_p10` s**, y se usa la regla `≤`. Eso significa que se marcan quienes tienen _exactamente_ `r cut_cargo$lowest` s (el piso de la plataforma, `r desc_cargo$n_at_min` encuestados = `r desc_cargo$pct_at_min`%) **y** quienes tienen exactamente `r cut_cargo$q_low_p10` s (un segundo más). La suma de ambos grupos da `r cnt_cargo$pct_fast`% — no el 10% esperado.
+
+Esto no significa que ese `r cnt_cargo$pct_fast - 10`% adicional sea necesariamente desatento: es una acumulación de encuestados en valores enteros muy bajos (artefacto del registro por segundos de la plataforma). El informe reporta la cifra tal como es y la señala como punto a evaluar.
+
+---
+
+# 3. Las tres flags base
+
+Un encuestado puede activar tres tipos de «alerta» (flags base). La combinación de dos o más de estas alertas constituye una **red flag**, y quienes tienen al menos una red flag se clasifican como **baja calidad**.
+
+## 3.1. Fallo del attention check
+
+La encuesta incluye una pregunta de control de atención: se le pide al encuestado recordar un dato específico del perfil. La respuesta correcta es la que corresponde a ese dato; cualquier otra opción indica que no lo leyó con atención.
+
+Sin embargo, **no todas las respuestas incorrectas son equivalentes** (ver sección 8). La sección 3.1 de la tabla de escenarios (sección 9) muestra el impacto de contar o no contar _«`r ac_weak_option`»_ como fallo.
+
+## 3.2. Duración total rápida
+
+La duración total de la encuesta (en minutos) cae bajo el corte de rapidez. Esta flag captura a quienes completaron la encuesta entera de forma inusualmente veloz.
+
+```{r flag-duracion}
+flag_counts_var %>%
+  filter(variable == "Total duration (min)") %>%
+  select(definition, n_fast, pct_fast) %>%
+  rename(Definición = definition, `N rápido` = n_fast, `% rápido` = pct_fast) %>%
+  kable(caption = "Tabla 3. Duración total: encuestados bajo el corte de rapidez")
+```
+
+## 3.3. Pantallas rápidas (≥ `r min_fast_screens` de 4)
+
+Las cuatro pantallas del experimento (cargo, tarea, postulante 1, postulante 2) tienen cada una su propio tiempo de respuesta. Un encuestado activa esta flag si **`r min_fast_screens` o más** de sus 4 pantallas caen bajo el corte de rapidez.
+
+> **Nota sobre el umbral:** el análisis anterior usaba ≥ 2 de 4 pantallas. Se sube a **≥ `r min_fast_screens` de 4** para exigir un patrón más consistente: que el comportamiento rápido no sea ocasional sino repetido en la mayoría de las pantallas del experimento.
+
+```{r flag-pantallas}
+flag_counts_var %>%
+  filter(variable != "Total duration (min)") %>%
+  select(definition, variable, n_fast, pct_fast) %>%
+  rename(Definición = definition, Variable = variable,
+         `N rápido` = n_fast, `% rápido` = pct_fast) %>%
+  kable(caption = "Tabla 4. Pantallas: encuestados bajo el corte de rapidez, por variable y definición")
+```
+
+## 3.4. Red flag: combinaciones de flags base
+
+```{r logica-combinaciones, results='asis'}
+```
+
+Un encuestado tiene una **red flag** cuando cumple **cualquier par** de flags base:
+
+| Par | Señal |
+|---|---|
+| AC fallido + duración total rápida | Respondió rápido Y no recordó el dato |
+| AC fallido + pantallas rápidas | Respondió rápido en pantallas Y no recordó el dato |
+| Duración total rápida + pantallas rápidas | Consistentemente rápido en tiempo total Y pantallas |
+
+**Baja calidad** = al menos una red flag = cumplir ≥ 2 de las 3 flags base.
+
+---
+
+# 4. Flags por variable (conteos)
+
+```{r tabla-flags-variable}
+flag_counts_var %>%
+  select(definition, variable, n_fast, pct_fast, n_slow_outlier, pct_slow_outlier) %>%
+  rename(
+    Definición = definition,
+    Variable = variable,
+    `N rápido` = n_fast, `% rápido` = pct_fast,
+    `N lento (outlier)` = n_slow_outlier, `% lento` = pct_slow_outlier
+  ) %>%
+  kable(caption = "Tabla 5. Conteo de encuestados bajo el corte de rapidez y sobre la cerca de lentitud, por variable y definición")
+```
+
+**«Lento» es solo descriptivo** y no entra en la definición de baja calidad: marca tiempos verdaderamente extremos (outliers por la cerca de Tukey en escala logarítmica). Con tiempos tan asimétricos, la cerca en escala original marcaba como outliers tiempos que no eran extremos.
+
+---
+
+# 5. Red flags y baja calidad
+
+## 5.1. Conteo por flag base y combinación
+
+```{r tabla-red-flags}
+red_flag_counts %>%
+  mutate(rule = str_replace(rule, "\\(>= min_red_flags_low_quality red flags\\)", "")) %>%
+  select(definition, rule, n, pct) %>%
+  rename(Definición = definition, Regla = rule, N = n, `%` = pct) %>%
+  kable(caption = "Tabla 6. Encuestados que cumplen cada flag base y cada red flag, por definición de «rápido»")
+```
+
+## 5.2. Todas las combinaciones de flags base
+
+Esta tabla muestra cada combinación posible de las tres flags base y cuántos encuestados caen en ella. Las filas con `TRUE` en dos o más columnas son las de baja calidad.
+
+```{r tabla-patrones}
+red_flag_patterns %>%
+  mutate(
+    ac_fail      = if_else(ac_fail, "Sí", "No"),
+    fast_total   = if_else(fast_total, "Sí", "No"),
+    fast_screens = if_else(fast_screens, "Sí", "No")
+  ) %>%
+  select(definition, ac_fail, fast_total, fast_screens, n, pct) %>%
+  rename(
+    Definición = definition,
+    `AC fallido` = ac_fail,
+    `Duración rápida` = fast_total,
+    `Pantallas rápidas` = fast_screens,
+    N = n, `%` = pct
+  ) %>%
+  kable(caption = "Tabla 7. Todas las combinaciones de flags base por definición")
+```
+
+**Cómo identificar a quienes fallaron en todo:** las filas donde las tres columnas dicen «Sí» son los encuestados que activaron las tres flags base al mismo tiempo — el patrón de mayor inatención. Ver también la sección 7 (desatención consistente en tiempos).
+
+---
+
+# 6. Baja calidad por condición ocupacional (brazo)
+
+```{r tabla-lq-brazo}
+lq_by_condition %>%
+  select(definition, VISITAS_1_BRAZO, n, n_low_quality, pct_low_quality) %>%
+  rename(
+    Definición = definition,
+    Brazo = VISITAS_1_BRAZO,
+    `N total` = n,
+    `N baja calidad` = n_low_quality,
+    `% baja calidad` = pct_low_quality
+  ) %>%
+  kable(caption = "Tabla 8. Baja calidad por brazo (condición ocupacional) y definición de «rápido»")
+```
+
+Un porcentaje similar de baja calidad en ambos brazos indica que la exclusión de estos casos no desbalanceará la comparación entre condiciones experimentales.
+
+---
+
+# 7. Attention check según la opción de respuesta
+
+La pregunta de atención tiene tres opciones incorrectas. Antes de decidir si todas cuentan como «fallo», se analiza si quienes eligen cada opción muestran efectivamente un comportamiento distinto al de quienes aprobaron.
+
+## 7.1. Tiempos medianos por opción (razón respecto a quienes aprobaron)
+
+```{r tabla-ac-timing}
+ac_timing %>%
+  select(variable, ac_option, n, median, median_ratio_vs_passed,
+         prob_faster_than_passed, p_holm) %>%
+  mutate(
+    p_holm = case_when(
+      is.na(p_holm) ~ "—",
+      p_holm < 0.001 ~ "< 0,001",
+      TRUE ~ as.character(round(p_holm, 3))
+    ),
+    median_ratio_vs_passed = round(median_ratio_vs_passed, 2),
+    prob_faster_than_passed = round(prob_faster_than_passed, 3)
+  ) %>%
+  rename(
+    Variable = variable,
+    `Opción AC` = ac_option,
+    N = n,
+    `Mediana` = median,
+    `Razón vs. aprobó` = median_ratio_vs_passed,
+    `P(más rápido)` = prob_faster_than_passed,
+    `p Holm` = p_holm
+  ) %>%
+  kable(caption = "Tabla 9. Tiempos de respuesta por opción del attention check vs. quienes aprobaron")
+```
+
+**Cómo leer:** «Razón vs. aprobó» cerca de 1 y «P(más rápido)» cerca de 0,5 indican que ese grupo responde _igual_ que quienes aprobaron. Si la p Holm es grande (> 0,05), no hay evidencia de diferencia.
+
+## 7.2. Indicadores adicionales de inatención
+
+```{r tabla-ac-summary}
+ac_summary %>%
+  rename(
+    `Opción AC` = ac_option,
+    N = n,
+    `Media medidas extremas` = mean_extreme_measures,
+    `% extremo en ≥3 medidas` = pct_extreme_on_k_measures,
+    `% straightlining` = pct_straightlining
+  ) %>%
+  kable(caption = "Tabla 10. Indicadores de inatención por opción del attention check")
+```
+
+**Straightlining:** dar la misma respuesta en los 16 ítems de al menos un perfil — indicador independiente de los tiempos.
+
+## 7.3. Lectura e implicancias
+
+```{r lectura-ac, results='asis'}
+n_hijos <- ac_summary %>% filter(str_detect(ac_option, "hijos")) %>% pull(n)
+n_cargo <- ac_summary %>% filter(str_detect(ac_option, "cargo")) %>% pull(n)
+n_nombre <- ac_summary %>% filter(str_detect(ac_option, "Nombre")) %>% pull(n)
+straight_hijos <- ac_summary %>% filter(str_detect(ac_option, "hijos")) %>% pull(pct_straightlining)
+straight_passed <- ac_summary %>% filter(ac_option == "Passed") %>% pull(pct_straightlining)
+```
+
+- **_«Número de hijos»_ (n = `r n_hijos`):** inatención clara. Tiempos sistematicamente más cortos (p Holm < 0,001 en todas las variables), `r straight_hijos`% de straightlining (vs. `r straight_passed`% en quienes aprobaron). Se incluye como fallo en la definición estricta.
+
+- **_«`r ac_weak_option`»_ (n = `r n_cargo`):** se comporta como quienes aprobaron. No hay diferencias sistemáticas de tiempo ni de straightlining. Lo más probable es que la pregunta sea ambigua para esta respuesta. **No se cuenta como fallo en la definición estricta.**
+
+- **_«Nombre»_ (n = `r n_nombre`):** muestra insuficiente para conclusiones estadísticas, pero es una respuesta claramente incorrecta. Se mantiene como fallo.
+
+---
+
+# 8. Desatención consistente en tiempos
+
+Esta sección identifica encuestados que fueron rápidos en **todas** las variables de tiempo simultáneamente — el perfil más extremo de respuesta apresurada. A diferencia de la definición de baja calidad (que se activa con cualquier par de flags), este indicador exige rapidez _consistente_ en todas las medidas.
+
+```{r tabla-consistent}
+consistent_fast %>%
+  select(definition, group, n_total, n_consistent, pct_consistent) %>%
+  rename(
+    Definición = definition,
+    Grupo = group,
+    `N total` = n_total,
+    `N consistentemente rápido` = n_consistent,
+    `%` = pct_consistent
+  ) %>%
+  kable(caption = "Tabla 11. Encuestados rápidos en TODAS las 5 medidas de tiempo, por definición y brazo")
+```
+
+## 8.1. Distribución: ¿en cuántas medidas fue rápido cada encuestado?
+
+```{r tabla-n-fast-all}
+n_fast_all_dist %>%
+  rename(
+    Definición = definition,
+    `N medidas rápidas (de 5)` = n_fast_all,
+    N = n, `%` = pct
+  ) %>%
+  kable(caption = "Tabla 12. Distribución del número de medidas de tiempo en que cada encuestado fue clasificado como rápido")
+```
+
+Los encuestados en la fila «5 medidas» son los consistentemente desatentos según este criterio. Nótese que ser rápido en pocas medidas (1-2) puede ser circunstancial; el patrón preocupante es cuando la rapidez se repite en todas.
+
+---
+
+# 9. Tabla de escenarios
+
+La tabla siguiente resume cuántos encuestados quedarían como «baja calidad» bajo cada combinación de:
+- **Definición de «rápido»:** Q1 (más amplio) o P10 (más conservador).
+- **Definición de fallo del AC:** todas las opciones incorrectas, o solo las que muestran evidencia de inatención (_«`r paste(ac_strong_options, collapse = "» y «")`»_).
+
+```{r tabla-escenarios}
+scenarios %>%
+  select(definition, ac_definition, n_total, pct_total,
+         n_profesional, pct_profesional, n_tecnico, pct_tecnico, diff_pp) %>%
+  rename(
+    `Def. rápido` = definition,
+    `Def. AC` = ac_definition,
+    `N total` = n_total, `% total` = pct_total,
+    `N prof.` = n_profesional, `% prof.` = pct_profesional,
+    `N téc.` = n_tecnico, `% téc.` = pct_tecnico,
+    `Dif. pp (prof–téc)` = diff_pp
+  ) %>%
+  kable(caption = "Tabla 13. Escenarios de exclusión: tamaño y balance del grupo de baja calidad según definición")
+```
+
+**Fila recomendada:** P10 + solo _«`r paste(ac_strong_options, collapse = "» y «")`»_. Produce el grupo más pequeño y mejor respaldado, con la menor diferencia entre brazos.
+
+---
+
+# 10. Puntos a considerar antes de fijar la definición
+
+1. **Las definiciones son relativas.** P10 y Q1 siempre marcan una proporción fija de encuestados, sea o no implausible ese tiempo. Antes de fijar la exclusión conviene contrastar el corte P10 con un mínimo absoluto de lectura (p. ej., cuántos segundos toma leer el texto de cada pantalla a velocidad mínima razonable).
+
+2. **Piso de registro.** Varios encuestados comparten exactamente el valor mínimo en:
+   - Pantalla cargo: `r time_desc %>% filter(str_detect(variable, "Career")) %>% pull(min)` s (`r time_desc %>% filter(str_detect(variable, "Career")) %>% pull(n_at_min)` casos, `r time_desc %>% filter(str_detect(variable, "Career")) %>% pull(pct_at_min)`%)
+   - Pantalla tarea: `r time_desc %>% filter(str_detect(variable, "Task")) %>% pull(min)` s (`r time_desc %>% filter(str_detect(variable, "Task")) %>% pull(n_at_min)` casos, `r time_desc %>% filter(str_detect(variable, "Task")) %>% pull(pct_at_min)`%)
+   - Pantallas postulante: `r time_desc %>% filter(str_detect(variable, "Candidate")) %>% pull(min) %>% unique()` s (varios casos)
+
+   No se puede saber si el tiempo real fue menor o si la plataforma registra un piso.
+
+3. **Análisis de sensibilidad.** Antes de fijar la definición, conviene estimar los efectos principales de interés con y sin cada escenario de exclusión. Si los resultados no cambian sustantivamente, la elección de la definición es menos crítica.
+
+4. **Pantallas rápidas ≥ `r min_fast_screens` de 4.** El nuevo umbral (subido desde 2) es más exigente: un encuestado que fue rápido en solo una o dos pantallas ya no activa esa flag. Esto reduce el grupo de baja calidad pero aumenta la certeza de que quienes quedan en él mostraron un patrón consistente.
+
+---
+
+_Generado automáticamente desde los outputs del script `05_response_time_metrics.R`. Todos los números provienen de los archivos CSV en `outputs/05_response_time_metrics/`._
