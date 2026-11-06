@@ -1,0 +1,35 @@
+Publication Years	Record Count	% of 675
+2026	64	9.481
+2025	102	15.111
+2024	87	12.889
+2023	57	8.444
+2022	62	9.185
+2021	61	9.037
+2020	45	6.667
+2019	41	6.074
+2018	23	3.407
+2017	22	3.259
+2016	20	2.963
+2015	25	3.704
+2014	10	1.481
+2013	16	2.370
+2012	10	1.481
+2011	8	1.185
+2010	5	0.741
+2009	3	0.444
+2008	4	0.593
+2007	3	0.444
+2006	2	0.296
+2005	2	0.296
+2003	2	0.296
+1997	1	0.148
+
+# NOTA METODOLOGICA (actualizada 2026-11-05)
+# Esta serie no es una descarga agregada directa de WoS. Fue reconstruida desde corpus_unico_inicial.rds despues de integrar la revision manual y aplicar las exclusiones del corpus.
+# Criterio de inclusion: paper elegible con al menos una afiliacion institucional en uno de los 14 paises latinoamericanos definidos para el estudio.
+# La afiliacion se valida usando el pais al final de cada direccion de C1; no se usan coincidencias de texto libre dentro de la direccion.
+# Unidad de conteo: UT unica por anio. Un paper con autores o afiliaciones en varios paises latinoamericanos se cuenta una sola vez.
+# Total: 675 papers entre 1997 y 2026; 611 hasta 2025 y 64 en 2026. El anio 2026 es parcial.
+# Los 675 corresponden a 674 papers de la busqueda endogena final y WOS:001488694300001, recuperado por laboratorio pero con afiliaciones argentinas completadas en la revision manual.
+# Se retiraron cinco falsos positivos causados por confundir New Mexico, USA, con Mexico: WOS:000560503100006, WOS:001042741200001, WOS:001277827200001, WOS:001684128300001 y WOS:001740801800001.
+# Al importar este archivo programaticamente se deben ignorar las lineas que comienzan con #.

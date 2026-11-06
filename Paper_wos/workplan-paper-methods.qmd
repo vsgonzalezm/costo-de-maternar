@@ -1,0 +1,163 @@
+---
+title: "Workplan detallado: paper de métodos"
+author: "Tania Hutt"
+date: 2026-11-03
+lang: es
+format:
+  html:
+    toc: true
+  docx:
+    toc: true
+---
+
+::: callout-note
+Basado en el documento `workplan-paper-tipo`. Las fechas fijas son las acordadas por el equipo. Las fechas intermedias son propuestas para ordenar el trabajo dentro de esos plazos.
+:::
+
+# 1. Equipo y roles
+
+::: callout-important
+**Autoría compartida (equal first authorship).** Tania y Vale son co-primeras autoras con contribución igual. En la lista de autoras Tania va primera y Vale segunda, y se reporta explícitamente que ambas contribuyeron por igual (nota al pie en la portada y en la declaración CRediT).
+:::
+
+| Rol | Persona | Responsabilidad principal en este paper |
+|---|---|---|
+| P1 | Tania (co-primera autora, primera en la lista) | Lidera el paper. Escribe introducción y discusión. Integra el borrador 1. Decide texto principal y suplementario. Prepara y realiza el envío. |
+| P2 | Vale (co-primera autora, contribución igual) | Núcleo analítico (análisis de datos bibliométricos). Escribe métodos y resultados. Elabora el Borrador 2. |
+| P3 | Isi | Datos, código, tablas y figuras. Escribe revisión de literatura y sección de datos. Elabora el Borrador 3 y el suplementario. |
+
+# 2. Fechas fijas acordadas
+
+| Fecha | Hito | Responsables |
+|---|---|---|
+| Vie 6 de noviembre | Tablas y figuras listas | P3 (con P2) |
+| Mié 2 de diciembre | Borrador de secciones | P1, P2, P3 |
+| Mié 9 de diciembre | Borrador 1 completo | P1 integra |
+| Mié 16 de diciembre | Borrador 2 completo | P2 |
+| Mié 23 de diciembre | Borrador 2 re-revisado | P1 |
+| Mié 6 de enero | Borrador 3 completo y suplementario | P3 |
+| Mié 20 de enero | Envío, tras revisiones de las tres | P1 |
+
+::: callout-warning
+En la lista original aparecían dos hitos de "Borrador 2" (16 y 23 de diciembre). Se interpretó, siguiendo el flujo del documento tipo, como: 16 dic = Borrador 2 (P2) y 23 dic = re-revisión de P1. Si es otra cosa, hay que ajustar la sección 4.
+:::
+
+# 3. Estado de las etapas previas
+
+Las etapas 0 a 3 del documento tipo (diseño, datos, estrategia analítica y análisis) se asumen cerradas o en cierre. El análisis queda congelado: desde ahora no se agregan análisis nuevos, solo lo necesario para las tablas y figuras.
+
+| Etapa | Estado supuesto | Pendiente de confirmar |
+|---|---|---|
+| 0. Diseño | Cerrada | Revista objetivo y plan B anotados en la ficha |
+| 1. Datos | Cerrada | Base final y código en carpeta común |
+| 2. Estrategia analítica | Cerrada | Plan de análisis acordado P1 y P2 |
+| 3. Análisis | Cerrada, congelado | Confirmar con P2 que no hay modelos por correr |
+
+# 4. Cronograma detallado por semana
+
+| Semana | Fechas | Etapa | Tarea | Responsable | Entregable |
+|---|---|---|---|---|---|
+| 1 | 3–6 nov | 4. Tablas y figuras | Producir y editar tablas y figuras finales | P3, con P2 | Set final de tablas y figuras (**vie 6 nov**) |
+| 1 | 3–6 nov | 4. Tablas y figuras | Revisar que tablas coincidan con resultados del análisis | P2 | Visto bueno de P2 |
+| 2 | 9–13 nov | 5. Borrador | Reunión de arranque. P1 asigna secciones y fechas por sección | P1 | Esquema del paper con secciones y responsables |
+| 2 | 9–13 nov | 5. Borrador | Verificar tablas y figuras contra el esquema | P1 | Lista de ajustes menores a tablas y figuras |
+| 2–3 | 9–20 nov | 5. Borrador | Esquema detallado y primeras páginas de cada sección | P1, P2, P3 | Esquemas por sección |
+| 3–4 | 16–27 nov | 5. Borrador | Escribir secciones: introducción y discusión (P1); métodos y resultados (P2); revisión de literatura y sección de datos (P3) | P1, P2, P3 | Secciones en borrador |
+| 4 | 23–27 nov | 5. Borrador | Actualizar búsqueda de literatura y entregar referencias a P1 y P2 | P3 | Base de referencias actualizada |
+| 5 | 30 nov–2 dic | 5. Borrador | Cierre de secciones y entrega en carpeta común | P1, P2, P3 | Secciones entregadas (**mié 2 dic**) |
+| 5 | 3–9 dic | 5. Borrador | P1 integra las secciones en una sola voz, ajusta consistencia de términos, tablas y figuras | P1 | Borrador 1 completo (**mié 9 dic**) |
+| 6 | 10–16 dic | 6. Revisiones | P2 revisa, aporta y modifica el Borrador 1 | P2 | Borrador 2 completo (**mié 16 dic**) |
+| 7 | 17–23 dic | 6. Revisiones | P1 re-revisa el Borrador 2 y resuelve cambios | P1 | Borrador 2 re-revisado (**mié 23 dic**) |
+| 8–9 | 24 dic–6 ene | 6. Revisiones | P3 revisa y modifica. Verifica reproducibilidad. Arma apéndices y suplementario | P3 | Borrador 3 y suplementario (**mié 6 ene**) |
+| 9 | 7–13 ene | 7. Cierre | Primera lectura completa con ediciones | P1, P2, P3 | Primera lectura entregada |
+| 9 | 7–9 ene | 7. Cierre | Última búsqueda de literatura, no más de 3 meses antes del envío | P3 | Nuevas referencias, si hay |
+| 10 | 14–16 ene | 7. Cierre | Segunda lectura completa con ediciones | P1, P2, P3 | Segunda lectura entregada |
+| 10 | 14–16 ene | 7. Cierre | Dos revisiones independientes con IA, con agentes distintos | P1 | Dos informes de comentarios |
+| 10 | 17–19 ene | 7. Cierre | Corregir solo en base a esos comentarios. Aprobación de la versión final por las tres | P1 (con P2 y P3) | Versión final aprobada |
+| 10 | 19–20 ene | 7. Cierre | Carta al editor, portal y envío | P1 | **Paper enviado (mié 20 ene)** |
+
+El tramo 24 dic–6 ene incluye las fiestas de fin de año. Conviene que P3 confirme su disponibilidad antes del 16 de diciembre, y que P1 y P2 dejen el Borrador 2 re-revisado el 23 dic sin pendientes.
+
+# 5. Tareas por persona
+
+## P1 · Tania
+
+| Fecha | Tarea |
+|---|---|
+| 9–13 nov | Esquema del paper, asignación de secciones y fechas |
+| 16 nov–2 dic | Escribir introducción y discusión |
+| 3–9 dic | Integrar el Borrador 1 en una sola voz |
+| 17–23 dic | Re-revisar el Borrador 2 |
+| 7–16 ene | Dos lecturas completas |
+| 14–16 ene | Dos revisiones con IA (agentes distintos) |
+| 17–20 ene | Corregir, obtener aprobación de las tres, carta al editor y envío |
+| Todo el periodo | Reunión de seguimiento, decisión texto principal vs. suplementario |
+
+## P2 · Vale
+
+| Fecha | Tarea |
+|---|---|
+| 3–6 nov | Validar que tablas y figuras reflejen los resultados |
+| 16 nov–2 dic | Escribir métodos y resultados |
+| 10–16 dic | Revisar y modificar el Borrador 1 para producir el Borrador 2 |
+| 7–16 ene | Dos lecturas completas |
+| 17–19 ene | Aprobar la versión final |
+
+## P3 · Isi
+
+| Fecha | Tarea |
+|---|---|
+| 3–6 nov | Producir y editar tablas y figuras |
+| 16 nov–2 dic | Escribir revisión de literatura y sección de datos |
+| 23–27 nov | Actualizar búsqueda de literatura y compartir referencias |
+| 24 dic–6 ene | Revisar y modificar para producir el Borrador 3. Verificar reproducibilidad. Escribir apéndices y suplementario |
+| 7–9 ene | Última búsqueda de literatura |
+| 7–16 ene | Dos lecturas completas |
+| 17–19 ene | Aprobar la versión final |
+
+# 6. Reuniones de seguimiento
+
+| Fecha | Propósito |
+|---|---|
+| 9–13 nov | Arranque de escritura y asignación de secciones |
+| 25–27 nov | Revisión de avance de secciones antes del 2 dic |
+| 10 dic | Traspaso del Borrador 1 a P2 |
+| 17 dic | Estado del Borrador 2 y coordinación de P3 durante las fiestas |
+| 7 ene | Traspaso del Borrador 3 e inicio de lecturas |
+| 14 ene | Chequeo de la primera lectura y arranque de segunda lectura y revisiones con IA |
+| 19 ene | Cierre, aprobación y preparación del envío |
+
+# 7. Checklist de envío (20 de enero)
+
+1. Búsqueda de literatura con no más de 3 meses de antigüedad al momento del envío.
+2. Primera lectura completa por cada autora (P1, P2, P3), con ediciones.
+3. Segunda lectura completa por cada autora, con ediciones.
+4. Dos revisiones independientes con IA, usando agentes distintos.
+5. Corregir solo en base a esos comentarios. Queda listo cuando todos están resueltos.
+6. Aprobación de la versión final por las tres.
+7. Nota de contribución igual (Tania y Vale) incluida en la portada, en el portal de la revista y en la declaración CRediT.
+8. Enviar a la revista elegida de antemano.
+
+# 8. Riesgos y reglas
+
+- No se agregan análisis nuevos después de congelar el análisis.
+- Si una autora no puede cumplir una fecha, avisa en cuanto lo sepa.
+- Todas las versiones se guardan con fecha y número de borrador.
+- El Borrador 2 re-revisado del 23 dic es el último punto donde P1 y P2 hacen cambios de fondo. Después, P3 trabaja sobre una versión estable.
+- Las decisiones sobre texto principal y suplementario las toma P1.
+- Si el envío se rechaza, se reenvía en un plazo máximo de 2 semanas a la revista plan B.
+
+# 9. Datos del paper
+
+| Campo | Paper |
+|---|---|
+| Título de trabajo | |
+| P1 / P2 / P3 | Tania / Vale / Isi |
+| Autoría | Tania y Vale co-primeras autoras (equal contribution). Orden: Tania, Vale, Isi |
+| Revista objetivo / plan B | |
+| Fecha de envío objetivo | 20 de enero de 2027 |
+| Horas por semana por autora | |
+| Análisis congelado | Antes del 6 de noviembre de 2026 |
+| Fecha Borrador 1 | 9 de diciembre de 2026 |
+| Fecha Borrador 3 | 6 de enero de 2027 |
+| Fecha límite de lecturas | 16 de enero de 2027 |

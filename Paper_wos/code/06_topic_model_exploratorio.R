@@ -3,7 +3,7 @@
 #
 # Este script trabaja a nivel de paper (UT). Su objetivo es explorar en que
 # temas se publica, como cambia esa distribucion en el tiempo y si los temas
-# tienen distinta presencia en Endogena, Laboratorio y core_area.
+# tienen distinta presencia entre core areas del corpus affi_latam.
 #
 # El modelo principal usa titulo + abstract. Las keywords se usan solo en una
 # sensibilidad para comprobar si cambian sustantivamente los resultados.
@@ -32,13 +32,18 @@ library(writexl)
 
 seed <- 20260929L # Semilla aleatoria: hace reproducibles los resultados.
 
-k_candidates <- 4:12
+k_candidates <- 4:10
 # Valores de k que se comparan. k representa el numero de topics que el modelo
 # debe encontrar. Probar varios valores evita fijar arbitrariamente un unico k.
 
-k_exploratory <- c(4L, 12L)
+k_exploratory <- c(4L, 10L)
 # Soluciones que se exportan explicitamente para lectura manual:
-# 4 topics entrega una sintesis parsimoniosa y 12 una lectura mas detallada.
+# 4 topics entrega una sintesis parsimoniosa y 10 una lectura mas detallada.
+# El maximo baja de 12 a 10 porque el corpus oficial tiene 675 documentos.
+
+minimum_topic_share <- 0.03
+# Cada topic dominante debe reunir al menos 3% de los papers. Este control
+# evita recomendar particiones con grupos casi vacios.
 
 n_top_terms <- 12L # Numero de palabras principales que se exportan por topic para interpretarlo.
 
@@ -64,16 +69,16 @@ figures_dir <- here("Paper_wos", "outputs", "figures")
 # 2. Cargar y consolidar el corpus final
 # -----------------------------------------------------------------------------
 # Topic modeling necesita una observacion por documento. Por eso se carga
-# corpus_unico_inicial.rds, que ya contiene las correcciones de Isidora,
+# base_oficial.rds, que ya contiene las correcciones de Isidora,
 # exclusiones, abstracts y keywords integradas por 00.
 
 corpus_raw <- readRDS(
-  here("Paper_wos", "data", "intermediate", "corpus_unico_inicial.rds")
+  here("Paper_wos", "data", "intermediate", "base_oficial.rds")
 )
 
 required <- c(
   "UT", "TI", "AB", "keywords_analisis", "PY", "SO",
-  "base_endogeno", "base_laboratorio", "core_area"
+  "core_area"
 )
 # Se detiene el script si falta una variable necesaria para identificar el
 # documento, construir el texto o comparar los topics por contexto.
@@ -81,25 +86,10 @@ required <- c(
 missing <- setdiff(required, names(corpus_raw))
 if (length(missing) > 0L) {
   stop(
-    "Faltan columnas en corpus_unico_inicial.rds: ",
+    "Faltan columnas en base_oficial.rds: ",
     paste(missing, collapse = ", ")
   )
 }
-
-base_flags <- corpus_raw |>
-  transmute(
-    UT = as.character(UT),
-    base_endogeno = replace_na(as.integer(base_endogeno), 0L),
-    base_laboratorio = replace_na(as.integer(base_laboratorio), 0L)
-  ) |>
-  group_by(UT) |>
-  summarise(
-    base_endogeno = max(base_endogeno, na.rm = TRUE),
-    base_laboratorio = max(base_laboratorio, na.rm = TRUE),
-    .groups = "drop"
-  )
-# Un paper puede estar en ambas bases. max() conserva esa pertenencia sin
-# duplicar el documento.
 
 corpus <- corpus_raw |>
   transmute(
@@ -111,17 +101,6 @@ corpus <- corpus_raw |>
     keywords_analisis = as.character(keywords_analisis),
     core_area = as.character(core_area)
   ) |>
-  group_by(UT) |>
-  summarise(
-    year = first(year),
-    title = first(title),
-    abstract = first(abstract),
-    journal = first(journal),
-    keywords_analisis = first(keywords_analisis),
-    core_area = first(core_area),
-    .groups = "drop"
-  ) |>
-  left_join(base_flags, by = "UT") |>
   mutate(
     # 00 ya consolida la jerarquia definida para keywords: originales del autor,
     # correcciones manuales cuando existen y keywords disponibles de WoS.
@@ -129,8 +108,8 @@ corpus <- corpus_raw |>
     keywords_analisis = na_if(str_squish(keywords_analisis), "")
   )
 
-if (anyDuplicated(corpus$UT) > 0L) {
-  stop("Hay UT duplicados despues de consolidar el corpus.")
+if (nrow(corpus) != 675L || anyDuplicated(corpus$UT) > 0L) {
+  stop("El corpus de topic modeling debe contener 675 UT unicas.")
 }
 
 # -----------------------------------------------------------------------------
@@ -761,6 +740,29 @@ exclusivity_score <- function(model, n = 10L) {
   mean(topic_values)
 }
 
+topic_prevalence <- function(model) {
+  # Resume el tamano de los topics segun el topic dominante de cada paper.
+  # No define por si solo el mejor k, pero evita recomendar grupos casi vacios.
+  topic_sizes <- tidy(model, matrix = "gamma") |>
+    group_by(document) |>
+    slice_max(gamma, n = 1L, with_ties = FALSE) |>
+    ungroup() |>
+    count(topic, name = "n_papers") |>
+    complete(
+      topic = seq_len(ncol(posterior(model)$topics)),
+      fill = list(n_papers = 0L)
+    )
+
+  shares <- topic_sizes$n_papers / sum(topic_sizes$n_papers)
+
+  tibble(
+    min_topic_papers = min(topic_sizes$n_papers),
+    min_topic_share = min(shares),
+    max_topic_share = max(shares),
+    topic_share_sd = sd(shares)
+  )
+}
+
 model_grid <- map(k_candidates, ~ fit_lda(dtm_primary, .x, final = FALSE))
 # Ajusta todas las soluciones candidatas. Esto permite ver si el resultado cambia
 # mucho entre una estructura simple y otra mas desagregada.
@@ -769,33 +771,46 @@ model_selection <- map2_dfr(
   model_grid,
   k_candidates,
   function(model, k) {
-    tibble(
-      k = k,
-      log_likelihood = as.numeric(logLik(model)),
-      perplexity = perplexity(model, newdata = dtm_primary),
-      coherence_umass = umass_coherence(model, dtm_primary),
-      exclusivity = exclusivity_score(model)
+    bind_cols(
+      tibble(
+        k = k,
+        log_likelihood = as.numeric(logLik(model)),
+        perplexity = perplexity(model, newdata = dtm_primary),
+        coherence_umass = umass_coherence(model, dtm_primary),
+        exclusivity = exclusivity_score(model)
+      ),
+      topic_prevalence(model)
     )
   }
 ) |>
   mutate(
-    # Este score es una guia equilibrando las tres metricas. No reemplaza la
-    # evaluacion manual de los terminos ni la interpretacion teorica.
-    selection_score = as.numeric(scale(coherence_umass)) +
+    # El score combina ajuste, interpretabilidad y equilibrio. La regla de 3%
+    # impide recomendar una solucion con topics casi sin documentos dominantes.
+    metric_score = as.numeric(scale(coherence_umass)) +
       as.numeric(scale(exclusivity)) -
-      as.numeric(scale(perplexity))
+      as.numeric(scale(perplexity)) -
+      as.numeric(scale(topic_share_sd)),
+    eligible_prevalence = min_topic_share >= minimum_topic_share,
+    selection_score = if_else(eligible_prevalence, metric_score, -Inf)
   ) |>
-  arrange(desc(selection_score))
+  arrange(desc(eligible_prevalence), desc(selection_score))
 
-recommended_k <- model_selection$k[[1L]]
-# Guarda el k mejor posicionado por el score combinado. Ademas se exportan
-# explicitamente k=4 y k=12 para comparar una lectura simple y una amplia.
+if (!any(model_selection$eligible_prevalence)) {
+  stop("Ninguna solucion candidata supera el minimo de prevalencia por topic.")
+}
+
+recommended_k <- model_selection |>
+  filter(eligible_prevalence) |>
+  slice_max(selection_score, n = 1L, with_ties = FALSE) |>
+  pull(k)
+# Guarda el k mejor posicionado por las metricas y el control de prevalencia.
+# Ademas se exportan k=4 y k=10 para comparar una lectura simple y una amplia.
 
 # -----------------------------------------------------------------------------
-# 6. Estimar modelos finales: k=4, k=12 y k recomendado
+# 6. Estimar modelos finales: k=4, k=10 y k recomendado
 # -----------------------------------------------------------------------------
 # La primera exploracion necesita mostrar tanto una sintesis facil de leer como
-# una particion mas detallada. Por eso se estiman k=4 y k=12 con mas iteraciones.
+# una particion mas detallada. Por eso se estiman k=4 y k=10 con mas iteraciones.
 # El modelo recomendado se conserva como referencia automatica.
 
 fit_final_cached <- function(dtm, k, seed_value = seed) {
@@ -804,12 +819,12 @@ fit_final_cached <- function(dtm, k, seed_value = seed) {
 }
 
 final_k4 <- fit_final_cached(dtm_primary, 4L, seed_value = seed + 400L)
-final_k12 <- fit_final_cached(dtm_primary, 12L, seed_value = seed + 1200L)
+final_k10 <- fit_final_cached(dtm_primary, 10L, seed_value = seed + 1000L)
 
 final_recommended <- if (recommended_k == 4L) {
   final_k4
-} else if (recommended_k == 12L) {
-  final_k12
+} else if (recommended_k == 10L) {
+  final_k10
 } else {
   fit_final_cached(dtm_primary, recommended_k, seed_value = seed + recommended_k)
 }
@@ -862,7 +877,7 @@ make_topic_outputs <- function(model, corpus_data, model_name) {
 }
 
 outputs_k4 <- make_topic_outputs(final_k4, corpus, "K4_TI_AB")
-outputs_k12 <- make_topic_outputs(final_k12, corpus, "K12_TI_AB")
+outputs_k10 <- make_topic_outputs(final_k10, corpus, "K10_TI_AB")
 outputs_recommended <- make_topic_outputs(
   final_recommended,
   corpus,
@@ -875,37 +890,20 @@ outputs_keywords <- make_topic_outputs(
 )
 
 # -----------------------------------------------------------------------------
-# 7. Comparar topics por base, tiempo y disciplina
+# 7. Comparar topics por tiempo y disciplina
 # -----------------------------------------------------------------------------
 # Esta seccion no vuelve a estimar topics. Usa la asignacion del modelo
 # recomendado para preguntar donde aparecen mas los temas encontrados.
 
-paper_base <- corpus |>
-  transmute(
-    UT,
-    base = case_when(
-      base_endogeno == 1L & base_laboratorio == 1L ~ "Endogeno y Laboratorio",
-      base_endogeno == 1L ~ "Endogeno",
-      base_laboratorio == 1L ~ "Laboratorio",
-      TRUE ~ "Sin base identificada"
-    )
-  )
 
-topics_by_base <- outputs_recommended$papers |>
-  select(UT, dominant_topic, topic_label) |>
-  left_join(paper_base, by = "UT") |>
-  count(base, dominant_topic, topic_label, name = "n_papers") |>
-  group_by(base) |>
-  mutate(percent = 100 * n_papers / sum(n_papers)) |>
-  ungroup()
 
 topics_by_year <- outputs_recommended$papers |>
   count(year, dominant_topic, topic_label, name = "n_papers") |>
   group_by(year) |>
   mutate(percent = 100 * n_papers / sum(n_papers)) |>
   ungroup()
-# Un año aparece varias veces porque hay una fila por combinacion año-topic.
-# Los años con pocos papers deben interpretarse con cautela.
+# Un ano aparece varias veces porque hay una fila por combinacion ano-topic.
+# Los anos con pocos papers deben interpretarse con cautela.
 
 core_area_long <- corpus |>
   select(UT, core_area) |>
@@ -973,27 +971,27 @@ write_xlsx(
     Labels_k4 = outputs_k4$labels,
     Top_terms_k4 = outputs_k4$terms,
     Paper_topics_k4 = outputs_k4$papers,
-    Labels_k12 = outputs_k12$labels,
-    Top_terms_k12 = outputs_k12$terms,
-    Paper_topics_k12 = outputs_k12$papers,
+    Labels_k10 = outputs_k10$labels,
+    Top_terms_k10 = outputs_k10$terms,
+    Paper_topics_k10 = outputs_k10$papers,
     Topic_labels_primary = outputs_recommended$labels,
     Top_terms_primary = outputs_recommended$terms,
     Paper_topics_primary = outputs_recommended$papers,
-    Topics_by_base = topics_by_base,
+
     Topics_by_year = topics_by_year,
     Topics_by_core_area = topics_by_core_area,
     Topic_labels_keywords = outputs_keywords$labels,
     Top_terms_keywords = outputs_keywords$terms,
     Paper_topics_keywords = outputs_keywords$papers
   ),
-  file.path(tables_dir, "topic_model_endogeno_laboratorio.xlsx")
+  file.path(tables_dir, "topic_model_affi_latam.xlsx")
 )
 
 # -----------------------------------------------------------------------------
 # 9. Exportar figuras comparables
 # -----------------------------------------------------------------------------
 # Las figuras permiten ver rapidamente si k=4 entrega una sintesis clara y si
-# k=12 separa subtemas que quedan mezclados en la solucion parsimoniosa.
+# k=10 separa subtemas que quedan mezclados en la solucion parsimoniosa.
 
 plot_top_terms <- function(topic_terms, title_text, subtitle_text, file_name,
                            width = 13, height = 9) {
@@ -1036,10 +1034,10 @@ plot_top_terms(
 )
 
 plot_top_terms(
-  outputs_k12$terms,
-  "Terminos principales: k = 12",
+  outputs_k10$terms,
+  "Terminos principales: k = 10",
   "Modelo exploratorio desagregado, titulo + abstract",
-  "topic_model_top_terms_k12.png"
+  "topic_model_top_terms_k10.png"
 )
 
 plot_top_terms(
@@ -1049,24 +1047,7 @@ plot_top_terms(
   "topic_model_top_terms.png"
 )
 
-topic_base_plot <- topics_by_base |>
-  ggplot(aes(factor(dominant_topic), percent, fill = base)) +
-  geom_col(position = "dodge") +
-  labs(
-    title = "Distribucion de topics por base",
-    x = "Topic dominante",
-    y = "Porcentaje de papers",
-    fill = "Base"
-  ) +
-  theme_minimal(base_size = 12)
 
-ggsave(
-  file.path(figures_dir, "topic_model_topics_by_base.png"),
-  topic_base_plot,
-  width = 11,
-  height = 7,
-  dpi = 320
-)
 
 print(model_summary)
 print(model_selection)

@@ -871,5 +871,4 @@ resultados_set4b_etiq %>%
                "grafico_set4b", modo = "interacciones")
 
 cat("\n✓ Proceso completado.\n")
-cat("   Tablas en:  ~/Desktop/Diseno_demanda/tablas/\n")
-cat("   Figuras en: ~/Desktop/Diseno_demanda/figuras/\n")
+cat("   Tablas en:  ~/Desktop/D

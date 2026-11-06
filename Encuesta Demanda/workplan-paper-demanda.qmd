@@ -1,0 +1,208 @@
+---
+title: "Workplan detallado: paper de demanda"
+author: "Tania Hutt"
+date: 2026-11-03
+lang: es
+format:
+  html:
+    toc: true
+  docx:
+    toc: true
+---
+
+::: callout-note
+Basado en el documento `workplan-paper-tipo` y con el mismo formato que `workplan-paper-methods`. Las fechas de las etapas son las acordadas por el equipo. Las fechas intermedias son propuestas para ordenar el trabajo dentro de esos plazos. Ojo: en este paper los roles P2 y P3 están invertidos respecto del paper de métodos.
+:::
+
+# 1. Equipo y roles
+
+| Rol | Persona | Responsabilidad principal en este paper |
+|---|---|---|
+| P1 | Tania | Lidera el paper. Revisa la limpieza. Define los modelos junto con Isidora. Escribe introducción y discusión. Integra el Borrador 1. Coordina las revisiones. Decide texto principal y suplementario. Realiza el envío. |
+| P2 | Isidora | Define la estrategia de modelos junto con Tania. Ejecuta y documenta el análisis. Escribe métodos y resultados. Elabora el Borrador 2. |
+| P3 | Vale | Limpieza y validación de datos. Código reproducible. Tablas y figuras. Escribe revisión de literatura y sección de datos. Elabora el Borrador 3, el suplementario y el material de reproducibilidad. |
+| Las tres | Tania, Isidora, Vale | Lecturas completas, aprobación final y decisiones sobre modelos y alcance. |
+
+# 2. Fechas fijas acordadas
+
+| Fecha | Hito | Responsables |
+|---|---|---|
+| Vie 13 de noviembre | Base validada | P3 (revisan P1 y P2) |
+| Vie 20 de noviembre | Plan de análisis acordado | P1 y P2 (comenta P3) |
+| Vie 11 de diciembre | Análisis congelado | P2 |
+| Vie 18 de diciembre | Set final de tablas y figuras | P3, con P2 |
+| Vie 18 de diciembre | Revisión de literatura y sección de datos | P3 |
+| Mar 5 de enero | Métodos, resultados, introducción y discusión | P1, P2 |
+| Vie 8 de enero | Borrador 1 integrado | P1 |
+| Mié 13 de enero | Borrador 2 | P2 |
+| Vie 15 de enero | Borrador 2 re-revisado | P1 |
+| Mié 20 de enero | Borrador 3 y suplementario | P3 |
+| Mié 28 de enero | Aprobación final de las tres | P1, P2, P3 |
+| Vie 29 de enero | Envío | P1 |
+
+::: callout-warning
+La integración del Borrador 1 (4–8 ene) se superpone con la escritura de métodos, resultados, introducción y discusión (hasta el 5 ene). Se interpreta así: entre el 4 y el 5 de enero Tania integra lo que ya está listo (literatura y datos de Vale, y lo avanzado de Isidora), y entre el 6 y el 8 integra las versiones finales. Si Isidora entrega antes, mejor.
+:::
+
+# 3. Etapas
+
+| Etapa | Fechas | Responsables | Entregable |
+|---|---|---|---|
+| 1. Revisión de limpieza | 2–13 nov | P3 limpia y documenta. P1 y P2 revisan una muestra | Base validada (**13 nov**) |
+| 2. Definición de modelos principales | 9–20 nov | P1 y P2 deciden. P3 comenta | Plan de análisis acordado (**20 nov**) |
+| 3. Análisis | 23 nov–11 dic | P2 ejecuta y documenta. P1 revisa una vez por semana | Análisis congelado (**11 dic**) |
+| 4. Tablas y figuras | 7–18 dic | P3, con P2 | Set final (**18 dic**) |
+| 5. Primer borrador | 30 nov–8 ene | P1, P2, P3 | Borrador 1 integrado (**8 ene**) |
+| 6. Revisiones del borrador | 4–20 ene | P2, P1, P3 | Borrador 3 y suplementario (**20 ene**) |
+| 7. Cierre y envío | 21–29 ene | P1, P2, P3 | **Paper enviado (29 ene)** |
+
+# 4. Cronograma detallado por semana
+
+| Semana | Fechas | Etapa | Tarea | Responsable | Entregable |
+|---|---|---|---|---|---|
+| 1 | 2–6 nov | 1. Limpieza | Revisar y documentar la limpieza de la base. Dejar el código reproducible en la carpeta común | P3 | Código de limpieza documentado |
+| 2 | 9–13 nov | 1. Limpieza | Revisar una muestra de la base y reportar inconsistencias | P1, P2 | Observaciones sobre la muestra |
+| 2 | 9–13 nov | 1. Limpieza | Corregir lo observado y cerrar la base | P3 | Base validada (**vie 13 nov**) |
+| 2–3 | 9–20 nov | 2. Modelos | Definir los modelos principales con los que nos quedamos | P1, P2 | Propuesta de plan de análisis |
+| 3 | 16–20 nov | 2. Modelos | Comentar la propuesta desde los datos (variables, cobertura, limitaciones) | P3 | Comentarios a la propuesta |
+| 3 | 16–20 nov | 2. Modelos | Acordar el plan final | P1, P2, P3 | Plan de análisis acordado (**vie 20 nov**) |
+| 4–6 | 23 nov–11 dic | 3. Análisis | Ejecutar y documentar el análisis | P2 | Análisis documentado |
+| 4–6 | 23 nov–11 dic | 3. Análisis | Revisión semanal de avances (27 nov, 4 dic, 11 dic) | P1 | Visto bueno semanal |
+| 5–7 | 30 nov–18 dic | 5. Borrador | Revisión de literatura y sección de datos | P3 | Secciones de literatura y datos (**vie 18 dic**) |
+| 6 | 11 dic | 3. Análisis | Congelar el análisis. Desde aquí no se agregan análisis nuevos | P2 | **Análisis congelado (vie 11 dic)** |
+| 6–7 | 7–18 dic | 4. Tablas y figuras | Producir y editar tablas y figuras. P2 valida que coincidan con los resultados | P3, con P2 | Set final de tablas y figuras (**vie 18 dic**) |
+| 7–10 | 14 dic–5 ene | 5. Borrador | Escribir métodos y resultados | P2 | Métodos y resultados (**mar 5 ene**) |
+| 7–10 | 14 dic–5 ene | 5. Borrador | Escribir introducción y discusión | P1 | Introducción y discusión (**mar 5 ene**) |
+| 10 | 4–8 ene | 5. Borrador | Integrar todo en una sola voz, ajustar consistencia de términos, tablas y figuras | P1 | **Borrador 1 integrado (vie 8 ene)** |
+| 10–12 | 4–20 ene | 6. Revisiones | Preparar suplementario y material de reproducibilidad (código, datos, documentación) | P3 | Suplementario en preparación |
+| 11 | 11–13 ene | 6. Revisiones | Revisar, aportar y modificar el Borrador 1 | P2 | Borrador 2 (**mié 13 ene**) |
+| 11 | 14–15 ene | 6. Revisiones | Re-revisar el Borrador 2 y resolver cambios | P1 | Borrador 2 re-revisado (**vie 15 ene**) |
+| 12 | 18–20 ene | 6. Revisiones | Revisar y modificar sobre la versión estable. Verificar reproducibilidad. Cerrar suplementario | P3 | **Borrador 3 y suplementario (mié 20 ene)** |
+| 12 | 21–22 ene | 7. Cierre | Lectura 1 completa por cada una, con ediciones | P1, P2, P3 | Lectura 1 entregada |
+| 12 | 21–22 ene | 7. Cierre | Actualizar la búsqueda de literatura (menos de 3 meses al enviar) | P3 | Nuevas referencias, si hay |
+| 13 | 25 ene | 7. Cierre | Consolidar las ediciones de la lectura 1 | P1 | Versión consolidada |
+| 13 | 26–27 ene | 7. Cierre | Lectura 2 completa por cada una | P1, P2, P3 | Lectura 2 entregada |
+| 13 | 27–28 ene | 7. Cierre | Dos revisiones independientes con IA, con agentes distintos. Corregir solo desde esos comentarios | P1 | Dos informes y correcciones |
+| 13 | 28 ene | 7. Cierre | Aprobación final | P1, P2, P3 | Versión final aprobada |
+| 13 | 29 ene | 7. Cierre | Carta al editor, portal y envío | P1 | **Paper enviado (vie 29 ene)** |
+
+El tramo 21 dic–5 ene incluye las fiestas de fin de año y coincide con la escritura de métodos, resultados, introducción y discusión. Conviene que Tania e Isidora confirmen su disponibilidad en esas semanas antes del 18 de diciembre.
+
+# 5. Tareas por persona
+
+## P1 · Tania
+
+| Fecha | Tarea |
+|---|---|
+| 9–13 nov | Revisar una muestra de la base |
+| 9–20 nov | Definir los modelos principales con Isidora |
+| 23 nov–11 dic | Revisar avances del análisis una vez por semana |
+| 14 dic–5 ene | Escribir introducción y discusión |
+| 4–8 ene | Integrar el Borrador 1 en una sola voz |
+| 14–15 ene | Re-revisar el Borrador 2 |
+| 21–22 ene | Lectura 1 completa |
+| 25 ene | Consolidar las ediciones |
+| 26–27 ene | Lectura 2 completa |
+| 27–28 ene | Dos revisiones con IA (agentes distintos) y correcciones |
+| 28–29 ene | Aprobación final, carta al editor y envío |
+| Todo el periodo | Coordinar revisiones, decidir texto principal vs. suplementario |
+
+## P2 · Isidora
+
+| Fecha | Tarea |
+|---|---|
+| 9–13 nov | Revisar una muestra de la base |
+| 9–20 nov | Definir los modelos principales con Tania |
+| 23 nov–11 dic | Ejecutar y documentar el análisis. Congelarlo el 11 dic |
+| 7–18 dic | Validar que tablas y figuras reflejen los resultados |
+| 14 dic–5 ene | Escribir métodos y resultados |
+| 11–13 ene | Revisar y modificar el Borrador 1 para producir el Borrador 2 |
+| 21–22 ene | Lectura 1 completa |
+| 26–27 ene | Lectura 2 completa |
+| 28 ene | Aprobar la versión final |
+
+## P3 · Vale
+
+| Fecha | Tarea |
+|---|---|
+| 2–13 nov | Revisar y documentar la limpieza. Código reproducible |
+| 16–20 nov | Comentar la propuesta de modelos |
+| 30 nov–18 dic | Escribir revisión de literatura y sección de datos |
+| 7–18 dic | Producir y editar tablas y figuras |
+| 4–20 ene | Preparar suplementario y reproducibilidad |
+| 18–20 ene | Producir el Borrador 3 |
+| 21–22 ene | Lectura 1 completa y actualización de la búsqueda de literatura |
+| 26–27 ene | Lectura 2 completa |
+| 28 ene | Aprobar la versión final |
+
+# 6. Reuniones de seguimiento
+
+La frecuencia de la revisión de avance (semanal o quincenal) está por definir. Como mínimo, se proponen estas reuniones en los traspasos:
+
+| Fecha | Propósito |
+|---|---|
+| 13 nov | Cierre de la base validada |
+| 20 nov | Acuerdo del plan de análisis |
+| 11 dic | Congelamiento del análisis y arranque de escritura de métodos, resultados, introducción y discusión |
+| 18 dic | Entrega de tablas, figuras, literatura y datos. Coordinación de fiestas |
+| 8 ene | Traspaso del Borrador 1 a Isidora |
+| 15 ene | Traspaso del Borrador 2 re-revisado a Vale |
+| 20 ene | Traspaso del Borrador 3 e inicio de lecturas |
+| 28 ene | Aprobación final |
+
+# 7. Por acordar: cruces con el paper de métodos
+
+En methods los roles están invertidos (P2 = Vale, P3 = Isidora), y Vale es co-primera autora con Tania (equal contribution). Estas son las superposiciones detectadas:
+
+| Persona | Demanda | Methods | Cruce |
+|---|---|---|---|
+| Vale | Limpieza (2–13 nov) | Tablas y figuras (vie 6 nov) | Primera semana completa |
+| Vale | Literatura y datos (30 nov–18 dic) | Métodos y resultados (2 dic) y Borrador 2 (10–16 dic) | Dos entregas fuertes de methods dentro del tramo |
+| Vale | Tablas y figuras (7–18 dic) | Borrador 2 (10–16 dic) | Superposición casi total |
+| Vale | Suplementario (4–20 ene) | Lecturas, última búsqueda y aprobación (7–19 ene) | Superposición casi total |
+| Isidora | Métodos y resultados (14 dic–5 ene) | Borrador 3 y suplementario (24 dic–6 ene) | Superposición en fiestas |
+| Isidora | Borrador 2 (11–13 ene) | Lecturas de methods (7–16 ene) | Superposición parcial |
+| Tania | Integración Borrador 1 (4–8 ene) | Lectura 1 de methods (7–13 ene) | Superposición parcial |
+| Tania | Re-revisión Borrador 2 (14–15 ene) | Lectura 2, revisiones con IA y envío de methods (14–20 ene) | Semana de cierre de methods |
+
+::: callout-important
+Hay que confirmar si estas fechas son realistas o si hay que correr alguna. El punto más cargado es Vale entre el 7 y el 18 de diciembre (tablas y figuras de demanda, literatura y datos de demanda, y Borrador 2 de methods). Una opción es adelantar la revisión de literatura de demanda al 23–27 nov, mientras Isidora analiza. Otra es acotar la semana del 14–15 ene de Tania: el envío de methods (20 ene) va primero.
+:::
+
+# 8. Checklist de envío (29 de enero)
+
+1. Búsqueda de literatura con menos de 3 meses de antigüedad al momento del envío (actualizada 21–22 ene).
+2. Lectura 1 completa por cada autora (P1, P2, P3), con ediciones, consolidadas por P1.
+3. Lectura 2 completa por cada autora.
+4. Dos revisiones independientes con IA, usando agentes distintos.
+5. Corregir solo en base a esos comentarios. Queda listo cuando todos están resueltos.
+6. Suplementario y material de reproducibilidad completos (código y datos documentados).
+7. Aprobación de la versión final por las tres.
+8. Enviar a la revista elegida de antemano.
+
+# 9. Riesgos y reglas
+
+- Una vez congelado el análisis (11 dic), no se agregan análisis nuevos.
+- Cada versión se guarda con fecha y número de borrador.
+- Si alguna no puede cumplir una fecha, avisa apenas lo sepa.
+- Las decisiones sobre texto principal y suplementario las toma Tania.
+- Código y datos en una carpeta compartida, con documentación.
+- Revisión breve de avance, semanal o quincenal (frecuencia por definir).
+- El Borrador 2 re-revisado del 15 ene es el último punto donde Tania e Isidora hacen cambios de fondo. Después, Vale trabaja sobre una versión estable.
+- Si el envío se rechaza, se reenvía en un plazo máximo de 2 semanas a la revista plan B.
+
+# 10. Datos del paper
+
+| Campo | Paper |
+|---|---|
+| Título de trabajo | |
+| P1 / P2 / P3 | Tania / Isidora / Vale |
+| Revista objetivo / plan B | |
+| Fecha de envío objetivo | 29 de enero de 2027 |
+| Horas por semana por autora | |
+| Base validada | 13 de noviembre de 2026 |
+| Plan de análisis | 20 de noviembre de 2026 |
+| Análisis congelado | 11 de diciembre de 2026 |
+| Fecha Borrador 1 | 8 de enero de 2027 |
+| Fecha Borrador 3 | 20 de enero de 2027 |
+| Fecha límite de lecturas | 27 de enero de 2027 |

@@ -1,65 +1,53 @@
-#-----------------------------------------------
-# Descriptivos bibliometricos de paises, autores, afiliaciones y revistas.
-# Valentina Gonzalez Madariaga
-# Agosto 2026
-#-----------------------------------------------
-
-
-
-# Este script usa exclusivamente el corpus depurado por 00_inicial.R. Produce
-# un solo libro Excel con tablas descriptivas y bases de auditoria, ademas de
-# las dos figuras. No crea nuevas bases intermedias.
+# -----------------------------------------------------------------------------
+# 05 - Descriptivos bibliometricos del corpus con afiliacion latinoamericana
+# -----------------------------------------------------------------------------
+# Este script usa exclusivamente base_oficial.rds, creada por 00_inicial.R.
+# El universo analitico contiene 675 papers con al menos una afiliacion LatAm.
+# No reconstruye el universo ni vuelve a leer la revision manual.
+#
+# Output unico:
+#   outputs/tables/descriptivos_affi_latam.xlsx
+#
+# La unidad de Authors_long es autor-paper: un paper con N autores genera N
+# filas. Author_affiliations tiene una fila por direccion atribuible al autor.
+# C3 se asigna a un autor solo cuando la revision manual conserva esa posicion;
+# el C3 completo tambien se mantiene a nivel paper.
 
 library(tidyverse)
 library(here)
 library(writexl)
-library(igraph)
-library(readxl)
 
-# 1. Rutas y carga de insumos -------------------------------------------------
-# corpus_unico_inicial.rds ya contiene las correcciones de Isidora, las
-# exclusiones acordadas y las variables derivadas en 00_inicial.R.
+# 1. Carga y controles del insumo --------------------------------------------
+# Se exige la salida oficial de 00. Los controles evitan trabajar por error con
+# una version anterior o con un universo distinto del acordado.
 data_dir <- here("Paper_wos", "data")
 tables_dir <- here("Paper_wos", "outputs", "tables")
-figures_dir <- here("Paper_wos", "outputs", "figures")
-
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
-corpus_completo <- readRDS(
-  file.path(data_dir, "intermediate", "corpus_unico_inicial.rds")
+base_oficial <- readRDS(
+  file.path(data_dir, "intermediate", "base_oficial.rds")
 )
 
-# La base de revision conserva C1 y C3 manuales por posicion de autor. Se usa
-# solo para recuperar ese vinculo; el universo de papers siempre lo define el
-# corpus ya depurado por 00.
-revision_manual <- read_excel(
-  file.path(data_dir, "intermediate", "base_octubre.xlsx")
+required_columns <- c(
+  "UT", "TI", "PY", "SO", "DI", "AU", "AF", "RP", "C1", "C3",
+  "WC", "core_area", "des_exp", "author_affiliation_map"
 )
+missing_columns <- setdiff(required_columns, names(base_oficial))
 
-# Version compacta a nivel paper para los descriptivos. C1 ya incorpora las
-# correcciones manuales realizadas en 00.
-corpus <- corpus_completo |>
-  transmute(
-    UT,
-    year = as.integer(PY),
-    title = TI,
-    journal = SO,
-    C1,
-    base_endogeno,
-    base_laboratorio
+if (length(missing_columns) > 0L) {
+  stop(
+    "Faltan columnas producidas por 00: ",
+    str_c(missing_columns, collapse = ", ")
   )
+}
 
-# Un mismo paper puede pertenecer a ambas estrategias de busqueda. Esta tabla
-# permite producir resultados separados sin duplicarlo dentro del corpus.
-paper_base <- bind_rows(
-  corpus |> filter(base_endogeno == 1L) |> select(UT) |> mutate(base = "Endogenous"),
-  corpus |> filter(base_laboratorio == 1L) |> select(UT) |> mutate(base = "Laboratory")
-)
+if (nrow(base_oficial) != 675L || n_distinct(base_oficial$UT) != 675L) {
+  stop("base_oficial.rds debe contener 675 papers con UT unica.")
+}
 
-# 2. Funciones de normalizacion ----------------------------------------------
-# normalize_name crea claves comparables, pero no desambigua autores. Las
-# variantes quedan visibles para revision en una tabla especifica.
+# 2. Funciones de apoyo -------------------------------------------------------
+# Las claves normalizadas permiten comparar formas exactamente equivalentes.
+# No constituyen una desambiguacion probabilistica de personas homonimas.
 normalize_name <- function(x) {
   x |>
     iconv(from = "", to = "ASCII//TRANSLIT") |>
@@ -79,6 +67,20 @@ collapse_unique <- function(x) {
   if (length(values) == 0L) NA_character_ else str_c(values, collapse = "; ")
 }
 
+split_semicolon <- function(x) {
+  if (is.na(x) || str_squish(x) == "") return(character())
+  x |>
+    str_split(";", simplify = FALSE) |>
+    unlist() |>
+    str_squish() |>
+    discard(~ is.na(.x) || .x == "")
+}
+
+value_at_position <- function(x, position) {
+  values <- split_semicolon(x)
+  if (position > length(values)) NA_character_ else values[[position]]
+}
+
 latam_country_names <- c(
   "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Costa Rica",
   "Cuba", "Dominican Rep", "Ecuador", "El Salvador", "Guatemala", "Haiti",
@@ -86,9 +88,8 @@ latam_country_names <- c(
   "Puerto Rico", "Uruguay", "Venezuela"
 )
 
-# WoS usa un vocabulario acotado de paises. La lista incluye todos los valores
-# observados actualmente en C1; las formas especiales se homologan abajo. Si
-# aparece una forma nueva, el script se detiene para que no se pierda en silencio.
+# La lista contiene las formas WoS observadas. Si aparece una forma nueva, el
+# script se detiene para que sea revisada en lugar de perderla silenciosamente.
 standard_wos_countries <- c(
   "ARGENTINA", "AUSTRALIA", "AUSTRIA", "BELGIUM", "BENIN", "BOLIVIA",
   "BRAZIL", "BURKINA FASO", "CAMBODIA", "CANADA", "CHILE", "COLOMBIA",
@@ -96,10 +97,11 @@ standard_wos_countries <- c(
   "ETHIOPIA", "FINLAND", "FRANCE", "GERMANY", "GUATEMALA", "HONDURAS",
   "HUNGARY", "INDIA", "INDONESIA", "IRELAND", "ISRAEL", "ITALY", "JAPAN",
   "KENYA", "KUWAIT", "MEXICO", "MOROCCO", "NEPAL", "NETHERLANDS",
-  "NIGERIA", "NORWAY", "PAKISTAN", "PERU", "PHILIPPINES", "POLAND",
-  "PORTUGAL", "RUSSIA", "SENEGAL", "SINGAPORE", "SLOVAKIA", "SOUTH AFRICA",
-  "SPAIN", "SWEDEN", "SWITZERLAND", "TAIWAN", "TANZANIA", "THAILAND",
-  "TURKEY", "URUGUAY", "VENEZUELA"
+  "NIGERIA", "NORWAY", "PAKISTAN", "PANAMA", "PARAGUAY", "PERU",
+  "PHILIPPINES", "POLAND", "PORTUGAL", "PUERTO RICO", "RUSSIA", "SENEGAL",
+  "SINGAPORE", "SLOVAKIA", "SOUTH AFRICA", "SPAIN", "SWEDEN",
+  "SWITZERLAND", "TAIWAN", "TANZANIA", "THAILAND", "TURKEY", "URUGUAY",
+  "VENEZUELA"
 )
 
 country_lookup <- bind_rows(
@@ -123,6 +125,32 @@ country_lookup <- bind_rows(
 ) |>
   distinct(country_raw, .keep_all = TRUE)
 
+# Algunas celdas C1 manuales contienen mas de una direccion concatenada, por
+# ejemplo "..., CHILE. UCLOUVAIN ..., BELGIUM.". Esta funcion inserta un
+# separador despues de cada pais y evita perder la primera afiliacion.
+country_tokens <- c(country_lookup$country_raw, "USA") |>
+  unique() |>
+  sort(decreasing = TRUE)
+country_boundary_pattern <- str_c(
+  "(,\\s*(?:",
+  str_c(country_tokens, collapse = "|"),
+  ")\\.?)(?=\\s+[[:upper:]])"
+)
+
+split_c1_addresses <- function(x) {
+  if (is.na(x) || str_squish(x) == "") return(character())
+
+  x |>
+    str_replace_all(";", "|||" ) |>
+    str_replace_all(
+      regex(country_boundary_pattern, ignore_case = TRUE),
+      "\\1|||"
+    ) |>
+    str_split(fixed("|||"), simplify = FALSE) |>
+    unlist() |>
+    str_squish() |>
+    discard(~ is.na(.x) || .x == "")
+}
 extract_country_raw <- function(address) {
   address |>
     str_remove("[.;[:space:]]+$") |>
@@ -142,19 +170,59 @@ normalize_country <- function(address) {
   )
 }
 
-# 3. Lectura de autores y C1 desde los TXT originales ------------------------
-# Los TXT conservan AF (nombre completo) y los corchetes de C1 que vinculan
-# autores con direcciones. Esos elementos no se pueden reconstruir con certeza
-# desde el C1 colapsado, por eso se recuperan aqui y luego se restringen al
-# corpus final producido por 00.
+five_year_period <- function(year) {
+  start <- 1990L + 5L * floor((as.integer(year) - 1990L) / 5L)
+  str_c(start, "-", start + 4L)
+}
+
+# 3. Base maestra de autores -------------------------------------------------
+# author_affiliation_map fue construido por 00 a partir del orden de AF/AU y de
+# las correcciones c1_autN_manual. Al desanidarlo se obtiene exactamente una
+# fila por autor y paper.
+authors <- base_oficial |>
+  select(UT, AU, author_affiliation_map) |>
+  unnest(author_affiliation_map) |>
+  mutate(
+    author_abbreviated = map2_chr(AU, author_position, value_at_position),
+    author_name = na_if(str_squish(author_name), ""),
+    author_name_key = normalize_name(author_name),
+    c1_manual = na_if(str_squish(c1_manual), ""),
+    c3_manual = na_if(str_squish(c3_manual), "")
+  ) |>
+  select(-AU)
+
+expected_author_counts <- base_oficial |>
+  transmute(
+    UT,
+    expected_authors = map_int(AU, ~ length(split_semicolon(.x)))
+  )
+
+author_count_audit <- expected_author_counts |>
+  left_join(authors |> count(UT, name = "author_rows"), by = "UT") |>
+  mutate(
+    author_rows = replace_na(author_rows, 0L),
+    count_matches = expected_authors == author_rows
+  )
+
+if (any(!author_count_audit$count_matches)) {
+  stop("El numero de filas autor-paper no coincide con AU.")
+}
+
+if (any(is.na(authors$author_name) | authors$author_name == "")) {
+  stop("Hay autores sin nombre en author_affiliation_map.")
+}
+
+# 4. Lectura de los vinculos originales de C1 -------------------------------
+# Los TXT conservan los corchetes de WoS: [autor] direccion. Esos corchetes
+# permiten atribuir una direccion a uno o varios autores sin usar el orden de
+# las entradas. Solo se recuperan C1 y UT; el universo sigue definido por 00.
 extract_field <- function(record, tag) {
   start <- which(str_detect(record, paste0("^", tag, " ")))[1]
+  if (is.na(start)) return(character())
 
-  if (is.na(start)) {
-    return(character())
-  }
-
-  next_tag <- which(seq_along(record) > start & str_detect(record, "^[A-Z0-9]{2} "))
+  next_tag <- which(
+    seq_along(record) > start & str_detect(record, "^[A-Z0-9]{2} ")
+  )
   end <- if (length(next_tag) == 0L) length(record) else min(next_tag) - 1L
   values <- record[start:end]
   values[1] <- str_remove(values[1], paste0("^", tag, " "))
@@ -162,10 +230,7 @@ extract_field <- function(record, tag) {
 }
 
 merge_c1_lines <- function(lines) {
-  if (length(lines) == 0L) {
-    return(character())
-  }
-
+  if (length(lines) == 0L) return(character())
   entries <- character()
 
   for (line in lines) {
@@ -179,209 +244,104 @@ merge_c1_lines <- function(lines) {
   entries
 }
 
-parse_wos_record <- function(record, source_base) {
+parse_wos_record <- function(record) {
   ut <- first(extract_field(record, "UT"), default = NA_character_)
-  au <- extract_field(record, "AU")
-  af <- extract_field(record, "AF")
-  n_authors <- max(length(au), length(af))
+  entries <- merge_c1_lines(extract_field(record, "C1"))
 
-  if (n_authors == 0L) {
-    authors <- tibble()
-  } else {
-    length(au) <- n_authors
-    length(af) <- n_authors
-    authors <- tibble(
-      UT = ut,
-      source_base,
-      author_position = seq_len(n_authors),
-      author = au,
-      author_full = af,
-      author_full_key = normalize_name(af)
-    )
+  if (length(entries) == 0L) {
+    return(tibble(
+      UT = character(), c1_author_name = character(), address = character(),
+      link_status = character()
+    ))
   }
 
-  c1_entries <- merge_c1_lines(extract_field(record, "C1"))
-
-  affiliations <- map_dfr(seq_along(c1_entries), function(position) {
-    entry <- c1_entries[[position]]
+  map_dfr(entries, function(entry) {
     matched <- str_match(entry, "^\\[(.*?)\\]\\s*(.*)$")
 
     if (is.na(matched[1, 2])) {
       return(tibble(
         UT = ut,
-        source_base,
-        affiliation_entry = position,
-        c1_author_full = NA_character_,
+        c1_author_name = NA_character_,
         address = entry,
-        mapping_status = "No author link in C1"
+        link_status = "no_author_link"
       ))
     }
 
     str_split(matched[1, 2], ";", simplify = FALSE)[[1]] |>
       str_squish() |>
-      tibble(c1_author_full = _) |>
+      tibble(c1_author_name = _) |>
       mutate(
         UT = ut,
-        source_base,
-        affiliation_entry = position,
         address = matched[1, 3],
-        mapping_status = "Author linked in C1",
+        link_status = "wos_author_link",
         .before = 1
       )
   })
-
-  list(authors = authors, affiliations = affiliations)
 }
 
 parse_wos_file <- function(path) {
-  source_base <- if_else(
-    str_detect(str_to_lower(path), "endogeno"),
-    "Endogenous",
-    "Laboratory"
-  )
   lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
   record_id <- cumsum(str_detect(lines, "^PT "))
   records <- split(lines[record_id > 0L], record_id[record_id > 0L])
-  map(records, parse_wos_record, source_base = source_base)
+  map_dfr(records, parse_wos_record)
 }
 
 raw_files <- c(
-  list.files(file.path(data_dir, "raw", "endogeno"), pattern = "\\.txt$", full.names = TRUE),
-  list.files(file.path(data_dir, "raw", "laboratorio"), pattern = "\\.txt$", full.names = TRUE)
+  list.files(
+    file.path(data_dir, "raw", "endogeno"),
+    pattern = "\\.txt$", full.names = TRUE
+  ),
+  list.files(
+    file.path(data_dir, "raw", "laboratorio"),
+    pattern = "\\.txt$", full.names = TRUE
+  )
 )
 
-parsed_records <- raw_files |>
-  map(parse_wos_file) |>
-  flatten()
-
-# 4. Correcciones manuales por posicion de autor -----------------------------
-# name_autN, c1_autN_manual y c3_autN_manual comparten la misma posicion N.
-# Se transforman a formato largo para unirlas sin crear un numero fijo de
-# columnas en la base final de autores.
-manual_column <- function(data, column_name) {
-  if (column_name %in% names(data)) {
-    as.character(data[[column_name]])
-  } else {
-    rep(NA_character_, nrow(data))
-  }
+if (length(raw_files) == 0L) {
+  stop("No se encontraron TXT originales para recuperar los vinculos C1.")
 }
 
-author_positions <- str_match(
-  names(revision_manual),
-  "^name_aut([0-9]+)$"
-)[, 2] |>
-  as.integer() |>
-  discard(is.na)
-
-max_author_position <- max(author_positions)
-
-manual_author_corrections <- map_dfr(seq_len(max_author_position), function(position) {
-  tibble(
-    UT = revision_manual$UT,
-    author_position = position,
-    author_manual = manual_column(revision_manual, str_c("name_aut", position)),
-    c1_manual = manual_column(revision_manual, str_c("c1_aut", position, "_manual")),
-    c3_manual = manual_column(revision_manual, str_c("c3_aut", position, "_manual"))
-  )
-}) |>
-  filter(UT %in% corpus$UT) |>
+raw_c1 <- raw_files |>
+  map_dfr(parse_wos_file) |>
+  filter(UT %in% base_oficial$UT) |>
   mutate(
-    across(
-      c(author_manual, c1_manual, c3_manual),
-      ~ na_if(str_squish(.x), "")
-    )
-  )
-
-# 5. Base maestra de autores -------------------------------------------------
-# AF entrega el nombre completo y AU la forma abreviada. author_name_normalized
-# identifica coincidencias exactas despues de normalizar. author_candidate_key
-# agrupa solo candidatos con igual apellido e inicial; no declara que sean la
-# misma persona y se usa exclusivamente para auditar variantes.
-authors <- parsed_records |>
-  map("authors") |>
-  bind_rows() |>
-  distinct(UT, author_position, .keep_all = TRUE) |>
-  inner_join(corpus |> select(-C1), by = "UT") |>
-  left_join(manual_author_corrections, by = c("UT", "author_position")) |>
-  mutate(
-    author = na_if(str_squish(author), ""),
-    author_full = na_if(str_squish(author_full), ""),
-    author_name = coalesce(author_full, author_manual, author),
-    author_name_normalized = normalize_name(author_name),
-    author_surname = if_else(
-      str_detect(author_name, fixed(",")),
-      str_extract(author_name, "^[^,]+"),
-      str_remove(author, "\\s+[^ ]+$")
-    ),
-    author_given = if_else(
-      str_detect(author_name, fixed(",")),
-      str_remove(author_name, "^[^,]+,\\s*"),
-      str_extract(author, "[^ ]+$")
-    ),
-    author_candidate_key = str_c(
-      normalize_name(author_surname),
-      str_sub(normalize_name(author_given), 1L, 1L),
-      sep = "|"
-    )
-  )
-
-# Esta auditoria garantiza la regla central: un paper con N autores debe
-# producir exactamente N filas en la base autor-paper.
-author_count_audit <- corpus_completo |>
-  transmute(
-    UT,
-    expected_authors = case_when(
-      is.na(AU) | str_squish(AU) == "" ~ 0L,
-      TRUE ~ str_count(AU, fixed(";")) + 1L
-    )
+    address = na_if(str_squish(address), ""),
+    c1_author_key = normalize_name(c1_author_name)
   ) |>
-  left_join(authors |> count(UT, name = "author_rows"), by = "UT") |>
-  mutate(
-    author_rows = replace_na(author_rows, 0L),
-    count_matches = expected_authors == author_rows
-  )
+  filter(!is.na(address)) |>
+  distinct(UT, c1_author_name, address, link_status, .keep_all = TRUE)
 
-if (any(!author_count_audit$count_matches)) {
-  stop("La cantidad de filas autor-paper no coincide con AU. Revisar author_count_audit.")
-}
+# 5. Afiliaciones atribuibles a cada autor ----------------------------------
+# Las correcciones manuales reemplazan el vinculo WoS de ese autor. Si WoS no
+# identifica personas y el paper tiene un solo autor, la direccion puede
+# asignarse sin ambiguedad. Los demas casos sin vinculo se detienen abajo.
+duplicate_author_keys <- authors |>
+  filter(!is.na(author_name_key), author_name_key != "") |>
+  count(UT, author_name_key) |>
+  filter(n > 1L)
 
-# 6. Afiliaciones originales y manuales por autor ---------------------------
-# Las entradas C1 entre corchetes de los TXT vinculan uno o varios nombres
-# completos con una direccion. Primero se recuperan esos vinculos originales.
-raw_affiliations <- parsed_records |>
-  map("affiliations") |>
-  bind_rows() |>
-  filter(UT %in% corpus$UT) |>
-  distinct(UT, affiliation_entry, c1_author_full, address, .keep_all = TRUE) |>
-  mutate(
-    author_full_key = normalize_name(c1_author_full),
-    address = na_if(str_squish(address), "")
-  )
+unique_author_keys <- authors |>
+  anti_join(duplicate_author_keys, by = c("UT", "author_name_key")) |>
+  select(UT, author_position, author_name_key)
 
-author_key <- authors |>
-  filter(!is.na(author_full_key), author_full_key != "") |>
-  distinct(
-    UT, author_position, author, author_full, author_name,
-    author_name_normalized, author_candidate_key, author_full_key
-  )
-
-wos_author_affiliations <- raw_affiliations |>
-  filter(!is.na(c1_author_full), !is.na(address)) |>
-  inner_join(author_key, by = c("UT", "author_full_key")) |>
+wos_author_affiliations <- raw_c1 |>
+  filter(link_status == "wos_author_link", !is.na(c1_author_key)) |>
+  inner_join(
+    unique_author_keys,
+    by = c("UT", "c1_author_key" = "author_name_key")
+  ) |>
   transmute(
-    UT,
-    author_position,
-    address,
+    UT, author_position, address,
     affiliation_source = "wos_c1_linked"
   ) |>
   distinct()
 
-# Cuando Isidora completo C1 por autor, esa informacion reemplaza el vinculo
-# original de ese autor. Una celda puede contener mas de una direccion.
-manual_author_affiliations <- manual_author_corrections |>
+manual_author_affiliations <- authors |>
   filter(!is.na(c1_manual)) |>
-  transmute(UT, author_position, address = c1_manual) |>
-  separate_rows(address, sep = ";") |>
+  select(UT, author_position, c1_manual) |>
+  mutate(address = map(c1_manual, split_c1_addresses)) |>
+  select(-c1_manual) |>
+  unnest_longer(address) |>
   mutate(
     address = na_if(str_squish(address), ""),
     affiliation_source = "manual_c1"
@@ -389,15 +349,17 @@ manual_author_affiliations <- manual_author_corrections |>
   filter(!is.na(address)) |>
   distinct()
 
-manual_c1_keys <- manual_author_affiliations |>
+manual_author_keys <- manual_author_affiliations |>
   distinct(UT, author_position)
 
 author_affiliations <- wos_author_affiliations |>
-  anti_join(manual_c1_keys, by = c("UT", "author_position")) |>
+  anti_join(manual_author_keys, by = c("UT", "author_position")) |>
   bind_rows(manual_author_affiliations)
 
-# Si el paper tiene un solo autor y WoS no trae el vinculo entre nombre y C1,
-# todas las direcciones corregidas del paper pueden asignarse sin ambiguedad.
+raw_paper_addresses <- raw_c1 |>
+  select(UT, address) |>
+  distinct()
+
 single_author_fallback <- authors |>
   count(UT, name = "n_authors") |>
   filter(n_authors == 1L) |>
@@ -407,252 +369,259 @@ single_author_fallback <- authors |>
     author_affiliations |> distinct(UT, author_position),
     by = c("UT", "author_position")
   ) |>
-  inner_join(corpus |> select(UT, C1), by = "UT") |>
-  rename(address = C1) |>
-  separate_rows(address, sep = ";") |>
-  mutate(
-    address = na_if(str_squish(address), ""),
-    affiliation_source = "paper_c1_single_author"
-  ) |>
-  filter(!is.na(address)) |>
-  distinct(UT, author_position, address, affiliation_source)
+  inner_join(raw_paper_addresses, by = "UT") |>
+  mutate(affiliation_source = "single_author_c1")
 
 author_affiliations <- author_affiliations |>
   bind_rows(single_author_fallback) |>
   mutate(
-    institution_address = str_extract(address, "^[^,]+") |> str_squish(),
+    affiliation_unit = str_extract(address, "^[^,]+") |> str_squish(),
     country_raw = extract_country_raw(address),
     country = normalize_country(address)
   ) |>
   distinct(UT, author_position, address, .keep_all = TRUE)
 
-# 7. Auditoria completa del mapeo de paises ---------------------------------
-# El universo de control usa el C1 corregido a nivel paper. Cada direccion debe
-# terminar en una forma reconocida. Si alguna no se reconoce, el script se
-# detiene antes de generar resultados incompletos.
-paper_address_entries <- corpus |>
+# Casos documentados por Isidora como autores independientes sin afiliacion.
+confirmed_no_affiliation <- tribble(
+  ~UT, ~author_position, ~affiliation_note,
+  "WOS:000324740600002", 1L, "Investigador independiente; sin institucion.",
+  "WOS:000379962400003", 3L, "Sin afiliacion al momento de la publicacion.",
+  "WOS:000632971700002", 5L, "Profesional independiente; sin institucion.",
+  "WOS:000632971700002", 10L, "Investigador independiente; sin institucion.",
+  "WOS:000796681800001", 1L, "Investigador independiente; sin institucion.",
+  "WOS:001491371500001", 19L, "Investigador independiente; sin institucion.",
+  "WOS:001541599500001", 5L, "Investigador independiente; sin institucion."
+) |>
+  semi_join(authors, by = c("UT", "author_position"))
+
+unresolved_authors <- authors |>
+  anti_join(
+    author_affiliations |> distinct(UT, author_position),
+    by = c("UT", "author_position")
+  ) |>
+  anti_join(
+    confirmed_no_affiliation,
+    by = c("UT", "author_position")
+  )
+
+if (nrow(unresolved_authors) > 0L) {
+  unresolved_ids <- unresolved_authors |>
+    distinct(UT) |>
+    slice_head(n = 10L) |>
+    pull(UT) |>
+    str_c(collapse = ", ")
+
+  stop(
+    "Persisten autores sin afiliacion atribuible. Primeros UT: ",
+    unresolved_ids
+  )
+}
+
+# 6. Paises a nivel paper y auditoria exhaustiva -----------------------------
+# Se unen las direcciones originales y manuales. Cada direccion debe terminar
+# en un pais reconocido. Un paper puede participar en varios paises.
+paper_addresses <- base_oficial |>
   select(UT, C1) |>
-  rename(address = C1) |>
-  separate_rows(address, sep = ";") |>
+  mutate(address = map(C1, split_c1_addresses)) |>
+  select(-C1) |>
+  unnest_longer(address) |>
   mutate(
     address = na_if(str_squish(address), ""),
+    address_source = "corrected_paper_c1",
     country_raw = extract_country_raw(address),
     country = normalize_country(address)
   ) |>
-  filter(!is.na(address))
+  filter(!is.na(address)) |>
+  distinct(UT, address, .keep_all = TRUE)
 
-unmapped_country_entries <- paper_address_entries |>
+unmapped_addresses <- paper_addresses |>
   filter(is.na(country))
 
-if (nrow(unmapped_country_entries) > 0L) {
-  unknown_values <- unmapped_country_entries |>
+if (nrow(unmapped_addresses) > 0L) {
+  unknown_values <- unmapped_addresses |>
     distinct(country_raw) |>
     slice_head(n = 10L) |>
     pull(country_raw) |>
     str_c(collapse = ", ")
-
-  stop(str_c("Hay formas de pais sin mapear en C1: ", unknown_values))
+  stop("Hay paises sin mapear en C1: ", unknown_values)
 }
 
 if (any(is.na(author_affiliations$country))) {
-  stop("Hay afiliaciones de autor con pais sin mapear.")
+  stop("Hay afiliaciones de autor cuyo pais no pudo mapearse.")
 }
 
-country_mapping_audit <- paper_address_entries |>
-  count(country_raw, country, name = "n_address_entries", sort = TRUE) |>
-  mutate(mapping_status = "mapped")
-
-paper_countries <- paper_address_entries |>
+paper_countries <- paper_addresses |>
   distinct(UT, country)
 
-# Casos revisados por Isi en base_octubre donde el autor no tenia una
-# institucion afiliada en el momento de la publicacion. No son errores de
-# asignacion: se conserva la fila del autor y se deja explicitamente sin afiliacion.
-confirmed_no_affiliation <- tribble(
-  ~UT, ~author_position, ~affiliation_note,
-  "WOS:000324740600002", 1L, "Isi: investigador independiente; solo figura Ensenada, Baja California, sin institucion.",
-  "WOS:000379962400003", 3L, "Isi: Parker no tenia afiliacion al momento de la publicacion.",
-  "WOS:000632971700002", 5L, "Isi: Sharma es disenadora independiente y no tiene institucion.",
-  "WOS:000632971700002", 10L, "Isi: Morris es investigador independiente y no tiene institucion.",
-  "WOS:000796681800001", 1L, "Isi: Arias firma como investigador independiente.",
-  "WOS:001491371500001", 19L, "Isi: Kandrik es investigador independiente.",
-  "WOS:001541599500001", 5L, "Isi: Phimister firma como investigador independiente."
-)
-# 8. Base larga autor-paper ---------------------------------------------------
-# author_paper contiene exactamente una fila por autor y paper. Conserva todas
-# las variables del paper, los nombres WoS sin desambiguar y las afiliaciones
-# atribuibles al autor. paper_C1 y paper_C3 se repiten para mantener disponible
-# la informacion completa aun cuando no pueda asignarse a una persona concreta.
+paper_country_summary <- paper_countries |>
+  group_by(UT) |>
+  summarise(
+    n_countries = n_distinct(country),
+    countries = collapse_unique(country),
+    n_latam_countries = n_distinct(country[country %in% latam_country_names]),
+    latam_countries = collapse_unique(country[country %in% latam_country_names]),
+    has_non_latam = any(!country %in% latam_country_names),
+    has_united_states = any(country == "United States"),
+    .groups = "drop"
+  )
+
+papers_without_latam <- paper_country_summary |>
+  filter(n_latam_countries == 0L)
+
+if (nrow(paper_country_summary) != 675L || nrow(papers_without_latam) > 0L) {
+  stop("El mapeo de paises no reproduce los 675 papers con afiliacion LatAm.")
+}
+
+# 7. Base larga autor-paper ---------------------------------------------------
+# La hoja Authors_long mantiene una fila por autor y paper. Las afiliaciones se
+# resumen solo cuando pudieron atribuirse a esa persona mediante C1.
 author_affiliation_summary <- author_affiliations |>
   group_by(UT, author_position) |>
   summarise(
     n_author_affiliations = n_distinct(address),
     author_addresses = collapse_unique(address),
-    institutions_from_address = collapse_unique(institution_address),
+    author_affiliation_units = collapse_unique(affiliation_unit),
     author_countries = collapse_unique(country),
-    affiliation_sources = collapse_unique(affiliation_source),
+    affiliation_source = collapse_unique(affiliation_source),
     .groups = "drop"
   )
 
-author_paper <- authors |>
-  select(
-    UT, author_position, author, author_full, author_name,
-    author_name_normalized, author_candidate_key, author_surname, author_given,
-    c1_manual, c3_manual
-  ) |>
-  inner_join(corpus_completo, by = "UT") |>
-  rename(
-    paper_author_list = AU,
-    paper_C1 = C1,
+paper_variables <- base_oficial |>
+  transmute(
+    UT,
+    year = as.integer(PY),
+    title = TI,
+    journal = SO,
+    doi = DI,
+    core_area,
+    experimental_method = des_exp,
     paper_C3 = C3
-  ) |>
+  )
+
+authors_long <- authors |>
   left_join(author_affiliation_summary, by = c("UT", "author_position")) |>
   left_join(confirmed_no_affiliation, by = c("UT", "author_position")) |>
+  inner_join(paper_variables, by = "UT") |>
   mutate(
     n_author_affiliations = replace_na(n_author_affiliations, 0L),
-    author_institutions = coalesce(c3_manual, institutions_from_address),
+    author_institutions = coalesce(c3_manual, author_affiliation_units),
     institution_source = case_when(
       !is.na(c3_manual) ~ "manual_c3",
-      !is.na(institutions_from_address) ~ "derived_from_author_c1",
-      !is.na(paper_C3) & str_squish(paper_C3) != "" ~ "paper_c3_unassigned",
+      !is.na(author_affiliation_units) ~ "derived_from_c1_address",
+      !is.na(affiliation_note) ~ "confirmed_no_affiliation",
       TRUE ~ "missing"
     ),
     affiliation_status = case_when(
-      !is.na(affiliation_note) ~ "confirmed_independent_no_affiliation",
-      !is.na(c1_manual) ~ "manual_c1",
-      n_author_affiliations > 0L ~ affiliation_sources,
-      !is.na(paper_C1) & str_squish(paper_C1) != "" ~ "paper_c1_unassigned",
-      TRUE ~ "missing_c1"
+      !is.na(affiliation_note) ~ "confirmed_no_affiliation",
+      affiliation_source == "manual_c1" ~ "manual_c1",
+      !is.na(affiliation_source) ~ affiliation_source,
+      TRUE ~ "unresolved"
     )
   ) |>
-  arrange(UT, author_position)
+  arrange(year, UT, author_position)
 
-# Tabla separada con una fila por afiliacion atribuible. Permite revisar casos
-# con varias instituciones sin romper la regla de una fila por autor-paper.
-author_affiliation_history <- author_affiliations |>
+if (nrow(authors_long) != sum(expected_author_counts$expected_authors)) {
+  stop("Authors_long no contiene exactamente una fila por autor-paper.")
+}
+
+# Una fila por direccion atribuible. Esta hoja permite observar autores con dos
+# o mas afiliaciones sin duplicarlos en Authors_long.
+author_affiliation_detail <- author_affiliations |>
   left_join(
     authors |>
       select(
-        UT, author_position, author, author_full, author_name,
-        author_name_normalized, author_candidate_key
+        UT, author_position, author_name_key, author_name,
+        normalized_institutions = c3_manual
       ),
     by = c("UT", "author_position")
   ) |>
   left_join(
-    corpus |> select(UT, year, title, base_endogeno, base_laboratorio),
+    paper_variables |> select(UT, year, title, journal),
     by = "UT"
   ) |>
   select(
-    author_name, author_full, author, author_name_normalized,
-    author_candidate_key, author_position, UT, year, title,
-    institution_address, country, address, affiliation_source,
-    base_endogeno, base_laboratorio
+    UT, year, title, journal, author_position, author_name_key, author_name,
+    normalized_institutions, affiliation_unit, country, address,
+    affiliation_source
   ) |>
-  arrange(author_name_normalized, year, UT, institution_address)
+  arrange(author_name, year, UT, author_position, address)
 
-# 8b. Conteo de afiliaciones multiples ----------------------------------------
-# Se calculan dos medidas distintas. La primera identifica autores con dos o
-# mas direcciones en un mismo paper. La segunda identifica autores que aparecen
-# con mas de una direccion o institucion distinta a lo largo de la base. Solo
-# cuentan afiliaciones que pudieron atribuirse a un autor.
-affiliations_per_author_paper <- author_affiliation_history |>
-  group_by(author_name_normalized, UT, author_position) |>
-  summarise(
-    n_affiliations_same_paper = n_distinct(address),
-    .groups = "drop"
-  )
+# 8. Tablas sustantivas del paper --------------------------------------------
+# Papers conserva una fila por publicacion y resume su composicion geografica.
+papers <- base_oficial |>
+  transmute(
+    UT,
+    year = as.integer(PY),
+    title = TI,
+    journal = SO,
+    doi = DI,
+    document_type = DT,
+    citations = TC,
+    authors = AF,
+    corresponding_author = RP,
+    author_keywords = keywords_autor,
+    analysis_keywords = keywords_analisis,
+    wos_categories = WC,
+    core_area,
+    experimental_method = des_exp,
+    C1,
+    C3
+  ) |>
+  left_join(paper_country_summary, by = "UT") |>
+  arrange(year, UT)
 
-author_affiliation_counts <- author_paper |>
-  distinct(author_name_normalized, author_name) |>
-  left_join(
-    author_affiliation_history |>
-      group_by(author_name_normalized) |>
-      summarise(
-        n_distinct_addresses = n_distinct(address),
-        n_distinct_institutions = n_distinct(institution_address),
-        n_papers_with_affiliation = n_distinct(UT),
-        .groups = "drop"
-      ),
-    by = "author_name_normalized"
-  ) |>
-  left_join(
-    affiliations_per_author_paper |>
-      group_by(author_name_normalized) |>
-      summarise(
-        max_affiliations_same_paper = max(n_affiliations_same_paper),
-        .groups = "drop"
-      ),
-    by = "author_name_normalized"
-  ) |>
+# Las disciplinas no son mutuamente excluyentes: un paper aparece una vez en
+# cada core area asignada.
+disciplines_5year <- papers |>
+  select(UT, year, core_area) |>
+  separate_rows(core_area, sep = ";") |>
   mutate(
-    across(
-      c(n_distinct_addresses, n_distinct_institutions,
-        n_papers_with_affiliation, max_affiliations_same_paper),
-      ~ replace_na(.x, 0L)
-    ),
-    affiliation_data_status = if_else(
-      n_papers_with_affiliation > 0L,
-      "Attribution observable",
-      "No affiliation assigned to author"
-    )
+    core_area = str_squish(core_area),
+    period_5year = five_year_period(year)
   ) |>
-  arrange(desc(max_affiliations_same_paper), desc(n_distinct_institutions), author_name)
+  filter(!is.na(core_area), core_area != "") |>
+  count(core_area, period_5year, name = "n_papers") |>
+  group_by(core_area) |>
+  mutate(total_papers = sum(n_papers)) |>
+  ungroup() |>
+  arrange(core_area, period_5year)
 
-affiliation_multiplicity <- author_affiliation_counts |>
-  count(max_affiliations_same_paper, name = "n_authors") |>
-  arrange(max_affiliations_same_paper)
-# 9. Descriptivos de paises y coocurrencia ----------------------------------
-country_by_paper <- paper_countries |>
-  group_by(UT) |>
-  summarise(
-    n_countries = n_distinct(country),
-    countries = collapse_unique(country),
-    latam_countries = collapse_unique(country[country %in% latam_country_names]),
-    n_latam_countries = n_distinct(country[country %in% latam_country_names]),
-    has_latam = any(country %in% latam_country_names),
-    has_non_latam = any(!country %in% latam_country_names),
-    .groups = "drop"
-  )
-
-papers_country_summary <- corpus |>
-  select(-C1) |>
-  left_join(country_by_paper, by = "UT") |>
+# Los metodos y disciplinas tampoco son mutuamente excluyentes. Los papers sin
+# palabra metodologica identificada se conservan como Not classified.
+methods_discipline <- papers |>
+  transmute(
+    UT,
+    year,
+    period_5year = five_year_period(year),
+    core_area,
+    experimental_method = replace_na(experimental_method, "Not classified")
+  ) |>
+  separate_rows(core_area, sep = ";") |>
+  separate_rows(experimental_method, sep = ";") |>
   mutate(
-    n_countries = replace_na(n_countries, 0L),
-    n_latam_countries = replace_na(n_latam_countries, 0L),
-    has_latam = replace_na(has_latam, FALSE),
-    has_non_latam = replace_na(has_non_latam, FALSE),
-    latam_with_other_regions = has_latam & has_non_latam
-  )
+    core_area = str_squish(core_area),
+    experimental_method = str_squish(experimental_method)
+  ) |>
+  count(
+    core_area, experimental_method, period_5year,
+    name = "n_papers"
+  ) |>
+  arrange(core_area, experimental_method, period_5year)
 
-summary_base <- paper_base |>
-  left_join(papers_country_summary, by = "UT") |>
-  group_by(base) |>
-  summarise(
-    n_papers = n_distinct(UT),
-    papers_with_country = n_distinct(UT[n_countries > 0L]),
-    papers_with_latam = n_distinct(UT[has_latam]),
-    papers_latam_and_other_regions = n_distinct(UT[latam_with_other_regions]),
-    percent_with_latam = 100 * papers_with_latam / n_papers,
-    percent_latam_international = 100 * papers_latam_and_other_regions / papers_with_latam,
-    .groups = "drop"
-  )
-
-papers_latam <- papers_country_summary |>
-  filter(has_latam) |>
-  left_join(paper_base, by = "UT", relationship = "many-to-many") |>
-  arrange(base, year, UT) |>
-  select(
-    base, UT, year, title, journal, n_countries, countries,
-    n_latam_countries, latam_countries, latam_with_other_regions
-  )
-
-country_participation <- paper_countries |>
-  left_join(paper_base, by = "UT", relationship = "many-to-many") |>
-  group_by(base, country) |>
-  summarise(n_papers = n_distinct(UT), .groups = "drop") |>
-  mutate(region = if_else(country %in% latam_country_names, "Latin America", "Other")) |>
-  arrange(base, desc(n_papers), country)
+# Cada paper cuenta una vez por pais. Por eso los totales entre paises no deben
+# sumarse como si fueran categorias excluyentes.
+countries_decade <- paper_countries |>
+  left_join(papers |> select(UT, year), by = "UT") |>
+  mutate(decade = 10L * floor(year / 10L)) |>
+  count(country, decade, name = "n_papers") |>
+  group_by(country) |>
+  arrange(decade, .by_group = TRUE) |>
+  mutate(
+    cumulative_papers = cumsum(n_papers),
+    total_papers = sum(n_papers)
+  ) |>
+  ungroup() |>
+  arrange(desc(total_papers), country, decade)
 
 country_pairs <- paper_countries |>
   group_by(UT) |>
@@ -662,401 +631,178 @@ country_pairs <- paper_countries |>
     pairs <- t(combn(countries, 2L))
     tibble(country_1 = pairs[, 1], country_2 = pairs[, 2])
   }) |>
-  ungroup()
+  ungroup() |>
+  filter(
+    country_1 %in% latam_country_names |
+      country_2 %in% latam_country_names
+  ) |>
+  count(country_1, country_2, name = "n_papers", sort = TRUE)
 
-country_cooccurrence <- country_pairs |>
-  left_join(paper_base, by = "UT", relationship = "many-to-many") |>
-  filter(country_1 %in% latam_country_names | country_2 %in% latam_country_names) |>
-  group_by(base, country_1, country_2) |>
-  summarise(n_papers = n_distinct(UT), .groups = "drop") |>
-  arrange(base, desc(n_papers), country_1, country_2)
-
-# 10. Autores, variantes de nombre, afiliaciones y coautoria ----------------
-# Los resumenes usan el nombre completo normalizado exacto. Las claves
-# candidatas solo senalan grupos que requieren revision manual.
-authors_summary <- author_paper |>
-  filter(!is.na(author_name_normalized), author_name_normalized != "") |>
-  group_by(author_name_normalized) |>
+# El resumen de autores usa la forma completa normalizada exacta. Esto integra
+# diferencias de mayusculas y tildes, pero no fusiona nombres distintos.
+author_countries_by_name <- author_affiliation_detail |>
+  group_by(author_name_key) |>
   summarise(
-    author_name = first(author_name),
-    full_name_forms = collapse_unique(author_full),
-    abbreviated_forms = collapse_unique(author),
-    n_papers = n_distinct(UT),
-    first_year = min(as.integer(PY), na.rm = TRUE),
-    last_year = max(as.integer(PY), na.rm = TRUE),
-    n_endogenous = n_distinct(UT[base_endogeno == 1L]),
-    n_laboratory = n_distinct(UT[base_laboratorio == 1L]),
+    n_countries = n_distinct(country),
+    countries = collapse_unique(country),
     .groups = "drop"
-  ) |>
-  arrange(desc(n_papers), author_name)
-
-
-
-# 10a. Variantes de nombres que requieren revision manual --------------------
-# Se comparan formas completas del nombre. Un caso entra solo cuando comparte
-# apellido y al menos un nombre de pila con otra forma completa distinta.
-# Asi, Juan Perez/Juan Carlos Perez queda para revision, mientras que
-# Sebastian Perez/Samuel Perez no se agrupa automaticamente.
-# Las abreviaciones no generan un caso por si solas; quedan como contexto.
-name_forms <- author_paper |>
-  mutate(
-    full_name_key = coalesce(
-      na_if(normalize_name(author_full), ''),
-      na_if(normalize_name(author), '')
-    ),
-    full_name_display = na_if(str_squish(coalesce(author_full, author)), ''),
-    surname_key = normalize_name(author_surname),
-    given_name_text = normalize_name(author_given)
-  ) |>
-  filter(
-    !is.na(full_name_key), full_name_key != '',
-    !is.na(surname_key), surname_key != '',
-    !is.na(given_name_text), given_name_text != ''
-  ) |>
-  distinct(surname_key, full_name_key, full_name_display, given_name_text)
-
-shared_given_tokens <- function(x, y) {
-  # Identifica nombres de pila compartidos entre dos formas completas.
-  x_tokens <- str_split(x, '\\s+')[[1]]
-  y_tokens <- str_split(y, '\\s+')[[1]]
-  shared <- intersect(x_tokens, y_tokens)
-  if (length(shared) == 0L) NA_character_ else str_c(shared, collapse = '; ')
-}
-
-is_initial_only_difference <- function(x, y) {
-  # Excluye pares donde la diferencia consiste solo en iniciales.
-  # Ejemplos excluidos: John/John M.; Brett R./Brett Ryan.
-  x_tokens <- str_split(x, '\\s+')[[1]]
-  y_tokens <- str_split(y, '\\s+')[[1]]
-  x_diff <- setdiff(x_tokens, y_tokens)
-  y_diff <- setdiff(y_tokens, x_tokens)
-  (length(x_diff) > 0L && all(str_length(x_diff) == 1L)) ||
-    (length(y_diff) > 0L && all(str_length(y_diff) == 1L))
-}
-
-name_variant_pairs <- name_forms |>
-  inner_join(
-    name_forms,
-    by = 'surname_key',
-    suffix = c('_1', '_2'),
-    relationship = 'many-to-many'
-  ) |>
-  filter(full_name_key_1 < full_name_key_2) |>
-  mutate(
-    shared_given_names = map2_chr(
-      given_name_text_1,
-      given_name_text_2,
-      shared_given_tokens
-    ),
-    initials_only_difference = map2_lgl(
-      given_name_text_1,
-      given_name_text_2,
-      is_initial_only_difference
-    )
-  ) |>
-  filter(
-    !is.na(shared_given_names),
-    !initials_only_difference
-  ) |>
-  mutate(
-    candidate_group_id = str_c(
-      surname_key, full_name_key_1, full_name_key_2, sep = '__'
-    ),
-    review_reason = paste(
-      'Nombres completos distintos con mismo apellido y nombres de pila compartidos;',
-      'confirmar manualmente si corresponden a la misma persona.'
-    )
-  ) |>
-  select(
-    candidate_group_id,
-    surname_key,
-    full_name_key_1,
-    full_name_display_1,
-    full_name_key_2,
-    full_name_display_2,
-    shared_given_names,
-    review_reason
   )
 
-author_name_variants <- bind_rows(
-  name_variant_pairs |>
-    transmute(
-      candidate_group_id,
-      review_reason,
-      surname_key,
-      shared_given_names,
-      candidate_full_name = full_name_display_1,
-      other_full_name = full_name_display_2,
-      candidate_side = 'name_1',
-      full_name_key = full_name_key_1,
-      other_full_name_key = full_name_key_2
-    ),
-  name_variant_pairs |>
-    transmute(
-      candidate_group_id,
-      review_reason,
-      surname_key,
-      shared_given_names,
-      candidate_full_name = full_name_display_2,
-      other_full_name = full_name_display_1,
-      candidate_side = 'name_2',
-      full_name_key = full_name_key_2,
-      other_full_name_key = full_name_key_1
-    )
-) |>
-  left_join(
-    author_paper |>
-      mutate(
-        full_name_key = coalesce(
-          na_if(normalize_name(author_full), ''),
-          na_if(normalize_name(author), '')
-        )
-      ) |>
-      select(
-        full_name_key,
-        UT,
-        year = PY,
-        title = TI,
-        journal = SO,
-        author_position,
-        author,
-        author_full,
-        author_name,
-        author_name_normalized,
-        author_addresses,
-        author_countries,
-        author_institutions,
-        affiliation_status
-      ),
-    by = 'full_name_key',
-    relationship = 'many-to-many'
-  ) |>
-  arrange(candidate_group_id, year, UT, author_position)
-author_paper_affiliations <- author_paper |>
-  filter(!is.na(author_name_normalized), author_name_normalized != "") |>
-  transmute(
-    author_name_normalized,
-    UT,
-    institution_set = replace_na(author_institutions, ""),
-    country_set = replace_na(author_countries, "")
-  ) |>
-  distinct()
+author_institutions_by_name <- authors_long |>
+  select(author_name_key, author_institutions) |>
+  separate_rows(author_institutions, sep = ";") |>
+  mutate(author_institutions = na_if(str_squish(author_institutions), "")) |>
+  filter(!is.na(author_institutions)) |>
+  group_by(author_name_key) |>
+  summarise(
+    n_affiliation_units = n_distinct(author_institutions),
+    affiliations = collapse_unique(author_institutions),
+    .groups = "drop"
+  )
 
-affiliation_changes <- author_paper |>
-  filter(!is.na(author_name_normalized), author_name_normalized != "") |>
-  group_by(author_name_normalized) |>
+author_affiliation_by_name <- full_join(
+  author_countries_by_name,
+  author_institutions_by_name,
+  by = "author_name_key"
+)
+
+authors_summary <- authors_long |>
+  group_by(author_name_key) |>
   summarise(
     author_name = first(author_name),
+    name_forms = collapse_unique(author_name),
     n_papers = n_distinct(UT),
-    n_papers_with_author_affiliation = n_distinct(UT[n_author_affiliations > 0L]),
-    first_year = min(as.integer(PY), na.rm = TRUE),
-    last_year = max(as.integer(PY), na.rm = TRUE),
-    n_institutions = n_distinct(author_institutions, na.rm = TRUE),
-    institutions = collapse_unique(author_institutions),
-    n_countries = n_distinct(author_countries, na.rm = TRUE),
-    countries = collapse_unique(author_countries),
+    first_year = min(year),
+    last_year = max(year),
+    n_affiliation_patterns = n_distinct(
+      author_addresses[!is.na(author_addresses)]
+    ),
+    changed_affiliation = n_papers > 1L & n_affiliation_patterns > 1L,
     .groups = "drop"
   ) |>
-  left_join(
-    author_paper_affiliations |>
-      group_by(author_name_normalized) |>
-      summarise(
-        n_affiliation_patterns = n_distinct(institution_set[institution_set != ""]),
-        n_country_patterns = n_distinct(country_set[country_set != ""]),
-        affiliation_changed_between_papers = n() > 1L & n_affiliation_patterns > 1L,
-        country_changed_between_papers = n() > 1L & n_country_patterns > 1L,
-        .groups = "drop"
-      ),
-    by = "author_name_normalized"
+  left_join(author_affiliation_by_name, by = "author_name_key") |>
+  mutate(
+    n_countries = replace_na(n_countries, 0L),
+    n_affiliation_units = replace_na(n_affiliation_units, 0L)
   ) |>
-  arrange(desc(affiliation_changed_between_papers), desc(n_papers), author_name)
+  select(-author_name_key) |>
+  arrange(desc(n_papers), author_name)
 
-coauthor_pairs <- author_paper |>
-  filter(!is.na(author_name_normalized), author_name_normalized != "") |>
-  distinct(UT, author_name_normalized) |>
-  group_by(UT) |>
+# Las diadas se cuentan una vez por paper y se muestran solo si reaparecen en
+# dos o mas publicaciones.
+author_name_lookup <- authors_long |>
+  group_by(author_name_key) |>
+  summarise(author_name = first(author_name), .groups = "drop")
+
+coauthor_pairs <- authors_long |>
+  distinct(UT, year, author_name_key) |>
+  group_by(UT, year) |>
   group_modify(~ {
-    paper_authors <- sort(unique(.x$author_name_normalized))
+    paper_authors <- sort(unique(.x$author_name_key))
     if (length(paper_authors) < 2L) return(tibble())
     pairs <- t(combn(paper_authors, 2L))
-    tibble(author_1 = pairs[, 1], author_2 = pairs[, 2])
+    tibble(author_1_key = pairs[, 1], author_2_key = pairs[, 2])
   }) |>
   ungroup() |>
-  left_join(corpus |> select(UT, year, base_endogeno, base_laboratorio), by = "UT") |>
-  group_by(author_1, author_2) |>
+  group_by(author_1_key, author_2_key) |>
   summarise(
     n_papers = n_distinct(UT),
     years = str_c(sort(unique(year)), collapse = "; "),
-    n_endogenous = n_distinct(UT[base_endogeno == 1L]),
-    n_laboratory = n_distinct(UT[base_laboratorio == 1L]),
     .groups = "drop"
   ) |>
   filter(n_papers > 1L) |>
+  left_join(
+    author_name_lookup |> rename(author_1_key = author_name_key, author_1 = author_name),
+    by = "author_1_key"
+  ) |>
+  left_join(
+    author_name_lookup |> rename(author_2_key = author_name_key, author_2 = author_name),
+    by = "author_2_key"
+  ) |>
+  select(author_1, author_2, n_papers, years) |>
   arrange(desc(n_papers), author_1, author_2)
 
-# 11. Revistas y evolucion temporal ------------------------------------------
-# Se mantienen los conteos por estrategia de busqueda y por ano.
-journals <- paper_base |>
-  left_join(corpus |> select(UT, year, journal), by = "UT") |>
-  filter(!is.na(journal), journal != "") |>
-  group_by(base, journal) |>
+journals <- papers |>
+  filter(!is.na(journal), str_squish(journal) != "") |>
+  group_by(journal) |>
   summarise(
     n_papers = n_distinct(UT),
-    first_year = min(year, na.rm = TRUE),
-    last_year = max(year, na.rm = TRUE),
+    first_year = min(year),
+    last_year = max(year),
     .groups = "drop"
   ) |>
-  arrange(base, desc(n_papers), journal)
+  arrange(desc(n_papers), journal)
 
-journals_year <- paper_base |>
-  left_join(corpus |> select(UT, year, journal), by = "UT") |>
-  filter(!is.na(journal), journal != "", !is.na(year)) |>
-  count(base, journal, year, name = "n_papers") |>
-  arrange(base, journal, year)
+journals_year <- papers |>
+  filter(!is.na(journal), str_squish(journal) != "") |>
+  count(journal, year, name = "n_papers") |>
+  arrange(journal, year)
 
-# Version compacta de la base larga autor-paper para el Excel final.
-# Hay una fila por autor y paper. Se conserva solo la afiliacion atribuible
-# a ese autor; paper_C1 y paper_C3 completos no se repiten en esta hoja.
-author_paper_export <- author_paper |>
-  select(any_of(c(
-    "UT", "year", "title", "journal", "base_endogeno", "base_laboratorio",
-    "paper_shared", "core_area", "des_exp", "author_position", "author",
-    "author_full", "author_name", "author_addresses", "author_countries",
-    "author_institutions", "n_author_affiliations", "affiliation_sources",
-    "affiliation_note",
-    "affiliation_status", "institution_source"
-  )))
-# 12. Diagnosticos y libro de salida -----------------------------------------
-# Diagnostics resume las coberturas criticas. Author_count_audit permite
-# comprobar paper por paper que el numero de filas coincide con AU.
-diagnostics <- tibble(
-  measure = c(
-    "Unique papers",
-    "Author-paper rows",
-    "Papers with author-count mismatch",
-    "Author rows with manual C1",
-    "Author rows with linked WoS C1",
-    "Author rows with single-author C1 fallback",
-    "Author rows with paper C1 not assignable",
-    "Author rows with missing C1",
-    "Corrected paper C1 address entries",
-    "Unmapped country entries",
-    "Candidate name-variant groups",
-    "Authors with >1 address in one paper",
-    "Authors with >1 observable address overall",
-    "Authors with >1 observable institution overall",
-    "Maximum addresses for one author-paper"
-  ),
-  n = c(
-    n_distinct(corpus$UT),
-    nrow(author_paper),
-    sum(!author_count_audit$count_matches),
-    sum(author_paper$affiliation_status == "manual_c1", na.rm = TRUE),
-    sum(str_detect(author_paper$affiliation_status, "wos_c1_linked"), na.rm = TRUE),
-    sum(str_detect(author_paper$affiliation_status, "paper_c1_single_author"), na.rm = TRUE),
-    sum(author_paper$affiliation_status == "paper_c1_unassigned", na.rm = TRUE),
-    sum(author_paper$affiliation_status == "missing_c1", na.rm = TRUE),
-    nrow(paper_address_entries),
-    nrow(unmapped_country_entries),
-    n_distinct(author_name_variants$candidate_group_id),
-    sum(author_affiliation_counts$max_affiliations_same_paper > 1L),
-    sum(author_affiliation_counts$n_distinct_addresses > 1L),
-    sum(author_affiliation_counts$n_distinct_institutions > 1L),
-    max(author_affiliation_counts$max_affiliations_same_paper)
+# 9. Exportacion limpia -------------------------------------------------------
+# No se incluyen hojas de diagnostico ni variantes de nombres. Los controles
+# anteriores detienen el script si la estructura necesaria para el paper falla.
+authors_long_export <- authors_long |>
+  select(
+    UT, year, title, journal, core_area, experimental_method,
+    author_position, author_name, author_abbreviated,
+    n_author_affiliations, author_institutions, institution_source,
+    author_countries, author_addresses, affiliation_status, affiliation_note
   )
-)
 
-# Todas las tablas se guardan en un unico libro. Author_paper es la base larga
-# principal; Author_affiliations contiene el detalle cuando un autor posee mas
-# de una direccion. No se crean archivos de datos intermedios adicionales.
 write_xlsx(
   list(
-    Summary = summary_base,
-    Papers_country = papers_country_summary,
-    Countries = country_participation,
-    Country_cooccurrence = country_cooccurrence,
-    Country_mapping = country_mapping_audit,
+    Papers = papers,
+    Disciplines_5year = disciplines_5year,
+    Methods_discipline = methods_discipline,
+    Countries_decade = countries_decade,
+    Country_pairs = country_pairs,
+    Authors_long = authors_long_export,
+    Author_affiliations = author_affiliation_detail |>
+      select(-author_name_key),
     Authors_summary = authors_summary,
-    Authors_long = author_paper_export,
-    Author_affiliation_detail = author_affiliation_history,
-    Affiliation_changes = affiliation_changes,
-    Repeated_coauthor_pairs = coauthor_pairs,
+    Repeated_coauthors = coauthor_pairs,
     Journals = journals,
-    Journals_by_year = journals_year
+    Journals_year = journals_year
   ),
-  file.path(tables_dir, "descriptivos_endogeno_laboratorio.xlsx")
+  file.path(tables_dir, "descriptivos_affi_latam.xlsx")
 )
 
-
-# 13. Figuras descriptivas ----------------------------------------------------
-# Red de coocurrencia con al menos un pais latinoamericano en cada vinculo.
-network_edges <- country_pairs |>
-  filter(country_1 %in% latam_country_names | country_2 %in% latam_country_names) |>
-  count(country_1, country_2, name = "n_papers")
-
-if (nrow(network_edges) > 0L) {
-  network <- graph_from_data_frame(network_edges, directed = FALSE)
-  vertex_region <- if_else(V(network)$name %in% latam_country_names, "Latin America", "Other")
-
-  png(
-    file.path(figures_dir, "country_cooccurrence_latam.png"),
-    width = 2600,
-    height = 1900,
-    res = 240
+# 10. Diagnosticos visibles en consola ---------------------------------------
+# Estos valores sirven para auditar la ejecucion, pero no agregan hojas al Excel.
+diagnostics <- tibble(
+  measure = c(
+    "Papers",
+    "Author-paper rows",
+    "Unique normalized author names",
+    "Attributed author affiliations",
+    "Authors with multiple affiliations in one paper",
+    "Confirmed independent authors",
+    "Unresolved authors",
+    "Papers with international collaboration",
+    "Papers with United States collaboration",
+    "Unmapped addresses"
+  ),
+  n = c(
+    n_distinct(papers$UT),
+    nrow(authors_long),
+    n_distinct(authors$author_name_key),
+    nrow(author_affiliation_detail),
+    author_affiliation_detail |>
+      count(UT, author_position) |>
+      filter(n > 1L) |>
+      nrow(),
+    nrow(confirmed_no_affiliation),
+    nrow(unresolved_authors),
+    sum(papers$has_non_latam),
+    sum(papers$has_united_states),
+    nrow(unmapped_addresses)
   )
-  set.seed(20260929)
-  plot(
-    network,
-    layout = layout_with_fr(network, weights = E(network)$n_papers),
-    vertex.color = if_else(vertex_region == "Latin America", "#D55E00", "#56B4E9"),
-    vertex.frame.color = "white",
-    vertex.size = 7 + 3 * log1p(degree(network)),
-    vertex.label.cex = 0.75,
-    vertex.label.color = "#1C1C1C",
-    edge.width = 0.7 + 1.5 * log1p(E(network)$n_papers),
-    edge.color = adjustcolor("#666666", alpha.f = 0.45),
-    main = "Country co-occurrence in papers with Latin American affiliations"
-  )
-  legend(
-    "topleft",
-    legend = c("Latin America", "Other"),
-    col = c("#D55E00", "#56B4E9"),
-    pch = 19,
-    bty = "n"
-  )
-  dev.off()
-}
-
-top_journals <- journals |>
-  group_by(journal) |>
-  summarise(n_papers = sum(n_papers), .groups = "drop") |>
-  slice_max(n_papers, n = 12L, with_ties = FALSE) |>
-  pull(journal)
-
-journals_plot <- journals_year |>
-  filter(journal %in% top_journals) |>
-  ggplot(aes(year, n_papers, color = base)) +
-  geom_line(linewidth = 0.8) +
-  geom_point(size = 1.5) +
-  facet_wrap(~ journal, scales = "free_y", ncol = 3) +
-  scale_color_manual(values = c("Endogenous" = "#D55E00", "Laboratory" = "#0072B2")) +
-  scale_x_continuous(breaks = scales::breaks_pretty(4)) +
-  labs(x = "Year", y = "Papers", color = "Database") +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "top",
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
-  )
-
-ggsave(
-  file.path(figures_dir, "journals_top_over_time.png"),
-  journals_plot,
-  width = 13,
-  height = 10,
-  dpi = 320
 )
 
-print(summary_base)
+cat("\nDescriptivos affi_latam creados correctamente\n")
 print(diagnostics)
-print(affiliation_multiplicity)
+cat(
+  "\nOutput:",
+  file.path(tables_dir, "descriptivos_affi_latam.xlsx"),
+  "\n"
+)

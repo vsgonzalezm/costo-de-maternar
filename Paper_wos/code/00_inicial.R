@@ -1,92 +1,237 @@
-#-----------------------------------------------
-# 00 inicial - Cargar bases WoS originales
+# ------------------------------------------------------------
+# 00 - Construccion de la base oficial con afiliacion LatAm
 # Valentina Gonzalez Madariaga
-# Agosto 2026
-#-----------------------------------------------
+# Noviembre 2026
+# ------------------------------------------------------------
+
+# Reconstruye la base desde los TXT originales. La procedencia de la busqueda
+# se usa solo para auditar el origen; no define universos analiticos separados.
+# El universo final exige al menos una afiliacion en uno de los 14 paises LatAm ( los que mantuvimos del filtro de wos)
+# incluidos en la estrategia original de busqueda
+
 
 library(tidyverse)
 library(bibliometrix)
 library(here)
-library(writexl)
-# Fijar rutas de las carpetas con archivos txt
-raw_dir <- here("Paper_wos", "data", "raw")
-endogeno_dir <- here("Paper_wos", "data", "raw", "endogeno")
-laboratorio_dir <- here("Paper_wos", "data", "raw", "laboratorio")
+library(readxl)
 
-# Listar los archivos txt de cada base
+# 1. Carga y conciliacion de los TXT originales -----------------------------
+
+raw_dir <- here("Paper_wos", "data", "raw")
+endogeno_dir <- file.path(raw_dir, "endogeno")
+laboratorio_dir <- file.path(raw_dir, "laboratorio")
+intermediate_dir <- here("Paper_wos", "data", "intermediate")
+
 archivos_endogeno <- list.files(endogeno_dir, pattern = "\\.txt$", full.names = TRUE)
 archivos_laboratorio <- list.files(laboratorio_dir, pattern = "\\.txt$", full.names = TRUE)
 
-# Cargar los txt de endogeno en formato data frame
-endogeno <- convert2df(
-  file = archivos_endogeno,
-  dbsource = "wos",
-  format = "plaintext"
+if (length(archivos_endogeno) == 0L || length(archivos_laboratorio) == 0L) {
+  stop("Faltan TXT originales en las carpetas endogeno o laboratorio.")
+}
+
+base_endogeno_original <- convert2df(
+  archivos_endogeno, dbsource = "wos", format = "plaintext"
 ) |>
   as_tibble()
 
-# Cargar los txt de laboratorio en formato data frame
-laboratorio <- convert2df(
-  file = archivos_laboratorio,
-  dbsource = "wos",
-  format = "plaintext"
+base_laboratorio_original <- convert2df(
+  archivos_laboratorio, dbsource = "wos", format = "plaintext"
 ) |>
   as_tibble()
 
+# Estos conteos fijan el punto de partida del paper. Si los TXT cambian, el
+# script se detiene para que la actualizacion sea revisada y documentada.
+if (nrow(base_endogeno_original) != 716L ||
+    anyDuplicated(base_endogeno_original$UT) > 0L) {
+  stop("La busqueda endogena original ya no contiene 716 UT unicas.")
+}
 
-# Crear base conjunta sin papers duplicados
-corpus_unico <- bind_rows(
-  endogeno |> mutate(base_endogeno = 1, base_laboratorio = 0),
-  laboratorio |> mutate(base_endogeno = 0, base_laboratorio = 1)
+if (nrow(base_laboratorio_original) != 839L ||
+    anyDuplicated(base_laboratorio_original$UT) > 0L) {
+  stop("La busqueda laboratorio original ya no contiene 839 UT unicas.")
+}
+
+# Se unen las busquedas solo para recuperar todos los candidatos. Un paper
+# presente en ambas se conserva una vez mediante UT  (esto es porque despues de la recuperacion manual de afiliaciones que hizo isi2, hay un paper qeu solo aparece en lab que tiene afiliación latam).
+candidatos_originales <- bind_rows(
+  base_endogeno_original |>
+    mutate(en_busqueda_endogena = TRUE, en_busqueda_laboratorio = FALSE),
+  base_laboratorio_original |>
+    mutate(en_busqueda_endogena = FALSE, en_busqueda_laboratorio = TRUE)
 ) |>
   group_by(UT) |>
   mutate(
-    base_endogeno = max(base_endogeno),
-    base_laboratorio = max(base_laboratorio)
+    en_busqueda_endogena = any(en_busqueda_endogena),
+    en_busqueda_laboratorio = any(en_busqueda_laboratorio)
   ) |>
-  slice(1) |>
-  ungroup() |>
-  mutate(
-    # Estas variables conservan la pertenencia al resultado original de cada consulta WoS.
-    query_endogeno = base_endogeno,
-    query_laboratorio = base_laboratorio
-  )
+  slice(1L) |>
+  ungroup()
 
-# Incorporar correcciones y decisiones de la revision manual.
-revision_manual <- readxl::read_excel(
-  here("Paper_wos", "data", "intermediate", "base_octubre.xlsx")
+n_overlap_original <- sum(
+  candidatos_originales$en_busqueda_endogena &
+    candidatos_originales$en_busqueda_laboratorio
 )
 
-if (anyDuplicated(revision_manual$UT) > 0) {
-  stop("La base de revision manual contiene UT duplicados.")
+if (nrow(candidatos_originales) != 1137L || n_overlap_original != 418L) {
+  stop("La union original debe contener 1.137 papers y 418 coincidencias.")
 }
 
-# Un paper puede tener varias afiliaciones manuales distribuidas por autor.
-combinar_columnas_manuales <- function(data, columns) {
-  if (length(columns) == 0) {
+# 2. Integracion de la revision manual --------------------------------------
+
+revision_original <- read_excel(
+  file.path(intermediate_dir, "base_octubre.xlsx")
+)
+
+if (anyDuplicated(revision_original$UT) > 0L) {
+  stop("base_octubre.xlsx contiene UT duplicadas.")
+}
+
+# Devuelve NA cuando una columna opcional no existe.
+columna_o_na <- function(data, nombre) {
+  if (nombre %in% names(data)) {
+    as.character(data[[nombre]])
+  } else {
+    rep(NA_character_, nrow(data))
+  }
+}
+
+# Reune las correcciones de C1 o C3 registradas por posicion de autor.
+combinar_columnas_manuales <- function(data, columnas) {
+  if (length(columnas) == 0L) {
     return(rep(NA_character_, nrow(data)))
   }
 
-  apply(data[, columns, drop = FALSE], 1, function(values) {
-    entries <- values |>
+  apply(data[, columnas, drop = FALSE], 1L, function(valores) {
+    entradas <- valores |>
       as.character() |>
-      discard(~ is.na(.x) || str_squish(.x) == "") |>
       str_split(";", simplify = FALSE) |>
       unlist() |>
       str_squish() |>
-      discard(~ .x == "") |>
+      discard(~ is.na(.x) || .x == "") |>
       unique()
 
-    if (length(entries) == 0) NA_character_ else str_c(entries, collapse = "; ")
+    if (length(entradas) == 0L) NA_character_ else str_c(entradas, collapse = "; ")
   })
 }
 
-revision_manual_original <- revision_manual
+# Conserva el vinculo por posicion entre cada autor y las afiliaciones C1/C3
+# revisadas por Isidora. La posicion se extrae exclusivamente del numero entre
+# _aut y _manual: el 12 de c3_aut12_manual corresponde al autor 12.
+# El mapa anidado evita sumar 72 columnas a la base oficial y permite construir
+# la base larga sin volver a cargar el Excel de revision.
+construir_mapa_autor_afiliacion <- function(data, columnas_c1, columnas_c3) {
+  posicion_columna <- function(columnas) {
+    posiciones <- str_match(columnas, "_aut([0-9]+)_manual$")[, 2]
+    setNames(columnas, posiciones)
+  }
 
-# Combina WoS con correcciones manuales sin borrar afiliaciones originales.
-# Las correcciones de Isi pueden ser parciales: solo agregamos entradas nuevas o corregidas.
+  columnas_c1_pos <- posicion_columna(columnas_c1)
+  columnas_c3_pos <- posicion_columna(columnas_c3)
+  autores_af <- columna_o_na(data, "AF")
+  autores_au <- columna_o_na(data, "AU")
+
+  valor_por_posicion <- function(data, fila, columnas_pos, posicion) {
+    columna <- unname(columnas_pos[as.character(posicion)])
+    if (length(columna) == 0L || is.na(columna)) {
+      return(NA_character_)
+    }
+
+    valor <- str_squish(as.character(data[[columna]][fila]))
+    if (is.na(valor) || valor == "") NA_character_ else valor
+  }
+
+  map(seq_len(nrow(data)), function(fila) {
+    autores_texto <- autores_af[fila]
+    if (is.na(autores_texto) || str_squish(autores_texto) == "") {
+      autores_texto <- autores_au[fila]
+    }
+
+    autores <- autores_texto |>
+      coalesce("") |>
+      str_split(";", simplify = FALSE) |>
+      unlist() |>
+      str_squish() |>
+      discard(~ is.na(.x) || .x == "")
+
+    posiciones_disponibles <- sort(unique(as.integer(c(
+      names(columnas_c1_pos), names(columnas_c3_pos)
+    ))))
+    posiciones_con_datos <- keep(posiciones_disponibles, function(posicion) {
+      c1 <- valor_por_posicion(data, fila, columnas_c1_pos, posicion)
+      c3 <- valor_por_posicion(data, fila, columnas_c3_pos, posicion)
+      !is.na(c1) || !is.na(c3)
+    })
+
+    # En un registro de la revision, la misma institucion del unico autor fue
+    # copiada tambien en las posiciones 2 a 5. Esas copias redundantes se
+    # ignoran. Una afiliacion distinta fuera del rango sigue siendo un error,
+    # porque no podria vincularse de forma defendible con una persona.
+    posiciones_fuera <- posiciones_con_datos[
+      posiciones_con_datos > length(autores)
+    ]
+
+    if (length(posiciones_fuera) > 0L) {
+      valores_fuera <- c(
+        map_chr(
+          posiciones_fuera,
+          ~ valor_por_posicion(data, fila, columnas_c1_pos, .x)
+        ),
+        map_chr(
+          posiciones_fuera,
+          ~ valor_por_posicion(data, fila, columnas_c3_pos, .x)
+        )
+      ) |>
+        discard(is.na) |>
+        unique()
+
+      posiciones_validas <- seq_along(autores)
+      valores_validos <- c(
+        map_chr(
+          posiciones_validas,
+          ~ valor_por_posicion(data, fila, columnas_c1_pos, .x)
+        ),
+        map_chr(
+          posiciones_validas,
+          ~ valor_por_posicion(data, fila, columnas_c3_pos, .x)
+        )
+      ) |>
+        discard(is.na) |>
+        unique()
+
+      if (length(setdiff(valores_fuera, valores_validos)) > 0L) {
+        stop(
+          "Hay C1/C3 manual fuera del rango de autores en ",
+          as.character(data$UT[fila])
+        )
+      }
+    }
+
+    if (length(autores) == 0L) {
+      return(tibble(
+        author_position = integer(),
+        author_name = character(),
+        c1_manual = character(),
+        c3_manual = character()
+      ))
+    }
+
+    tibble(
+      author_position = seq_along(autores),
+      author_name = autores,
+      c1_manual = map_chr(
+        author_position,
+        ~ valor_por_posicion(data, fila, columnas_c1_pos, .x)
+      ),
+      c3_manual = map_chr(
+        author_position,
+        ~ valor_por_posicion(data, fila, columnas_c3_pos, .x)
+      )
+    )
+  })
+}
+# Agrega la correccion manual sin borrar informacion original valida.
 combinar_original_y_manual <- function(original, manual) {
-  purrr::map2_chr(original, manual, function(original_i, manual_i) {
+  map2_chr(original, manual, function(original_i, manual_i) {
     entradas <- c(original_i, manual_i) |>
       as.character() |>
       str_split(";", simplify = FALSE) |>
@@ -95,97 +240,203 @@ combinar_original_y_manual <- function(original, manual) {
       discard(~ is.na(.x) || .x == "") |>
       unique()
 
-    if (length(entradas) == 0) NA_character_ else str_c(entradas, collapse = "; ")
+    if (length(entradas) == 0L) NA_character_ else str_c(entradas, collapse = "; ")
   })
 }
 
-c1_manual_cols <- grep("^c1_aut[0-9]+_manual$", names(revision_manual), value = TRUE)
-c3_manual_cols <- grep("^c3_aut[0-9]+_manual$", names(revision_manual), value = TRUE)
-
-# Tabla de auditoria a nivel autor.
-# Conserva la clave de WoS, el id revisado por Isi y las entradas manuales.
-# Las entradas C1raw/C3raw se mantienen completas para rastrear la fuente original.
-columna_o_na <- function(data, nombre) {
-  if (nombre %in% names(data)) as.character(data[[nombre]]) else rep(NA_character_, nrow(data))
-}
-
-max_autores <- max(as.integer(str_extract(grep("^name_aut[0-9]+$", names(revision_manual_original), value = TRUE), "[0-9]+")), na.rm = TRUE)
-autores_afiliaciones_auditoria <- purrr::map_dfr(seq_len(max_autores), function(i) {
-  tibble(
-    UT = revision_manual_original$UT,
-    author_position = i,
-    name_wos = columna_o_na(revision_manual_original, paste0("name_aut", i)),
-    id_aut = columna_o_na(revision_manual_original, paste0("id_aut", i)),
-    c1_entry_wos = columna_o_na(revision_manual_original, paste0("c1_entry", i)),
-    c3_entry_wos = columna_o_na(revision_manual_original, paste0("c3_entry", i)),
-    c1_manual_author = columna_o_na(revision_manual_original, paste0("c1_aut", i, "_manual")),
-    c3_manual_author = columna_o_na(revision_manual_original, paste0("c3_aut", i, "_manual")),
-    C1raw_paper = columna_o_na(revision_manual_original, "C1raw"),
-    C3raw_paper = columna_o_na(revision_manual_original, "C3"),
-    assignment_status = case_when(
-      !is.na(c1_manual_author) & str_squish(c1_manual_author) != "" ~ "manual_author_affiliation",
-      !is.na(C1raw_paper) & str_detect(C1raw_paper, "\\[") ~ "raw_brackets_available_review_assignment",
-      TRUE ~ "paper_level_only_or_missing"
-    )
-  )
-}) |>
-  filter(!is.na(name_wos) & str_squish(name_wos) != "")
-
-revision_manual <- revision_manual |>
-  mutate(
-    C1_manual = combinar_columnas_manuales(pick(all_of(c1_manual_cols)), c1_manual_cols),
-    C3_manual = combinar_columnas_manuales(pick(all_of(c3_manual_cols)), c3_manual_cols)
-  ) |>
-  select(
-    UT,
-    AB_manual,
-    DE_manual,
-    C1_manual,
-    C3_manual,
-    review_status,
-    exclude_reason,
-    review_notes,
-    reviewer,
-    comentario_revision
-  )
-
-corpus_unico <- corpus_unico |>
-  left_join(revision_manual, by = "UT") |>
-  mutate(
-    # Conservamos el valor original antes de integrar cualquier correccion.
-    C1_original = C1,
-    C3_original = C3,
-    AB = if_else(!is.na(AB_manual) & str_squish(AB_manual) != "", AB_manual, AB),
-    C1 = combinar_original_y_manual(C1, C1_manual),
-    C3 = combinar_original_y_manual(C3, C3_manual),
-    curation_c1 = case_when(
-      is.na(C1_manual) | str_squish(C1_manual) == "" ~ "wos_original",
-      TRUE ~ "wos_original_plus_manual"
-    ),
-    curation_c3 = case_when(
-      is.na(C3_manual) | str_squish(C3_manual) == "" ~ "wos_original",
-      TRUE ~ "wos_original_plus_manual"
-    )
-  )
-
-# Excluir decisiones de la revision manual y casos resueltos por el equipo.
-papers_excluir_revision <- revision_manual |>
-  filter(review_status == "exclude") |>
-  pull(UT)
-
-papers_excluir_equipo <- c(
-  "WOS:000423043100005", # Diseno experimental fuera del interes del paper
-  "WOS:001003209400004", # Gelatina y peliculas de almidon
-  "WOS:001425530000002", # Duplicado sobre gelatina y fuera de tema
-  "WOS:000331604200005", # Resena de Roberts
-  "WOS:000412957000002", # Duplicado: excluir version volumen 99; conservar WOS:000401207500003 (volumen 94)
-  "WOS:001534810300002"  # Duplicado: excluir version 9 de mayo; conservar WOS:001475174400002 (15 de febrero)
+c1_manual_cols <- grep(
+  "^c1_aut[0-9]+_manual$", names(revision_original), value = TRUE
+)
+c3_manual_cols <- grep(
+  "^c3_aut[0-9]+_manual$", names(revision_original), value = TRUE
 )
 
-papers_excluir <- unique(c(papers_excluir_revision, papers_excluir_equipo))
+author_affiliation_map <- construir_mapa_autor_afiliacion(
+  revision_original, c1_manual_cols, c3_manual_cols
+)
 
-corpus_unico <- corpus_unico |>
-  filter(!UT %in% papers_excluir) |>
+revision_manual <- revision_original |>
+  mutate(
+    C1_manual = combinar_columnas_manuales(
+      pick(all_of(c1_manual_cols)), c1_manual_cols
+    ),
+    C3_manual = combinar_columnas_manuales(
+      pick(all_of(c3_manual_cols)), c3_manual_cols
+    ),
+    author_affiliation_map = author_affiliation_map
+  ) |>
+  transmute(
+    UT,
+    AB_manual = columna_o_na(revision_original, "AB_manual"),
+    DE_manual = columna_o_na(revision_original, "DE_manual"),
+    C1_manual,
+    C3_manual,
+    author_affiliation_map,
+    review_status = columna_o_na(revision_original, "review_status"),
+    exclude_reason = columna_o_na(revision_original, "exclude_reason"),
+    review_notes = columna_o_na(revision_original, "review_notes"),
+    reviewer = columna_o_na(revision_original, "reviewer"),
+    comentario_revision = columna_o_na(revision_original, "comentario_revision")
+  )
+
+candidatos_corregidos <- candidatos_originales |>
+  left_join(revision_manual, by = "UT") |>
+  mutate(
+    C1_original = C1,
+    C3_original = C3,
+    AB = if_else(
+      !is.na(AB_manual) & str_squish(AB_manual) != "",
+      AB_manual,
+      AB
+    ),
+    C1 = combinar_original_y_manual(C1, C1_manual),
+    C3 = combinar_original_y_manual(C3, C3_manual),
+    curation_c1 = if_else(
+      is.na(C1_manual) | str_squish(C1_manual) == "",
+      "wos_original",
+      "wos_original_plus_manual"
+    ),
+    curation_c3 = if_else(
+      is.na(C3_manual) | str_squish(C3_manual) == "",
+      "wos_original",
+      "wos_original_plus_manual"
+    )
+  )
+
+# 3. Aplicacion de exclusiones documentadas --------------------------------
+
+# Las exclusiones de la ayudante deben conservar una justificacion en alguna
+# de las columnas de revision.
+exclusiones_revision <- revision_manual |>
+  filter(review_status == "exclude") |>
+  mutate(
+    motivo = coalesce(
+      na_if(str_squish(exclude_reason), ""),
+      na_if(str_squish(review_notes), ""),
+      na_if(str_squish(comentario_revision), "")
+    )
+  ) |>
+  select(UT, motivo)
+
+if (any(is.na(exclusiones_revision$motivo))) {
+  stop("Hay exclusiones manuales sin justificacion documentada.")
+}
+
+# Decisiones adicionales acordadas por el equipo.
+exclusiones_equipo <- tribble(
+  ~UT, ~motivo,
+  "WOS:000423043100005",
+  "Diseno experimental fuera del interes del paper",
+  "WOS:001003209400004",
+  "Gelatina y peliculas de almidon; fuera de ciencias sociales",
+  "WOS:001425530000002",
+  "Duplicado sobre gelatina y fuera de ciencias sociales",
+  "WOS:000331604200005",
+  "Resena de Roberts",
+  "WOS:000412957000002",
+  "Duplicado: excluir volumen 99 y conservar volumen 94",
+  "WOS:001534810300002",
+  "Duplicado: excluir version del 9 de mayo y conservar la del 15 de febrero"
+)
+
+papers_excluir <- union(exclusiones_revision$UT, exclusiones_equipo$UT)
+
+if (length(papers_excluir) != 48L) {
+  stop("Se esperaban 48 exclusiones unicas.")
+}
+
+candidatos_elegibles <- candidatos_corregidos |>
+  filter(!UT %in% papers_excluir)
+
+if (nrow(candidatos_elegibles) != 1089L ||
+    anyDuplicated(candidatos_elegibles$UT) > 0L) {
+  stop("Despues de excluir deben quedar 1.089 candidatos con UT unica.")
+}
+
+# 4. Seleccion de papers con afiliacion LatAm -------------------------------
+
+# El corte mantiene los 14 paises de las consultas WoS. C1 permanece completo,
+# por lo que despues se podran identificar todos los demas paises de coautoria.
+paises_busqueda_latam <- tribble(
+  ~country_raw, ~country,
+  "ARGENTINA", "Argentina",
+  "BOLIVIA", "Bolivia",
+  "BRAZIL", "Brazil",
+  "CHILE", "Chile",
+  "COLOMBIA", "Colombia",
+  "COSTA RICA", "Costa Rica",
+  "CUBA", "Cuba",
+  "DOMINICAN REP", "Dominican Rep",
+  "ECUADOR", "Ecuador",
+  "GUATEMALA", "Guatemala",
+  "MEXICO", "Mexico",
+  "PERU", "Peru",
+  "URUGUAY", "Uruguay",
+  "VENEZUELA", "Venezuela"
+)
+
+# El pais se extrae del final de cada direccion. Esto evita confundir
+# New Mexico, USA, con Mexico.
+afiliaciones_latam <- candidatos_elegibles |>
+  select(UT, C1) |>
+  separate_rows(C1, sep = ";") |>
+  mutate(
+    address = str_squish(C1),
+    country_raw = address |>
+      str_remove("[.;[:space:]]+$") |>
+      str_extract("[^,]+$") |>
+      str_squish() |>
+      str_to_upper()
+  ) |>
+  inner_join(paises_busqueda_latam, by = "country_raw") |>
+  distinct(UT, country)
+
+paises_latam_por_paper <- afiliaciones_latam |>
+  group_by(UT) |>
+  summarise(
+    affi_latam_countries = str_c(sort(unique(country)), collapse = "; "),
+    .groups = "drop"
+  )
+
+base_oficial <- candidatos_elegibles |>
+  inner_join(paises_latam_por_paper, by = "UT") |>
+  mutate(affi_latam = TRUE)
+
+if (nrow(base_oficial) != 675L || anyDuplicated(base_oficial$UT) > 0L) {
+  stop("La base oficial debe contener exactamente 675 papers con UT unica.")
+}
+
+# Deben quedar 674 papers de la busqueda endogena original y un paper recuperado
+# desde la otra busqueda cuya afiliacion argentina fue completada manualmente.
+recuperados_fuera_busqueda_endogena <- base_oficial |>
+  filter(!en_busqueda_endogena) |>
+  pull(UT)
+
+if (
+  sum(base_oficial$en_busqueda_endogena) != 674L ||
+    !identical(recuperados_fuera_busqueda_endogena, "WOS:001488694300001")
+) {
+  stop("No se reproduce la conciliacion esperada de 674 + 1 papers.")
+}
+
+# Control especifico de los cinco falsos positivos encontrados.
+falsos_new_mexico <- c(
+  "WOS:000560503100006",
+  "WOS:001042741200001",
+  "WOS:001277827200001",
+  "WOS:001684128300001",
+  "WOS:001740801800001"
+)
+
+if (any(falsos_new_mexico %in% base_oficial$UT)) {
+  stop("Un paper afiliado solo a New Mexico fue clasificado como Mexico.")
+}
+
+# Desde este punto se trabaja exclusivamente con los 675 papers oficiales.
+
+# 5. Abstracts y keywords ---------------------------------------------------
+
+base_oficial <- base_oficial |>
   mutate(
     keywords_autor = case_when(
       !is.na(DE) & str_squish(DE) != "" ~ DE,
@@ -205,44 +456,22 @@ corpus_unico <- corpus_unico |>
     )
   )
 
-# Contar disponibilidad y fuente de las keywords despues de las exclusiones.
-resumen_keywords <- corpus_unico |>
-  summarise(
-    con_keywords_autor = sum(!is.na(keywords_autor)),
-    sin_keywords_autor = sum(is.na(keywords_autor)),
-    con_keywords_analisis = sum(!is.na(keywords_analisis)),
-    sin_keywords_analisis = sum(is.na(keywords_analisis))
-  )
+if (any(is.na(base_oficial$AB) | str_squish(base_oficial$AB) == "")) {
+  stop("La base oficial contiene papers sin abstract.")
+}
 
-conteo_keywords_fuente <- corpus_unico |>
-  count(keywords_fuente, name = "n_papers")
+if (any(
+  is.na(base_oficial$keywords_analisis) |
+    str_squish(base_oficial$keywords_analisis) == ""
+)) {
+  stop("La base oficial contiene papers sin keywords disponibles.")
+}
 
-# Mantener las dos bases consistentes con el corpus corregido.
-endogeno <- corpus_unico |>
-  filter(base_endogeno == 1)
+# 6. Core areas -------------------------------------------------------------
 
-laboratorio <- corpus_unico |>
-  filter(base_laboratorio == 1)
-
-
-# Dejar solo variables necesarias para revisar y trabajar
-columnas_base <- c(
-  "AU", "CR", "AB", "AB_manual", "C1", "C1_original", "C1_manual",
-  "C3", "C3_original", "C3_manual", "curation_c1", "curation_c3",
-  "DA", "KW_Merged", "DE", "DE_manual", "keywords_autor",
-  "keywords_analisis", "keywords_fuente", "DI", "ID", "PY", "TC",
-  "TI", "UT", "WC", "SO", "query_endogeno", "query_laboratorio",
-  "base_endogeno", "base_laboratorio", "has_latam_affiliation",
-  "has_latam_lab", "paper_shared", "universe_endogeno",
-  "universe_laboratorio", "des_exp_missing", "review_status", "exclude_reason",
-  "review_notes", "reviewer", "comentario_revision",
-  "core_area_mapping_status"
-)
-endogeno <- endogeno |> select(any_of(columnas_base))
-laboratorio <- laboratorio |> select(any_of(columnas_base))
-corpus_unico <- corpus_unico |> select(any_of(c(columnas_base, "base_endogeno", "base_laboratorio")))
-
-# Crear tabla de equivalencias entre WC y core area
+# Un paper puede pertenecer a mas de una core area. Las areas centrales se
+# mapean explicitamente; las demas categorias sociales quedan en Other y se
+# conservan sin modificar en WC para mantener trazabilidad.
 mapa_core_area <- tribble(
   ~core_area, ~WC,
   "Business/Management", "Management",
@@ -283,191 +512,87 @@ mapa_core_area <- tribble(
 ) |>
   mutate(WC = str_to_upper(WC))
 
-# Crear base larga de core areas para corpus unico
-corpus_unico_core_area_long <- corpus_unico |>
-  select(UT, WC, base_endogeno, base_laboratorio) |>
+core_area_long <- base_oficial |>
+  select(UT, WC) |>
   separate_rows(WC, sep = ";") |>
   mutate(WC = str_to_upper(str_squish(WC))) |>
+  filter(!is.na(WC), WC != "") |>
   left_join(mapa_core_area, by = "WC") |>
   mutate(
-    core_area_mapping_status = if_else(is.na(core_area), "unmapped_wc", "mapped_wc"),
+    core_area_mapping_status = if_else(
+      is.na(core_area), "assigned_to_other", "explicit_mapping"
+    ),
     core_area = replace_na(core_area, "Other")
   ) |>
-  distinct(UT, core_area, .keep_all = TRUE)
+  distinct(UT, WC, core_area, .keep_all = TRUE)
 
-# Agregar core areas resumidas en una columna por paper
-core_area_por_paper <- corpus_unico_core_area_long |>
+core_area_por_paper <- core_area_long |>
   group_by(UT) |>
   summarise(
-    core_area = str_c(unique(core_area), collapse = "; "),
-    core_area_mapping_status = if_else(any(core_area_mapping_status == "unmapped_wc"), "contains_unmapped_wc", "fully_mapped"),
+    core_area = str_c(sort(unique(core_area)), collapse = "; "),
+    core_area_mapping_status = if_else(
+      any(core_area_mapping_status == "assigned_to_other"),
+      "contains_other_wc",
+      "fully_explicit"
+    ),
     .groups = "drop"
   )
 
-endogeno <- endogeno |>
+base_oficial <- base_oficial |>
   left_join(core_area_por_paper, by = "UT")
 
-laboratorio <- laboratorio |>
-  left_join(core_area_por_paper, by = "UT")
-
-corpus_unico <- corpus_unico |>
-  left_join(core_area_por_paper, by = "UT")
-
-# Control obligatorio: cada paper debe quedar en al menos una core area.
-# Si aparece un paper sin mapeo, se detiene el pipeline para revisar el WC
-# original antes de producir bases analiticas.
-papers_sin_core_area <- corpus_unico |>
-  filter(is.na(core_area) | str_squish(core_area) == "")
-
-if (nrow(papers_sin_core_area) > 0) {
-  stop(
-    "Hay papers sin core area asignada. Revisar WC: ",
-    str_c(papers_sin_core_area$UT, collapse = ", ")
-  )
+if (any(is.na(base_oficial$core_area) | str_squish(base_oficial$core_area) == "")) {
+  stop("Hay papers sin core area asignada.")
 }
 
-# Crear tabla de paises LatAm para buscar en C1
-paises_latam <- tribble(
-  ~pais,
-  "Argentina",
-  "Bolivia",
-  "Brazil",
-  "Chile",
-  "Colombia",
-  "Costa Rica",
-  "Cuba",
-  "Dominican Rep",
-  "Ecuador",
-  "Guatemala",
-  "Mexico",
-  "Peru",
-  "Uruguay",
-  "Venezuela"
-)
+# 7. Tipo de diseno experimental -------------------------------------------
 
-# Crear menciones de afiliacion LatAm desde C1
-menciones_afiliacion_latam <- corpus_unico |>
-  select(UT, C1) |>
-  crossing(paises_latam) |>
-  mutate(encontrado = str_detect(str_to_lower(C1), regex(str_to_lower(pais), ignore_case = TRUE))) |>
-  filter(encontrado) |>
-  distinct(UT, pais)
-
-# Agregar paises LatAm de afiliacion en una columna por paper
-afiliacion_latam_por_paper <- menciones_afiliacion_latam |>
-  group_by(UT) |>
-  summarise(afiliacion_latam = str_c(unique(pais), collapse = "; "), .groups = "drop")
-
-endogeno <- endogeno |>
-  left_join(afiliacion_latam_por_paper, by = "UT")
-
-laboratorio <- laboratorio |>
-  left_join(afiliacion_latam_por_paper, by = "UT")
-
-corpus_unico <- corpus_unico |>
-  left_join(afiliacion_latam_por_paper, by = "UT")
-
-
-# Crear tabla de terminos para identificar investigaciones sobre LatAm
-patrones_lab_latam <- tribble(
-  ~lab_latam, ~patron,
-  "Argentina", "\\bargentina\\b|\\bargentin[a-z]*\\b",
-  "Bolivia", "\\bbolivia\\b|\\bbolivian[a-z]*\\b",
-  "Brazil", "\\bbrazil[a-z]*\\b|\\bbrasil[a-z]*\\b",
-  "Chile", "\\bchile\\b|\\bchilean[a-z]*\\b",
-  "Colombia", "\\bcolombia\\b|\\bcolombian[a-z]*\\b",
-  "Costa Rica", "\\bcosta rica\\b|\\bcosta rican[a-z]*\\b",
-  "Cuba", "\\bcuba\\b|\\bcuban[a-z]*\\b",
-  "Dominican Rep", "\\bdominican rep[a-z]*\\b|\\bdominican[a-z]*\\b",
-  "Ecuador", "\\becuador\\b|\\becuadorian[a-z]*\\b",
-  "Guatemala", "\\bguatemala\\b|\\bguatemalan[a-z]*\\b",
-  "Mexico", "\\bmexico\\b|\\bmexic[a-z]*\\b",
-  "Peru", "\\bperu\\b|\\bperuvian[a-z]*\\b",
-  "Uruguay", "\\buruguay\\b|\\buruguayan[a-z]*\\b",
-  "Venezuela", "\\bvenezuela\\b|\\bvenezuelan[a-z]*\\b",
-  "Latin America/Regional", "\\blatin america[a-z]*\\b|\\blatinamerican[a-z]*\\b|\\blatin american[a-z]*\\b|\\blatin-american[a-z]*\\b|\\bsouth america[a-z]*\\b|\\bsouthamerican[a-z]*\\b|\\bsouth american[a-z]*\\b|\\bcentral america[a-z]*\\b|\\bcentralamerican[a-z]*\\b|\\bcentral american[a-z]*\\b|\\blatin america and the caribbean\\b|\\blac\\b"
-)
-
-# Crear menciones de laboratorio LatAm desde titulo, abstract y keywords
-menciones_lab_latam <- corpus_unico |>
-  mutate(texto_lab = str_to_lower(str_c(replace_na(TI, ""), replace_na(AB, ""), replace_na(keywords_analisis, ""), sep = " "))) |>
-  select(UT, texto_lab) |>
-  crossing(patrones_lab_latam) |>
-  mutate(encontrado = str_detect(texto_lab, regex(patron, ignore_case = TRUE))) |>
-  filter(encontrado) |>
-  distinct(UT, lab_latam)
-
-# Agregar menciones LatAm de laboratorio en una columna por paper
-lab_latam_por_paper <- menciones_lab_latam |>
-  group_by(UT) |>
-  summarise(lab_latam = str_c(unique(lab_latam), collapse = "; "), .groups = "drop")
-
-endogeno <- endogeno |>
-  left_join(lab_latam_por_paper, by = "UT")
-
-laboratorio <- laboratorio |>
-  left_join(lab_latam_por_paper, by = "UT")
-
-corpus_unico <- corpus_unico |>
-  left_join(lab_latam_por_paper, by = "UT")
-# Indicadores de pertenencia conceptual a los universos.
-# La consulta WoS se conserva en query_*; estas variables permiten auditar
-# afiliacion LATAM y presencia tematica de LATAM despues de las correcciones.
-corpus_unico <- corpus_unico |>
-  mutate(
-    has_latam_affiliation = !is.na(afiliacion_latam) & str_squish(afiliacion_latam) != "",
-    has_latam_lab = !is.na(lab_latam) & str_squish(lab_latam) != "",
-    paper_shared = query_endogeno == 1 & query_laboratorio == 1,
-    universe_endogeno = has_latam_affiliation,
-    universe_laboratorio = has_latam_lab
-  )
-
-# Control obligatorio: ningun paper endogeno puede quedar sin afiliacion LATAM.
-# Si ocurre, el script se detiene para impedir un corpus conceptualmente incorrecto.
-endogeno_sin_afiliacion_latam <- corpus_unico |>
-  filter(query_endogeno == 1, !has_latam_affiliation)
-
-if (nrow(endogeno_sin_afiliacion_latam) > 0) {
-  stop(
-    "Hay papers de la consulta endogena sin afiliacion LATAM detectada en C1. ",
-    "Revisar antes de continuar: ",
-    str_c(endogeno_sin_afiliacion_latam$UT, collapse = ", ")
-  )
-}
-
-# Las bases derivadas heredan estas flags del corpus unico.
-flags_universo <- corpus_unico |>
-  select(UT, query_endogeno, query_laboratorio, has_latam_affiliation, has_latam_lab, paper_shared, universe_endogeno, universe_laboratorio)
-endogeno <- endogeno |> left_join(flags_universo, by = "UT")
-laboratorio <- laboratorio |> left_join(flags_universo, by = "UT")
-# Crear tabla de terminos para identificar disenos experimentales
+# La clasificacion admite mas de un metodo por paper. Las categorias genericas
+# solo se conservan cuando no existe un diseno mas informativo.
 patrones_des_exp <- tribble(
   ~des_exp, ~patron,
-  "Field experiment", "\\bfield experiment[a-z]*\\b|\\bfield-experiment[a-z]*\\b|\\bfield: experiment[a-z]*\\b",
-  "Survey experiment", "\\bsurvey experiment[a-z]*\\b|\\bsurvey-experiment[a-z]*\\b",
-  "Audit study", "\\baudit stud[a-z]*\\b",
-  "Correspondence experiment/audit", "\\bcorrespondence experiment[a-z]*\\b|\\bcorrespondence audit[a-z]*\\b|\\bcorrespondence test[a-z]*\\b",
-  "Conjoint", "\\bconjoint experiment[a-z]*\\b|\\bconjoint analy[a-z]*\\b|\\bconjoint-analy[a-z]*\\b|\\bconjoint stud[a-z]*\\b|\\bconjoint-study\\b|\\bconjoint study\\b",
-  "List experiment", "\\blist experiment[a-z]*\\b",
-  "Factorial experiment/survey", "\\bfactorial experiment[a-z]*\\b|\\bfactorial survey[a-z]*\\b",
-  "Vignette experiment/survey", "\\bvignette experiment[a-z]*\\b|\\bvignette survey[a-z]*\\b",
-  "Resume/CV audit", "\\bresume audit[a-z]*\\b|\\bcv audit[a-z]*\\b",
-  "Choice experiment", "\\bchoice experiment[a-z]*\\b",
-  "Online experiment", "\\bonline experiment[a-z]*\\b|\\bonline-experiment[a-z]*\\b",
-  "Experimental methods", "\\bexperimental method[a-z]*\\b|\\bexperimental evidence\\b|\\bexperiment[a-z]* from\\b|\\bexperiment[a-z]* in\\b|\\bexperimental study\\b|\\bexperimental studies\\b",
-  "Other experimental design", "\\bpreferential looking task\\b|\\blexical decision\\b|\\bsimulation\\b|\\bpractical illustration[a-z]*\\b"
+  "Field experiment",
+  "\\bfield experiment[a-z]*\\b|\\bfield-experiment[a-z]*\\b|\\bfield: experiment[a-z]*\\b",
+  "Survey experiment",
+  "\\bsurvey experiment[a-z]*\\b|\\bsurvey-experiment[a-z]*\\b",
+  "Audit study",
+  "\\baudit stud[a-z]*\\b",
+  "Correspondence experiment/audit",
+  "\\bcorrespondence experiment[a-z]*\\b|\\bcorrespondence audit[a-z]*\\b|\\bcorrespondence test[a-z]*\\b",
+  "Conjoint",
+  "\\bconjoint experiment[a-z]*\\b|\\bconjoint analy[a-z]*\\b|\\bconjoint-analy[a-z]*\\b|\\bconjoint stud[a-z]*\\b|\\bconjoint-study\\b|\\bconjoint study\\b",
+  "List experiment",
+  "\\blist experiment[a-z]*\\b",
+  "Factorial experiment/survey",
+  "\\bfactorial experiment[a-z]*\\b|\\bfactorial survey[a-z]*\\b",
+  "Vignette experiment/survey",
+  "\\bvignette experiment[a-z]*\\b|\\bvignette survey[a-z]*\\b",
+  "Resume/CV audit",
+  "\\bresume audit[a-z]*\\b|\\bcv audit[a-z]*\\b",
+  "Choice experiment",
+  "\\bchoice experiment[a-z]*\\b",
+  "Online experiment",
+  "\\bonline experiment[a-z]*\\b|\\bonline-experiment[a-z]*\\b",
+  "Experimental methods",
+  "\\bexperimental method[a-z]*\\b|\\bexperimental evidence\\b|\\bexperiment[a-z]* from\\b|\\bexperiment[a-z]* in\\b|\\bexperimental study\\b|\\bexperimental studies\\b",
+  "Other experimental design",
+  "\\bpreferential looking task\\b|\\blexical decision\\b|\\bsimulation\\b|\\bpractical illustration[a-z]*\\b"
 )
-# Crear menciones de diseno experimental desde titulo, abstract y keywords
-menciones_des_exp <- corpus_unico |>
-  mutate(texto_exp = str_to_lower(str_c(replace_na(TI, ""), replace_na(AB, ""), replace_na(keywords_analisis, ""), sep = " "))) |>
-  select(UT, texto_exp) |>
+
+menciones_des_exp <- base_oficial |>
+  transmute(
+    UT,
+    texto_exp = str_to_lower(str_c(
+      replace_na(TI, ""),
+      replace_na(AB, ""),
+      replace_na(keywords_analisis, ""),
+      sep = " "
+    ))
+  ) |>
   crossing(patrones_des_exp) |>
-  mutate(encontrado = str_detect(texto_exp, regex(patron, ignore_case = TRUE))) |>
-  filter(encontrado) |>
+  filter(str_detect(texto_exp, regex(patron, ignore_case = TRUE))) |>
   distinct(UT, des_exp)
 
-# Definir jerarquia de disenos experimentales
-# Online, Experimental methods y Other solo quedan si no hay algo mas especifico
 des_exp_especifico <- c(
   "Field experiment",
   "Survey experiment",
@@ -481,74 +606,152 @@ des_exp_especifico <- c(
   "Choice experiment"
 )
 
-# Agregar disenos experimentales en una columna por paper
 des_exp_por_paper <- menciones_des_exp |>
   group_by(UT) |>
   mutate(
     tiene_especifico = any(des_exp %in% des_exp_especifico),
-    tiene_online = any(des_exp == "Online experiment")
+    tiene_online = any(des_exp == "Online experiment"),
+    tiene_generico = any(des_exp == "Experimental methods")
   ) |>
   filter(
     des_exp %in% des_exp_especifico |
       (!tiene_especifico & des_exp == "Online experiment") |
       (!tiene_especifico & !tiene_online & des_exp == "Experimental methods") |
-      (!tiene_especifico & !tiene_online & !any(des_exp == "Experimental methods") & des_exp == "Other experimental design")
+      (!tiene_especifico & !tiene_online & !tiene_generico &
+         des_exp == "Other experimental design")
   ) |>
-  summarise(des_exp = str_c(unique(des_exp), collapse = "; "), .groups = "drop")
+  summarise(
+    des_exp = str_c(sort(unique(des_exp)), collapse = "; "),
+    .groups = "drop"
+  )
 
-endogeno <- endogeno |>
-  left_join(des_exp_por_paper, by = "UT")
-
-laboratorio <- laboratorio |>
-  left_join(des_exp_por_paper, by = "UT")
-
-corpus_unico <- corpus_unico |>
-  left_join(des_exp_por_paper, by = "UT")
-
-# Corregir manualmente diseno experimental revisado
 papers_survey_manual <- c("WOS:001661562700001", "WOS:001730690100001")
 
-endogeno <- endogeno |>
-  mutate(des_exp = if_else(UT %in% papers_survey_manual, "Survey experiment", des_exp))
+base_oficial <- base_oficial |>
+  left_join(des_exp_por_paper, by = "UT") |>
+  mutate(
+    des_exp = if_else(
+      UT %in% papers_survey_manual, "Survey experiment", des_exp
+    ),
+    des_exp_missing = is.na(des_exp) | str_squish(des_exp) == ""
+  )
 
-laboratorio <- laboratorio |>
-  mutate(des_exp = if_else(UT %in% papers_survey_manual, "Survey experiment", des_exp))
+# 8. Variables y controles finales -----------------------------------------
 
-corpus_unico <- corpus_unico |>
-  mutate(des_exp = if_else(UT %in% papers_survey_manual, "Survey experiment", des_exp))
+# Las marcas de las dos busquedas no se guardan: solo se usaron para auditar el
+# origen. La base oficial conserva los campos necesarios para descriptivos,
+# autores, afiliaciones, liderazgo, metodos y topic modeling.
+columnas_oficiales <- c(
+  "UT", "TI", "PY", "SO", "DI", "DT", "AU", "AF", "RP",
+  "C1", "C1_original", "C1_manual", "C3", "C3_original", "C3_manual",
+  "author_affiliation_map",
+  "curation_c1", "curation_c3", "affi_latam", "affi_latam_countries",
+  "AB", "AB_manual", "DE", "DE_manual", "ID", "KW_Merged",
+  "keywords_autor", "keywords_analisis", "keywords_fuente",
+  "WC", "core_area", "core_area_mapping_status",
+  "des_exp", "des_exp_missing", "TC", "DA", "CR",
+  "review_status", "exclude_reason", "review_notes", "reviewer",
+  "comentario_revision"
+)
 
-# Marcar papers sin diseno experimental detectado.
-# Esto no excluye papers: deja visible que el metodo no pudo inferirse
-# automaticamente desde titulo, abstract y keywords.
-corpus_unico <- corpus_unico |>
-  mutate(des_exp_missing = is.na(des_exp) | str_squish(des_exp) == "")
+base_oficial <- base_oficial |>
+  select(any_of(columnas_oficiales)) |>
+  arrange(as.integer(PY), UT)
 
-endogeno <- endogeno |>
-  left_join(select(corpus_unico, UT, des_exp_missing), by = "UT")
+if (nrow(base_oficial) != 675L || n_distinct(base_oficial$UT) != 675L) {
+  stop("La base oficial final no conserva 675 papers unicos.")
+}
 
-laboratorio <- laboratorio |>
-  left_join(select(corpus_unico, UT, des_exp_missing), by = "UT")
+# Verifica que el mapa anidado conserve una posicion unica por autor y que
+# ninguna afiliacion manual quede desligada de un nombre. Estos controles son
+# necesarios antes de construir la base larga de autores en descriptivos.
+mapa_autor_control <- base_oficial |>
+  select(UT, author_affiliation_map) |>
+  unnest(author_affiliation_map)
 
-# Contar papers sin diseno experimental detectado
-n_sin_des_exp <- sum(corpus_unico$des_exp_missing, na.rm = TRUE)
-# Crear subset de papers del corpus total que mencionan Chile
-chile_corpus <- corpus_unico |>
-  filter(str_detect(lab_latam, "(^|;\\s*)Chile($|;)"))
-# Guardar objetos simples para volver a cargarlos despues
-saveRDS(endogeno, here("Paper_wos", "data", "intermediate", "endogeno_inicial.rds"))
-saveRDS(laboratorio, here("Paper_wos", "data", "intermediate", "laboratorio_inicial.rds"))
-saveRDS(corpus_unico, here("Paper_wos", "data", "intermediate", "corpus_unico_inicial.rds"))
-saveRDS(corpus_unico_core_area_long, here("Paper_wos", "data", "intermediate", "corpus_unico_core_area_long.rds"))
-saveRDS(autores_afiliaciones_auditoria, here("Paper_wos", "data", "intermediate", "autores_afiliaciones_auditoria.rds"))
-write_csv(chile_corpus, here("Paper_wos", "data", "intermediate", "chile_corpus.csv"))
-# Mostrar resumen basico en consola
-print(dim(endogeno))
-print(dim(laboratorio))
-print(dim(corpus_unico))
-print(dim(corpus_unico_core_area_long))
-print(n_sin_des_exp)
-print(resumen_keywords)
-print(conteo_keywords_fuente)
-print(names(endogeno))
-print(names(laboratorio))
-print(names(corpus_unico))
+n_filas_autor_paper <- nrow(mapa_autor_control)
+n_c1_manuales <- sum(
+  !is.na(mapa_autor_control$c1_manual) &
+    str_squish(mapa_autor_control$c1_manual) != ""
+)
+n_c3_manuales <- sum(
+  !is.na(mapa_autor_control$c3_manual) &
+    str_squish(mapa_autor_control$c3_manual) != ""
+)
+
+# Estos totales corresponden a la revision manual vigente. Si cambian, el
+# script se detiene antes de sobrescribir la base oficial y obliga a revisar
+# si se modifico el archivo de entrada o el vinculo por posicion de autor.
+if (
+  n_filas_autor_paper != 2419L ||
+    n_c1_manuales != 1844L ||
+    n_c3_manuales != 1900L
+) {
+  stop(
+    "El mapa autor-afiliacion no coincide con la revision manual vigente: ",
+    n_filas_autor_paper, " filas autor-paper; ",
+    n_c1_manuales, " C1 manuales; ",
+    n_c3_manuales, " C3 manuales."
+  )
+}
+
+if (anyDuplicated(mapa_autor_control[c("UT", "author_position")]) > 0L) {
+  stop("El mapa autor-afiliacion contiene posiciones duplicadas por paper.")
+}
+
+if (any(
+  (is.na(mapa_autor_control$author_name) |
+    str_squish(mapa_autor_control$author_name) == "") &
+    (!is.na(mapa_autor_control$c1_manual) |
+      !is.na(mapa_autor_control$c3_manual))
+)) {
+  stop("Hay afiliaciones manuales que no pueden vincularse con un autor.")
+}
+
+if (
+  any(is.na(base_oficial$UT)) ||
+    any(is.na(base_oficial$TI)) ||
+    any(is.na(base_oficial$PY))
+) {
+  stop("Faltan identificadores, titulos o anios en la base oficial.")
+}
+
+doi_repetidos <- base_oficial |>
+  filter(!is.na(DI), str_squish(DI) != "") |>
+  count(DI) |>
+  filter(n > 1L)
+
+titulos_repetidos <- base_oficial |>
+  mutate(titulo_control = TI |> str_to_upper() |> str_squish()) |>
+  count(titulo_control) |>
+  filter(n > 1L)
+
+if (nrow(doi_repetidos) > 0L || nrow(titulos_repetidos) > 0L) {
+  stop("Persisten DOI o titulos exactos duplicados en la base oficial.")
+}
+
+# 9. Unico output analitico de 00 ------------------------------------------
+
+saveRDS(
+  base_oficial,
+  file.path(intermediate_dir, "base_oficial.rds")
+)
+
+# Resumen visible al ejecutar. No crea archivos auxiliares.
+cat("\nBase oficial creada correctamente\n")
+cat("Papers:", nrow(base_oficial), "\n")
+cat("Filas autor-paper:", n_filas_autor_paper, "\n")
+cat("Celdas C1 manuales:", n_c1_manuales, "\n")
+cat("Celdas C3 manuales:", n_c3_manuales, "\n")
+cat(
+  "Periodo:",
+  min(as.integer(base_oficial$PY)),
+  "-",
+  max(as.integer(base_oficial$PY)),
+  "\n"
+)
+cat("Hasta 2025:", sum(as.integer(base_oficial$PY) <= 2025L), "\n")
+cat("Papers 2026:", sum(as.integer(base_oficial$PY) == 2026L), "\n")
+cat("Sin metodo especifico:", sum(base_oficial$des_exp_missing), "\n")
+print(count(base_oficial, keywords_fuente, name = "n_papers"))
+
