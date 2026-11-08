@@ -1541,32 +1541,6 @@ plot_top_terms(
   "topic_model_top_terms.png"
 )
 
-core_heatmap_data <- topics_by_core_gamma |>
-  mutate(topic_short = str_c("T", topic))
-
-core_heatmap <- ggplot(
-  core_heatmap_data,
-  aes(topic_short, fct_reorder(core_area, n_papers), fill = percent_gamma)
-) +
-  geom_tile(color = "white", linewidth = 0.4) +
-  scale_fill_viridis_c(option = "C", direction = -1) +
-  labs(
-    title = "Peso promedio de cada topic por core area",
-    subtitle = "Promedio de gamma; las areas pueden superponerse",
-    x = "Topic",
-    y = NULL,
-    fill = "% gamma"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid = element_blank())
-
-ggsave(
-  file.path(figures_dir, "topic_model_core_area_heatmap.png"),
-  core_heatmap,
-  width = 10,
-  height = 6,
-  dpi = 320
-)
 
 print(model_summary)
 print(model_selection)

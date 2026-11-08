@@ -642,7 +642,7 @@ base_oficial <- base_oficial |>
 # origen. La base oficial conserva los campos necesarios para descriptivos,
 # autores, afiliaciones, liderazgo, metodos y topic modeling.
 columnas_oficiales <- c(
-  "UT", "TI", "PY", "SO", "DI", "DT", "AU", "AF", "RP",
+  "UT", "TI", "PY", "SO", "DI", "DT", "WE", "AU", "AF", "RP",
   "C1", "C1_original", "C1_manual", "C3", "C3_original", "C3_manual",
   "author_affiliation_map",
   "curation_c1", "curation_c3", "affi_latam", "affi_latam_countries",

@@ -15,4 +15,5 @@ Otros/
 venv/
 .DS_Store
 desktop.ini
+.claude/
 ~$*
