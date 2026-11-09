@@ -404,6 +404,28 @@ candidatos_corregidos <- candidatos_originales |>
     )
   )
 
+# 2c. Correccion de RP (autor corresponsal) del chequeo manual de Tania -------
+# Origen: chequeo manual de Tania Hutt (9-nov-2026).
+#  5. WOS:000338925400064 (Race and marriage in the labor market..., AER 2014).
+#     RP estaba vacio (NA) en WoS, por lo que el liderazgo del corresponsal
+#     quedaba como Other/unknown. Tania confirma que ambos autores (Arceo-Gomez y
+#     Campos-Vazquez) tienen afiliacion en MEXICO; sus afiliaciones por autor ya
+#     eran Mexico (C1 de WoS), asi que solo cambia RP: NA -> "MEXICO.".
+#     Efecto: el corresponsal pasa de Other/unknown a Latin America.
+correcciones_rp_tania <- tribble(
+  ~UT, ~rp_nuevo,
+  "WOS:000338925400064", "MEXICO."
+)
+
+if (!all(correcciones_rp_tania$UT %in% candidatos_corregidos$UT)) {
+  stop("Correccion RP de Tania: UT no encontrada en la base.")
+}
+
+candidatos_corregidos <- candidatos_corregidos |>
+  left_join(correcciones_rp_tania, by = "UT") |>
+  mutate(RP = coalesce(rp_nuevo, RP)) |>
+  select(-rp_nuevo)
+
 # 3. Aplicacion de exclusiones documentadas --------------------------------
 
 # Las exclusiones de la ayudante deben conservar una justificacion en alguna
