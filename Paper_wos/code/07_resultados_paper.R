@@ -18,6 +18,7 @@ library(readxl)
 library(writexl)
 library(here)
 library(wesanderson)
+library(patchwork)
 
 # -----------------------------------------------------------------------------
 # 1. Rutas, parametros y estilo grafico
@@ -42,10 +43,11 @@ first_year <- 1990L
 last_year <- 2026L
 last_month_2026 <- "July"
 # 2026 se conserva, pero se identifica como ano parcial en tablas y figuras.
+# El ultimo bloque de cinco anos se rotula 2025-26 (no hay datos despues de 2026).
 
 five_year_levels <- c(
   "1990-94", "1995-99", "2000-04", "2005-09",
-  "2010-14", "2015-19", "2020-24", "2025-29"
+  "2010-14", "2015-19", "2020-24", "2025-26"
 )
 decade_levels <- c("1990s", "2000s", "2010s", "2020-26")
 
@@ -76,7 +78,10 @@ save_publication_figure <- function(plot, file_stem, width, height) {
 five_year_period <- function(year) {
   # Convierte un ano en bloques de cinco anos desde 1990.
   start <- first_year + 5L * floor((as.integer(year) - first_year) / 5L)
-  str_c(start, "-", str_sub(as.character(start + 4L), -2L))
+  label <- str_c(start, "-", str_sub(as.character(start + 4L), -2L))
+  # No hay papers despues de 2026: el ultimo bloque se rotula 2025-26 (parcial)
+  # para no sugerir cobertura hasta 2029.
+  if_else(label == "2025-29", "2025-26", label)
 }
 
 decade_period <- function(year) {
@@ -352,6 +357,272 @@ figure4 <- ggplot(
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # -----------------------------------------------------------------------------
+# 5b. Figure 5: origen de la produccion (colaboracion de afiliaciones)
+# -----------------------------------------------------------------------------
+# Usa las afiliaciones por autor de 05 (Authors_long, ya con las correcciones
+# del chequeo manual de Tania incorporadas en 00_inicial.R). Cada paper cae en
+# UNA sola categoria (mutuamente excluyentes). Todos los papers tienen al menos
+# un autor LatAm. Si hay autores de Europa y/o EE.UU., esa presencia define la
+# categoria aunque haya ademas autores de otras regiones; "Latam-other" queda
+# solo para papers cuyos coautores no LatAm provienen exclusivamente de otras
+# regiones (Canada, Australia, Asia, etc.).
+
+latam_countries <- c(
+  "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Costa Rica",
+  "Cuba", "Dominican Rep", "Ecuador", "El Salvador", "Guatemala", "Haiti",
+  "Honduras", "Mexico", "Nicaragua", "Panama", "Paraguay", "Peru",
+  "Puerto Rico", "Uruguay", "Venezuela"
+)
+
+europe_countries <- c(
+  "Austria", "Belgium", "Croatia", "Czechia", "Denmark", "Finland",
+  "France", "Germany", "Hungary", "Ireland", "Italy", "Netherlands",
+  "Norway", "Poland", "Portugal", "Russia", "Slovakia", "Spain",
+  "Sweden", "Switzerland", "Turkey", "United Kingdom"
+)
+
+origin_levels <- c(
+  "Latam only", "Latam-Europe", "Latam-U.S.",
+  "Latam-Europe + U.S.", "Latam-other"
+)
+
+paper_origin <- authors_long |>
+  select(UT, author_countries) |>
+  separate_rows(author_countries, sep = "\\s*;\\s*") |>
+  mutate(author_countries = na_if(author_countries, "")) |>
+  group_by(UT) |>
+  summarise(
+    has_latam = any(author_countries %in% latam_countries),
+    has_europe = any(author_countries %in% europe_countries),
+    has_us = any(author_countries == "United States"),
+    has_other = any(
+      !is.na(author_countries) &
+        !author_countries %in% c(latam_countries, europe_countries, "United States")
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    origin = case_when(
+      has_europe & has_us ~ "Latam-Europe + U.S.",
+      has_europe ~ "Latam-Europe",
+      has_us ~ "Latam-U.S.",
+      has_other ~ "Latam-other",
+      TRUE ~ "Latam only"
+    ),
+    origin = factor(origin, levels = origin_levels)
+  )
+
+if (nrow(paper_origin) != 675L || !all(paper_origin$has_latam)) {
+  stop("Figure 5: todos los 675 papers deben tener al menos un autor LatAm.")
+}
+
+table_figure5_origin <- paper_origin |>
+  count(origin, name = "n_papers", .drop = FALSE) |>
+  mutate(percent = round(100 * n_papers / sum(n_papers), 1)) |>
+  bind_rows(
+    tibble(
+      origin = NA, n_papers = nrow(paper_origin), percent = 100
+    )
+  ) |>
+  mutate(origin = as.character(origin) |> replace_na("Total"))
+
+figure5_origin_note <- str_c(
+  "Mutually exclusive categories based on author affiliations. ",
+  "Latam only: no co-author outside Latin America. ",
+  "Latam-Europe / Latam-U.S. / Latam-Europe + U.S.: at least one author ",
+  "affiliated in Europe and/or the United States; this presence defines the ",
+  "category even when authors from other regions are also present. ",
+  "Latam-other: non-Latin American co-authors come only from other regions ",
+  "(e.g., Canada, Australia, Asia), with no Europe or U.S. affiliation."
+)
+
+# La nota viaja con la tabla (ultima fila) ademas de la hoja Notes.
+table_figure5_origin <- table_figure5_origin |>
+  bind_rows(tibble(
+    origin = str_c("Note: ", figure5_origin_note),
+    n_papers = NA_integer_, percent = NA_real_
+  ))
+
+# Origen por disciplina (total en el tiempo). Las disciplinas se superponen: un
+# paper cuenta en cada disciplina a la que pertenece, asi que la suma de filas
+# supera 675 (mismo criterio que Table 2).
+table_figure5_by_discipline <- paper_origin |>
+  select(UT, origin) |>
+  inner_join(
+    core_area_long |> select(UT, core_area),
+    by = "UT",
+    relationship = "many-to-many"
+  ) |>
+  count(core_area, origin, name = "n_papers", .drop = FALSE) |>
+  group_by(core_area) |>
+  mutate(
+    n_discipline = sum(n_papers),
+    percent = round(100 * n_papers / n_discipline, 1)
+  ) |>
+  ungroup() |>
+  filter(n_discipline > 0L) |>
+  mutate(label = str_c(n_papers, " (", percent, "%)")) |>
+  select(core_area, n_discipline, origin, label) |>
+  pivot_wider(names_from = origin, values_from = label) |>
+  arrange(desc(n_discipline)) |>
+  rename(`Core discipline` = core_area, `Papers in discipline` = n_discipline)
+
+figure5_discipline_note <- str_c(
+  "Origin categories as in Figure 5 (mutually exclusive within each discipline). ",
+  "Disciplines are not mutually exclusive: a paper counts in every discipline ",
+  "it belongs to, so discipline totals add to more than 675. ",
+  "Cells show n (% of the discipline's papers); totals cover all years through ",
+  last_month_2026, " 2026."
+)
+
+table_figure5_by_discipline <- table_figure5_by_discipline |>
+  bind_rows(
+    tibble(`Core discipline` = str_c("Note: ", figure5_discipline_note))
+  )
+
+# Figure 5 por disciplina: proporcion de cada origen sobre el total de papers de
+# la disciplina (barras horizontales al 100%, n de la disciplina en la etiqueta).
+figure5_discipline_data <- paper_origin |>
+  select(UT, origin) |>
+  inner_join(
+    core_area_long |> select(UT, core_area),
+    by = "UT",
+    relationship = "many-to-many"
+  ) |>
+  count(core_area, origin, name = "n_papers", .drop = FALSE) |>
+  group_by(core_area) |>
+  mutate(
+    n_discipline = sum(n_papers),
+    percent = 100 * n_papers / n_discipline
+  ) |>
+  ungroup() |>
+  filter(n_discipline > 0L) |>
+  group_by(core_area) |>
+  mutate(
+    discipline_label = str_c(core_area, "\n(n = ", n_discipline, ")"),
+    # Orden: de mayor a menor % de "Latam only" (primera fila arriba).
+    latam_only_percent = percent[origin == "Latam only"][1]
+  ) |>
+  ungroup() |>
+  mutate(
+    discipline_label = fct_reorder(discipline_label, latam_only_percent)
+  )
+
+figure5_by_discipline <- ggplot(
+  figure5_discipline_data,
+  aes(percent, discipline_label, fill = fct_rev(origin))
+) +
+  geom_col(width = 0.7, color = "white", linewidth = 0.3, alpha = 0.7) +
+  geom_text(
+    aes(label = if_else(percent >= 5, str_c(round(percent), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  scale_fill_manual(
+    values = origin_colors,
+    breaks = origin_levels,
+    name = "Origin"
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 100, 25),
+    labels = scales::label_percent(scale = 1),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  guides(fill = guide_legend(nrow = 1)) +
+  labs(
+    title = "Origin of experimental papers by discipline",
+    subtitle = "Share of each discipline's Latin America-affiliated papers, all years",
+    x = "Share of papers in discipline",
+    y = NULL,
+    caption = str_wrap(
+      str_c(
+        figure5_origin_note,
+        " Disciplines overlap, so a paper counts in each of its disciplines.",
+        " Includes records through ", last_month_2026, " 2026."
+      ),
+      width = 150
+    )
+  ) +
+  theme_paper +
+  theme(
+    panel.grid.major.x = element_line(color = "grey92"),
+    panel.grid.major.y = element_blank()
+  )
+
+# Figure 5: solo evolucion en el tiempo, periodos de cinco anos. Se muestra el
+# porcentaje sobre el total de papers del periodo y el n total sobre cada barra,
+# porque los periodos tempranos tienen pocos papers.
+figure5_plot_data <- paper_origin |>
+  left_join(papers |> select(UT, period_5year), by = "UT") |>
+  # 1995-2009 se agrupa: tiene solo 17 papers repartidos en tres periodos.
+  mutate(
+    period_5year = fct_collapse(
+      factor(period_5year, ordered = FALSE),
+      "1995-2009" = c("1995-99", "2000-04", "2005-09")
+    ) |>
+      fct_relevel("1995-2009")
+  ) |>
+  count(period_5year, origin, name = "n_papers", .drop = FALSE) |>
+  group_by(period_5year) |>
+  mutate(
+    n_period = sum(n_papers),
+    percent = 100 * n_papers / n_period
+  ) |>
+  ungroup() |>
+  filter(n_period > 0L)
+
+figure5_totals <- figure5_plot_data |>
+  distinct(period_5year, n_period)
+
+# Misma familia de paletas que Figure 4 (Zissou1), en tonos suaves.
+origin_colors <- setNames(
+  wes_palette("Zissou1", length(origin_levels), type = "continuous"),
+  origin_levels
+)
+
+figure5 <- ggplot(
+  figure5_plot_data,
+  aes(period_5year, percent, fill = fct_rev(origin))
+) +
+  geom_col(width = 0.75, color = "white", linewidth = 0.3, alpha = 0.7) +
+  geom_text(
+    data = figure5_totals,
+    aes(period_5year, 100, label = str_c("n = ", n_period)),
+    inherit.aes = FALSE,
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_fill_manual(
+    values = origin_colors,
+    breaks = origin_levels,
+    name = "Origin"
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, 100, 25),
+    labels = scales::label_percent(scale = 1),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
+  guides(fill = guide_legend(nrow = 1, reverse = FALSE)) +
+  labs(
+    title = "Origin of experimental papers over time",
+    subtitle = "Share of Latin America-affiliated papers by author affiliations; 1995-2009 pooled, then five-year periods",
+    x = NULL,
+    y = "Share of papers in period",
+    caption = str_wrap(
+      str_c(
+        figure5_origin_note, " 2025-26 includes records through ",
+        last_month_2026, " 2026."
+      ),
+      width = 150
+    )
+  ) +
+  theme_paper +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.caption = element_text(size = 8, hjust = 0)
+  )
+
+# -----------------------------------------------------------------------------
 # 6. Table 5: topics principales por disciplina
 # -----------------------------------------------------------------------------
 # Se prueban topic dominante y promedio de gamma. Gamma conserva la mezcla
@@ -557,20 +828,6 @@ figure_topics_by_discipline <- ggplot() +
 # -----------------------------------------------------------------------------
 # Para primer autor se usa 05. Para el corresponsal se recuperan paises desde RP.
 
-latam_countries <- c(
-  "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Costa Rica",
-  "Cuba", "Dominican Rep", "Ecuador", "El Salvador", "Guatemala", "Haiti",
-  "Honduras", "Mexico", "Nicaragua", "Panama", "Paraguay", "Peru",
-  "Puerto Rico", "Uruguay", "Venezuela"
-)
-
-europe_countries <- c(
-  "Austria", "Belgium", "Croatia", "Czechia", "Denmark", "Finland",
-  "France", "Germany", "Hungary", "Ireland", "Italy", "Netherlands",
-  "Norway", "Poland", "Portugal", "Russia", "Slovakia", "Spain",
-  "Sweden", "Switzerland", "Turkey", "United Kingdom"
-)
-
 standard_country_tokens <- c(
   "ARGENTINA", "AUSTRALIA", "AUSTRIA", "BELGIUM", "BENIN", "BOLIVIA",
   "BRAZIL", "BURKINA FASO", "CAMBODIA", "CANADA", "CHILE", "COLOMBIA",
@@ -718,64 +975,199 @@ leadership_combined <- leadership_by_discipline |>
   mutate(percent = 100 * n_papers / sum(n_papers)) |>
   ungroup()
 
-# Para la figura se muestra la proporcion sustantiva de interes: papers con
-# liderazgo LatAm. El tamano de cada punto transparenta cuantos papers sostienen
-# el porcentaje y evita equiparar periodos con uno y con muchos registros.
-figure6_plot_data <- leadership_combined |>
-  group_by(core_area, period_5year) |>
-  summarise(
-    n_papers = sum(n_papers),
-    n_latam_leadership = sum(
-      n_papers[combined_leadership == "Latin America"]
-    ),
-    percent_latam_leadership = 100 * n_latam_leadership / n_papers,
-    .groups = "drop"
+# Figure 6: liderazgo latinoamericano (LatAm vs. todo el resto junto).
+# Clasificacion mutuamente excluyente con prioridad al primer autor:
+#   - "First author": el primer autor tiene afiliacion LatAm.
+#   - "Corresponding author only": el primer autor NO es LatAm pero el autor
+#     corresponsal si. Asi un paper nunca se cuenta dos veces y la suma de ambas
+#     lineas es el liderazgo LatAm combinado (primer autor o corresponsal).
+# Todo lo demas (US/Europe, otras regiones, desconocido) se agrupa como "sin
+# liderazgo LatAm" y no se grafica. Se corrige un error previo: antes el
+# porcentaje se calculaba sobre un n_papers ya sobreescrito y salia 100%/0%.
+leadership_role_levels <- c("First author", "Corresponding author only")
+
+assign_leadership_role <- function(data) {
+  data |>
+    mutate(
+      leadership_role = case_when(
+        first_author_region == "Latin America" ~ "First author",
+        corresponding_region == "Latin America" ~ "Corresponding author only",
+        TRUE ~ "No Latin American leadership"
+      )
+    )
+}
+
+summarise_leadership_role <- function(data, group_var) {
+  data |>
+    assign_leadership_role() |>
+    group_by({{ group_var }}) |>
+    summarise(
+      n_papers = n(),
+      n_first_author = sum(leadership_role == "First author"),
+      n_corresponding_only = sum(leadership_role == "Corresponding author only"),
+      .groups = "drop"
+    ) |>
+    mutate(
+      n_latam_leadership = n_first_author + n_corresponding_only,
+      percent_first_author = 100 * n_first_author / n_papers,
+      percent_corresponding_only = 100 * n_corresponding_only / n_papers,
+      percent_latam_leadership = 100 * n_latam_leadership / n_papers
+    )
+}
+
+# 1995-2009 se agrupa por el mismo motivo que en Figure 5.
+figure6_time_summary <- leadership_paper |>
+  mutate(
+    period_5year = fct_collapse(
+      factor(period_5year, ordered = FALSE),
+      "1995-2009" = c("1995-99", "2000-04", "2005-09")
+    ) |>
+      fct_relevel("1995-2009")
+  ) |>
+  summarise_leadership_role(period_5year) |>
+  mutate(
+    period_label = str_c(period_5year, "\n(n = ", n_papers, ")"),
+    period_label = fct_inorder(period_label)
   )
 
-leadership_point_color <- wes_palette("Darjeeling1", 3L)[[1]]
+figure6_discipline_summary <- leadership_by_discipline |>
+  summarise_leadership_role(core_area) |>
+  mutate(
+    discipline_label = str_c(core_area, " (n = ", n_papers, ")"),
+    discipline_label = fct_reorder(discipline_label, percent_latam_leadership)
+  )
 
-figure6 <- figure6_plot_data |>
-  ggplot(aes(period_5year, percent_latam_leadership, group = 1)) +
-  geom_line(color = "grey65", linewidth = 0.65) +
-  geom_point(
-    aes(size = n_papers),
-    shape = 21,
-    fill = leadership_point_color,
-    color = "white",
-    stroke = 0.7,
-    alpha = 0.95
+# Datos exactos de la figura, un registro por periodo y por disciplina.
+figure6_plot_data <- bind_rows(
+  figure6_time_summary |>
+    transmute(panel = "Over time", group = as.character(period_5year), n_papers,
+              n_first_author, n_corresponding_only, n_latam_leadership,
+              percent_first_author, percent_corresponding_only,
+              percent_latam_leadership),
+  figure6_discipline_summary |>
+    transmute(panel = "By discipline", group = core_area, n_papers,
+              n_first_author, n_corresponding_only, n_latam_leadership,
+              percent_first_author, percent_corresponding_only,
+              percent_latam_leadership)
+)
+
+figure6_discipline_note <- str_c(
+  "Latin American leadership vs. all other leadership combined (US/Europe, ",
+  "other regions and unknown). Mutually exclusive roles with first-author ",
+  "priority: First author = first author has a Latin American affiliation; ",
+  "Corresponding author only = first author is not Latin American but the ",
+  "corresponding author is; Total = First author + Corresponding author only. ",
+  "Disciplines are not mutually exclusive, so a paper counts in each of its ",
+  "disciplines. Cells show n (% of the discipline's papers); all years through ",
+  last_month_2026, " 2026."
+)
+
+table_figure6_by_discipline <- figure6_discipline_summary |>
+  arrange(desc(n_papers)) |>
+  transmute(
+    `Core discipline` = core_area,
+    `Papers in discipline` = n_papers,
+    `First author` = str_c(n_first_author, " (", round(percent_first_author, 1), "%)"),
+    `Corresponding author only` = str_c(
+      n_corresponding_only, " (", round(percent_corresponding_only, 1), "%)"
+    ),
+    `Total Latin American leadership` = str_c(
+      n_latam_leadership, " (", round(percent_latam_leadership, 1), "%)"
+    )
+  ) |>
+  bind_rows(tibble(`Core discipline` = str_c("Note: ", figure6_discipline_note)))
+
+leadership_colors <- c(
+  "First author" = wes_palette("Zissou1", 5L)[[1]],
+  "Corresponding author only" = wes_palette("Zissou1", 5L)[[4]]
+)
+
+role_long <- function(data) {
+  data |>
+    pivot_longer(
+      c(percent_first_author, percent_corresponding_only),
+      names_to = "leadership_role",
+      values_to = "percent"
+    ) |>
+    mutate(
+      leadership_role = recode(
+        leadership_role,
+        percent_first_author = "First author",
+        percent_corresponding_only = "Corresponding author only"
+      ),
+      leadership_role = factor(leadership_role, levels = leadership_role_levels)
+    )
+}
+
+figure6_caption <- str_wrap(
+  str_c(
+    "Latin American leadership vs. all other leadership combined. A paper is ",
+    "counted once: as First author if the first author has a Latin American ",
+    "affiliation; otherwise as Corresponding author only if the corresponding ",
+    "author does. The two series add up to the combined first-or-corresponding ",
+    "share. Disciplines overlap, so a paper counts in each of its disciplines. ",
+    "2025-26 includes records through ", last_month_2026, " 2026."
+  ),
+  width = 150
+)
+
+figure6_time <- role_long(figure6_time_summary) |>
+  ggplot(aes(period_label, percent, color = leadership_role, group = leadership_role)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 2.4) +
+  geom_text(
+    aes(label = str_c(round(percent), "%")),
+    vjust = -1, size = 3, show.legend = FALSE
   ) +
-  facet_wrap(~ core_area, ncol = 2) +
+  scale_color_manual(values = leadership_colors, name = "Latin American leadership") +
   scale_y_continuous(
     limits = c(0, 100),
     breaks = seq(0, 100, 25),
     labels = scales::label_percent(scale = 1),
-    expand = expansion(mult = c(0, 0))
-  ) +
-  scale_size_area(
-    max_size = 9,
-    breaks = scales::breaks_pretty(n = 4),
-    name = "Papers in period"
+    expand = expansion(mult = c(0, 0.02))
   ) +
   labs(
-    title = "Leadership of Latin America-affiliated experimental papers",
-    subtitle = paste(
-      "Share with a Latin American first or corresponding author;",
-      "point size shows the number of papers"
-    ),
-    x = NULL,
-    y = "Papers with Latin American leadership",
-    caption = str_c(
-      "Latin America is assigned when either the first or corresponding ",
-      "author has a Latin American affiliation. Disciplines overlap. ",
-      "2025-29 includes records through ", last_month_2026, " 2026."
-    )
+    title = "Latin American leadership of Latin America-affiliated experimental papers",
+    subtitle = "Over time: share of papers whose first author (or, if not, corresponding author) is Latin American",
+    x = NULL, y = "Share of papers in period"
   ) +
   theme_paper +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid.major.x = element_line(color = "grey92")
+    panel.grid.major.x = element_line(color = "grey92"),
+    legend.position = "bottom"
   )
+
+# Por disciplina solo se muestra el total (first + corresponding only); el
+# detalle first/corresponding va en la tabla Table_Figure6_by_discipline.
+figure6_disc <- figure6_discipline_summary |>
+  ggplot(aes(percent_latam_leadership, discipline_label)) +
+  geom_col(
+    width = 0.6, alpha = 0.7,
+    fill = wes_palette("Zissou1", 5L)[[2]]
+  ) +
+  geom_text(
+    aes(label = str_c(round(percent_latam_leadership), "%")),
+    hjust = -0.2, size = 3
+  ) +
+  scale_x_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, 25),
+    labels = scales::label_percent(scale = 1),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    subtitle = "By discipline (all years): first author or corresponding author only, combined",
+    x = "Share of papers in discipline with Latin American leadership",
+    y = NULL,
+    caption = figure6_caption
+  ) +
+  theme_paper +
+  theme(
+    panel.grid.major.x = element_line(color = "grey92"),
+    panel.grid.major.y = element_blank()
+  )
+
+figure6 <- figure6_time / figure6_disc + plot_layout(heights = c(1, 1.1))
 
 # -----------------------------------------------------------------------------
 # 8. Figure 7: terminos principales del topic model
@@ -852,7 +1244,11 @@ notes <- tribble(
   "Table 3", "Country mentions are not mutually exclusive; each paper counts once per Latin American country affiliation.",
   "Table 4 / Figure 4", "Experimental methods are not mutually exclusive; Other includes records without a specific method label.",
   "Table 5", "Average gamma is the primary topic measure; dominant-topic counts are a complementary simplification.",
-  "Figure 6", "Latin American leadership is assigned when the first or corresponding author has a Latin American affiliation.",
+  "Figure 5", figure5_origin_note,
+  "Figure 5 by discipline", figure5_discipline_note,
+  "Figure 6", "Latin American leadership is assigned when the first or corresponding author has a Latin American affiliation; all other leadership (US/Europe, other, unknown) is grouped.",
+  "Figure 6 by discipline", figure6_discipline_note,
+  "Figure 6", "Mutually exclusive roles: First author takes priority; Corresponding author only counts papers whose first author is not Latin American but whose corresponding author is. The two shares add up to combined Latin American leadership.",
   "Figure 6", "First-author and corresponding-author classifications are exported separately for reporting in the text.",
   "ESCI", "WE identifies ESCI, SSCI, SCI-EXPANDED, and other WoS citation indexes."
 )
@@ -866,13 +1262,18 @@ results_index <- tribble(
   "Table 5", "Table5_top3_topics", "Top three topics per discipline using gamma and dominant-topic measures.",
   "Topic appendix", "Appendix_topics_full", "All topics by discipline under both topic measures.",
   "Topic plot data", "Topics_plot_data", "Exact values for the topic-by-discipline comparison; all seven topics are retained.",
+  "Figure 5", "Table_Figure5_origin", "Origin of papers (mutually exclusive); totals with a note on the classification criterion in Notes.",
+  "Figure 5 by discipline", "Table_Fig5_by_discipline", "Origin of papers by core discipline, totals over time; disciplines overlap.",
+  "Figure 6 by discipline", "Table_Fig6_by_discipline", "Latin American leadership by core discipline: first author, corresponding author only and total; disciplines overlap.",
   "Leadership", "Leadership_combined", "Combined first- or corresponding-author leadership classification.",
   "Leadership detail", "Leadership_separate", "First and corresponding authors reported separately.",
   "ESCI audit", "ESCI_audit", "Annual identification of records indexed in ESCI.",
   "Topic labels", "Topic_dictionary", "Substantive label assigned to each topic.",
   "Method notes", "Notes", "Definitions and non-mutual-exclusivity notes.",
   "Figure 4", "outputs/figures/figure4_methods_over_time.png", "Annual papers by experimental method.",
-  "Figure 6", "outputs/figures/figure6_leadership.png", "Latin American leadership share by discipline and period; point size is the number of papers.",
+  "Figure 5", "outputs/figures/figure5_origin_over_time.png", "Origin of papers by five-year period (100% stacked bars; n per period above bars).",
+  "Figure 5 by discipline", "outputs/figures/figure5_origin_by_discipline.png", "Origin of papers as a share of each discipline's total (100% stacked bars; disciplines overlap).",
+  "Figure 6", "outputs/figures/figure6_leadership.png", "Latin American leadership over time (first author vs. corresponding author only, mutually exclusive) and total share by discipline.",
   "Figure 7", "outputs/figures/figure7_topic_terms.png", "Top terms defining each topic.",
   "Topics by discipline", "outputs/figures/figure_topics_by_discipline.png", "Replacement for the former heatmap: top-three gamma topics with dominant-topic percentage as comparison."
 )
@@ -893,9 +1294,13 @@ write_xlsx(
     Table5_top3_topics = table5_top3_topics,
     Appendix_topics_full = table5_all_topics,
     Topics_plot_data = topics_discipline_plot,
+    Table_Figure5_origin = table_figure5_origin,
+    Figure5_plot_data = figure5_plot_data,
+    Table_Fig5_by_discipline = table_figure5_by_discipline,
     Leadership_combined = leadership_combined,
     Leadership_separate = leadership_separate,
     Figure6_plot_data = figure6_plot_data,
+    Table_Fig6_by_discipline = table_figure6_by_discipline,
     ESCI_audit = esci_audit,
     Topic_dictionary = topic_dictionary,
     Notes = notes
@@ -908,8 +1313,16 @@ save_publication_figure(
   width = 12, height = 11
 )
 save_publication_figure(
+  figure5, "figure5_origin_over_time",
+  width = 11, height = 7.5
+)
+save_publication_figure(
+  figure5_by_discipline, "figure5_origin_by_discipline",
+  width = 11, height = 6.5
+)
+save_publication_figure(
   figure6, "figure6_leadership",
-  width = 12, height = 9
+  width = 11, height = 9
 )
 save_publication_figure(
   figure7, "figure7_topic_terms",
