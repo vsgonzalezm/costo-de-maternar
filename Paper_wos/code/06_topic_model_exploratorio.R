@@ -30,7 +30,7 @@ library(writexl)
 # -----------------------------------------------------------------------------
 # Esta seccion concentra las decisiones que controlan el analisis. 
 
-seed <- 20260929L # Semilla aleatoria: hace reproducibles los resultados.
+seed <- 20260929L # Semilla maestra: reproduce la particion entrenamiento-validacion.
 
 k_candidates <- 4:10
 # Valores de k que se comparan. k representa el numero de topics que el modelo
@@ -39,27 +39,47 @@ k_candidates <- 4:10
 k_exploratory <- c(4L, 10L)
 # Soluciones que se exportan explicitamente para lectura manual:
 # 4 topics entrega una sintesis parsimoniosa y 10 una lectura mas detallada.
-# El maximo baja de 12 a 10 porque el corpus oficial tiene 675 documentos.
+
+selection_seeds <- c(1101L, 2202L, 3303L, 4404L, 5505L)
+# Cada k se estima cinco veces. LDA puede converger a soluciones distintas
+# segun la inicializacion; repetirlo permite medir estabilidad y no elegir k
+# por una corrida excepcionalmente favorable.
+
+training_proportion <- 0.80
+# Se usa 80% de los papers para ajustar los modelos candidatos y 20% para
+# calcular perplexity fuera de muestra. Asi perplexity mide generalizacion y
+# no solamente ajuste a los mismos documentos usados para entrenar.
 
 minimum_topic_share <- 0.03
-# Cada topic dominante debe reunir al menos 3% de los papers. Este control
-# evita recomendar particiones con grupos casi vacios.
+# El 3% es una alerta descriptiva sobre topics pequenos. No elimina soluciones
+# automaticamente, porque un topic poco frecuente puede ser sustantivamente
+# importante y la asignacion dominante pierde la mezcla interna de cada paper.
 
-n_top_terms <- 12L # Numero de palabras principales que se exportan por topic para interpretarlo.
+low_text_token_threshold <- 20L
+low_text_term_threshold <- 15L
+# Un paper se marca como de poco texto retenido si queda bajo cualquiera de
+# estos umbrales. La marca sirve para sensibilidad; el paper no se excluye.
 
-min_document_frequency <- 3L # Un termino debe aparecer en al menos tres papers para evitar que un caso aislado defina un topic completo.
+n_top_terms <- 12L
+# Numero de palabras con mayor probabilidad que se exporta para interpretar
+# cada topic. Las etiquetas siguen siendo provisorias y requieren lectura.
+
+min_document_frequency <- 3L
+# Un termino debe aparecer en al menos tres papers para evitar que una palabra
+# aislada defina por si sola un topic.
 
 max_document_proportion <- 1.00
 # No se eliminan automaticamente terminos frecuentes. Como el corpus ya esta
-# restringido a ciencias sociales, America Latina y experimentos, una palabra
-# comun puede ser sustantivamente importante. La frecuencia alta se reporta en
-# Common_terms_audit para revisarla antes de decidir.
+# restringido por campo, region y metodo, una palabra comun puede ser relevante.
+# Las frecuencias altas se auditan y cualquier exclusion queda en el diccionario.
 
-control_final <- list(burnin = 1000L, iter = 2000L, thin = 100L)
-# Parametros del muestreo Gibbs del modelo final:
-# burnin descarta iteraciones iniciales, iter define el muestreo total y thin
-# guarda una iteracion cada cierto intervalo para reducir dependencia serial.
+control_candidate <- list(burnin = 500L, iter = 1000L, thin = 100L)
+# Controles breves para comparar 35 modelos candidatos (7 k por 5 semillas).
 
+control_final <- list(burnin = 1500L, iter = 3000L, thin = 100L)
+# Parametros del muestreo Gibbs de los modelos finales:
+# burnin descarta iteraciones iniciales; iter cuenta las posteriores; thin
+# conserva una de cada 100. El ajuste final usa mas iteraciones que la seleccion.
 tables_dir <- here("Paper_wos", "outputs", "tables")
 figures_dir <- here("Paper_wos", "outputs", "figures")
 
@@ -238,7 +258,15 @@ corpus_generic_terms <- c(
   "explain", "explains", "explained", "explaining", "include", "includes",
   "included", "due", "statistical", "adoption", "reduction", "reductions",
   "insight", "insights", "effort", "efforts", "extent", "provide", "provides",
-  "provided", "providing"
+  "provided", "providing",
+  # Verbos de proposito y evaluacion academica que no identifican el tema.
+  "investigate", "investigates", "investigated", "investigating",
+  "examine", "examines", "examined", "examining",
+  "evaluate", "evaluates", "evaluated", "evaluating",
+  "assess", "assesses", "assessed", "assessing",
+  "aim", "aims", "aimed", "objective", "objectives", "purpose", "purposes",
+  "contribute", "contributes", "contributed", "contributing", "address",
+  "addresses", "addressed", "designed", "potential"
 )
 
 artifact_terms <- c(
@@ -451,22 +479,47 @@ term_normalization <- tribble(
   "taxes", "tax",
   "voters", "voter",
   "women", "woman",
-  "wtp", "willingness_to_pay"
+  "wtp", "willingness_to_pay",
+  # Plurales residuales observados en la auditoria del vocabulario.
+  "costs", "cost",
+  "perceptions", "perception",
+  "systems", "system"
 )
 
+normalize_compound_text <- function(text) {
+  # Convierte guiones y signos de puntuacion internos en espacios antes de
+  # buscar frases. Esto permite reconocer tanto "right-wing" como "right wing".
+  replace_na(text, "") |>
+    str_to_lower() |>
+    str_replace_all("[\u2010\u2011\u2012\u2013\u2014\u2015-]+", " ") |>
+    str_replace_all("[^a-z_\\s]", " ") |>
+    str_squish()
+}
+
+compound_dictionary <- compound_terms |>
+  # La frase se normaliza con la misma regla aplicada al corpus.
+  mutate(
+    phrase_normalized = normalize_compound_text(phrase),
+    phrase_words = str_count(phrase_normalized, "\\S+")
+  ) |>
+  # Las frases mas largas se reemplazan primero para que un bigrama no destruya
+  # previamente un trigrama que contiene las mismas palabras.
+  arrange(desc(phrase_words), desc(str_length(phrase_normalized)))
+
 apply_compounds <- function(text) {
-  # Sustituye primero las frases mas largas y conserva conectores internos como
-  # "to" en willingness_to_pay.
+  # Protege expresiones conceptuales como willingness_to_pay como un solo token.
+  # Los limites de palabra evitan reemplazos dentro de palabras mas extensas.
   reduce2(
-    compound_terms$phrase,
-    compound_terms$token,
-    .init = str_to_lower(replace_na(text, "")),
+    compound_dictionary$phrase_normalized,
+    compound_dictionary$token,
+    .init = normalize_compound_text(text),
     .f = function(current_text, phrase, token) {
-      str_replace_all(current_text, fixed(phrase), token)
+      flexible_phrase <- str_replace_all(phrase, "\\s+", "\\\\s+")
+      pattern <- regex(str_c("\\b", flexible_phrase, "\\b"))
+      str_replace_all(current_text, pattern, token)
     }
   )
 }
-
 generic_terms <- unique(c(
   connector_terms,
   methodological_terms,
@@ -588,24 +641,28 @@ normalization_counts <- normalization_audit_map |>
     .before = 1L
   )
 
-raw_text_for_audit <- str_to_lower(replace_na(corpus$text_ti_ab, ""))
+normalized_text_for_audit <- normalize_compound_text(corpus$text_ti_ab)
+# La auditoria usa exactamente la misma normalizacion de guiones y puntuacion
+# que el modelamiento para no subcontar variantes de una misma expresion.
 
 compound_counts <- pmap_dfr(
-  compound_terms,
-  function(phrase, token, keep_in_model) {
+  compound_dictionary |> select(phrase, token, keep_in_model, phrase_normalized),
+  function(phrase, token, keep_in_model, phrase_normalized) {
+    flexible_phrase <- str_replace_all(phrase_normalized, "\\s+", "\\\\s+")
+    pattern <- regex(str_c("\\b", flexible_phrase, "\\b"))
+
     tibble(
       mapping_type = "compound phrase",
       original_form = phrase,
       model_form = token,
       keep_in_model = keep_in_model,
-      raw_n_documents = sum(str_detect(raw_text_for_audit, fixed(phrase))),
-      raw_occurrences = sum(str_count(raw_text_for_audit, fixed(phrase)))
+      raw_n_documents = sum(str_detect(normalized_text_for_audit, pattern)),
+      raw_occurrences = sum(str_count(normalized_text_for_audit, pattern))
     )
   }
 ) |>
   left_join(model_term_counts, by = "model_form") |>
   mutate(across(where(is.numeric), ~ replace_na(.x, 0)))
-
 term_counts_audit <- bind_rows(normalization_counts, compound_counts) |>
   select(
     mapping_type, original_form, model_form, keep_in_model,
@@ -627,16 +684,17 @@ common_terms_audit <- tokens_primary_raw |>
 # pero no se eliminan automaticamente porque pueden ser lenguaje sustantivo.
 
 tokens_sensitivity_raw <- tokenize_corpus(corpus, "text_ti_ab_kw")
-# Tokens del modelo de sensibilidad antes de aplicar los mismos filtros.
+# La sensibilidad agrega keywords, pero aplica exactamente las mismas reglas de
+# compuestos, normalizacion y filtrado que el modelo principal.
 
 tokens_primary <- filter_tokens(tokens_primary_raw, nrow(corpus))
 tokens_sensitivity <- filter_tokens(tokens_sensitivity_raw, nrow(corpus))
 
 token_audit <- bind_rows(
-  tokens_primary_raw |> mutate(model = "TI_AB_raw"),
-  tokens_primary |> mutate(model = "TI_AB_filtered"),
-  tokens_sensitivity_raw |> mutate(model = "TI_AB_keywords_raw"),
-  tokens_sensitivity |> mutate(model = "TI_AB_keywords_filtered")
+  tokens_primary_raw |> mutate(model = "TI_AB_before_frequency_filter"),
+  tokens_primary |> mutate(model = "TI_AB_final"),
+  tokens_sensitivity_raw |> mutate(model = "TI_AB_keywords_before_frequency_filter"),
+  tokens_sensitivity |> mutate(model = "TI_AB_keywords_final")
 ) |>
   group_by(model) |>
   summarise(
@@ -646,51 +704,113 @@ token_audit <- bind_rows(
     total_token_count = sum(n),
     .groups = "drop"
   )
-# Permite comprobar cuantas palabras y documentos quedan disponibles para LDA.
+# Esta tabla permite verificar cuantos documentos, palabras distintas y tokens
+# sobreviven en cada version del corpus.
+
+raw_document_counts <- corpus |>
+  select(UT, text = text_ti_ab) |>
+  unnest_tokens(word, text) |>
+  group_by(UT) |>
+  summarise(
+    raw_tokens = n(),
+    raw_unique_terms = n_distinct(word),
+    .groups = "drop"
+  )
+# Cuenta el texto disponible antes de stopwords y filtros tematicos.
+
+retained_document_counts <- tokens_primary |>
+  group_by(UT) |>
+  summarise(
+    retained_tokens = sum(n),
+    retained_unique_terms = n_distinct(word),
+    .groups = "drop"
+  )
+# Cuenta cuanto texto aporta efectivamente cada paper a la matriz del modelo.
+
+document_coverage <- corpus |>
+  select(UT, year, title, journal, core_area) |>
+  left_join(raw_document_counts, by = "UT") |>
+  left_join(retained_document_counts, by = "UT") |>
+  mutate(
+    across(
+      c(raw_tokens, raw_unique_terms, retained_tokens, retained_unique_terms),
+      ~ replace_na(.x, 0L)
+    ),
+    token_retention_rate = if_else(
+      raw_tokens > 0L,
+      retained_tokens / raw_tokens,
+      NA_real_
+    ),
+    low_text_flag = retained_tokens < low_text_token_threshold |
+      retained_unique_terms < low_text_term_threshold
+  ) |>
+  arrange(desc(low_text_flag), retained_tokens, retained_unique_terms)
+# low_text_flag identifica casos fragiles para lectura y sensibilidad, pero no
+# los elimina: todos los papers permanecen en la cobertura principal.
 
 dtm_primary <- tokens_primary |>
   cast_dtm(UT, word, n)
-# DTM significa Document-Term Matrix: filas = papers, columnas = palabras,
-# celdas = frecuencia de la palabra en el paper.
+# DTM significa Document-Term Matrix: filas = papers, columnas = terminos y
+# cada celda = numero de veces que el termino aparece en ese paper.
 
 dtm_sensitivity <- tokens_sensitivity |>
   cast_dtm(UT, word, n)
+# Esta segunda DTM agrega keywords y permite evaluar si ellas cambian los topics.
 
-if (nrow(dtm_primary) < 10L || ncol(dtm_primary) < 10L) {
-  stop("La matriz principal tiene pocos documentos o terminos.")
+if (nrow(dtm_primary) != nrow(corpus) || ncol(dtm_primary) < 10L) {
+  stop("La DTM principal debe contener los 675 papers y un vocabulario util.")
 }
 
+if (!requireNamespace("lpSolve", quietly = TRUE)) {
+  stop("Se necesita el paquete lpSolve para comparar topics entre semillas.")
+}
+
+set.seed(seed)
+# La particion se realiza una sola vez y se mantiene igual para todos los k.
+all_document_ids <- rownames(dtm_primary)
+train_ids <- sample(
+  all_document_ids,
+  size = floor(training_proportion * length(all_document_ids)),
+  replace = FALSE
+)
+test_ids <- setdiff(all_document_ids, train_ids)
+
+train_rows <- match(train_ids, rownames(dtm_primary))
+test_rows <- match(test_ids, rownames(dtm_primary))
+dtm_train_full <- dtm_primary[train_rows, ]
+
+train_term_totals <- slam::col_sums(dtm_train_full)
+train_terms <- names(train_term_totals[train_term_totals > 0])
+# Se conservan solo terminos observados en entrenamiento. Usar vocabulario del
+# conjunto de validacion filtraria informacion futura hacia el ajuste.
+
+dtm_train <- dtm_primary[train_rows, train_terms]
+dtm_test_full <- dtm_primary[test_rows, train_terms]
+test_nonempty <- slam::row_sums(dtm_test_full) > 0
+dtm_test <- dtm_test_full[test_nonempty, ]
+# Perplexity no puede calcularse para una fila sin palabras conocidas. El numero
+# de casos omitidos, si existe alguno, queda informado en Model_summary.
 # -----------------------------------------------------------------------------
 # 5. Comparar soluciones con distinto numero de topics
 # -----------------------------------------------------------------------------
-# No se decide k solo por intuicion. Se ajustan varias soluciones y se comparan
-# perplexity, coherencia y exclusividad. Perplexity favorece ajuste; coherencia
-# y exclusividad ayudan a obtener topics mas interpretables y diferenciados.
+# Elegir k requiere equilibrar ajuste e interpretabilidad. Se comparan:
+# (a) perplexity en papers no usados para entrenar; (b) coherencia de palabras;
+# (c) exclusividad de los terminos; y (d) estabilidad entre cinco semillas.
+# Ninguna metrica reemplaza la lectura sustantiva de los topics.
 
-fit_lda <- function(dtm, k, seed_value = seed, final = FALSE) {
-  # Ajusta un modelo LDA con k topics.
-  # La semilla permite reproducir el mismo muestreo aleatorio.
-  # final = FALSE usa menos iteraciones para comparar k rapidamente.
-  # final = TRUE usa el muestreo completo definido en control_final.
-  set.seed(seed_value + k)
+fit_lda <- function(dtm, k, seed_value, final = FALSE) {
+  # Ajusta LDA mediante muestreo Gibbs para un k y una semilla determinados.
+  # final = FALSE usa el control breve de seleccion; TRUE usa mas iteraciones.
+  selected_control <- if (final) control_final else control_candidate
+  selected_control$seed <- seed_value
 
-  control <- if (final) {
-    modifyList(control_final, list(seed = seed_value + k))
-  } else {
-    list(
-      seed = seed_value + k,
-      burnin = 500L,
-      iter = 1000L,
-      thin = 100L
-    )
-  }
-
-  LDA(dtm, k = k, method = "Gibbs", control = control)
+  set.seed(seed_value)
+  LDA(dtm, k = k, method = "Gibbs", control = selected_control)
 }
 
 top_terms_by_topic <- function(model, n = n_top_terms) {
-  # Extrae las n palabras con mayor beta dentro de cada topic.
-  # beta representa la probabilidad de una palabra dentro del topic.
+  # beta es la probabilidad de cada termino condicionada al topic.
+  # Se extraen los n terminos de beta mas alto para interpretar cada grupo.
   tidy(model, matrix = "beta") |>
     group_by(topic) |>
     slice_max(beta, n = n, with_ties = FALSE) |>
@@ -698,26 +818,33 @@ top_terms_by_topic <- function(model, n = n_top_terms) {
 }
 
 umass_coherence <- function(model, dtm, n = 10L) {
-  # Mide si las palabras principales de un topic aparecen juntas en documentos.
-  # Valores menos negativos suelen indicar mayor coherencia interna.
+  # UMass evalua si los terminos principales aparecen en los mismos documentos.
+  # Valores mas altos (habitualmente menos negativos) indican mayor coherencia.
   beta <- posterior(model)$terms
   binary_dtm <- as.matrix(dtm > 0)
 
   topic_values <- map_dbl(seq_len(nrow(beta)), function(topic_id) {
-    terms <- names(sort(beta[topic_id, ], decreasing = TRUE))
-    terms <- head(terms, min(n, length(terms)))
+    ordered_terms <- names(sort(beta[topic_id, ], decreasing = TRUE))
+    ordered_terms <- head(ordered_terms, min(n, length(ordered_terms)))
 
-    if (length(terms) < 2L) {
+    if (length(ordered_terms) < 2L) {
       return(NA_real_)
     }
 
-    pairs <- combn(terms, 2L)
+    term_pairs <- combn(ordered_terms, 2L)
 
-    mean(map_dbl(seq_len(ncol(pairs)), function(i) {
-      wi <- pairs[1, i]
-      wj <- pairs[2, i]
-      denominator <- sum(binary_dtm[, wj])
-      numerator <- sum(binary_dtm[, wi] & binary_dtm[, wj])
+    mean(map_dbl(seq_len(ncol(term_pairs)), function(pair_id) {
+      higher_ranked_term <- term_pairs[1L, pair_id]
+      lower_ranked_term <- term_pairs[2L, pair_id]
+
+      # La formula de Mimno usa en el denominador el termino anterior y mas
+      # probable del par; esta orientacion corrige el calculo previo.
+      denominator <- sum(binary_dtm[, higher_ranked_term])
+      numerator <- sum(
+        binary_dtm[, higher_ranked_term] &
+          binary_dtm[, lower_ranked_term]
+      )
+
       log((numerator + 1) / max(denominator, 1))
     }))
   })
@@ -726,119 +853,318 @@ umass_coherence <- function(model, dtm, n = 10L) {
 }
 
 exclusivity_score <- function(model, n = 10L) {
-  # Mide cuanto pertenecen las palabras principales a un topic y no a todos.
-  # Un valor mayor significa que los terminos distinguen mejor ese topic.
+  # Exclusividad mide si los terminos principales distinguen un topic en vez de
+  # repetirse con igual fuerza en todos. Valores mayores son preferibles.
   beta <- posterior(model)$terms
-  relative_beta <- sweep(beta, 2, colSums(beta), "/")
+  relative_beta <- sweep(beta, 2L, colSums(beta), "/")
 
   topic_values <- map_dbl(seq_len(nrow(beta)), function(topic_id) {
-    terms <- names(sort(beta[topic_id, ], decreasing = TRUE))
-    terms <- head(terms, min(n, length(terms)))
-    mean(relative_beta[topic_id, terms])
+    ordered_terms <- names(sort(beta[topic_id, ], decreasing = TRUE))
+    selected_terms <- head(ordered_terms, min(n, length(ordered_terms)))
+    mean(relative_beta[topic_id, selected_terms])
   })
 
   mean(topic_values)
 }
 
 topic_prevalence <- function(model) {
-  # Resume el tamano de los topics segun el topic dominante de cada paper.
-  # No define por si solo el mejor k, pero evita recomendar grupos casi vacios.
-  topic_sizes <- tidy(model, matrix = "gamma") |>
-    group_by(document) |>
-    slice_max(gamma, n = 1L, with_ties = FALSE) |>
-    ungroup() |>
-    count(topic, name = "n_papers") |>
-    complete(
-      topic = seq_len(ncol(posterior(model)$topics)),
-      fill = list(n_papers = 0L)
-    )
-
-  shares <- topic_sizes$n_papers / sum(topic_sizes$n_papers)
+  # gamma contiene la mezcla de topics de cada paper. Se reporta tanto la
+  # proporcion promedio de gamma como el topic dominante, porque esta ultima
+  # simplifica cada documento a una sola categoria.
+  gamma <- posterior(model)$topics
+  expected_shares <- colMeans(gamma)
+  dominant_topics <- max.col(gamma, ties.method = "first")
+  dominant_counts <- tabulate(dominant_topics, nbins = ncol(gamma))
+  dominant_shares <- dominant_counts / sum(dominant_counts)
 
   tibble(
-    min_topic_papers = min(topic_sizes$n_papers),
-    min_topic_share = min(shares),
-    max_topic_share = max(shares),
-    topic_share_sd = sd(shares)
+    min_expected_topic_share = min(expected_shares),
+    max_expected_topic_share = max(expected_shares),
+    min_dominant_topic_papers = min(dominant_counts),
+    min_dominant_topic_share = min(dominant_shares),
+    max_dominant_topic_share = max(dominant_shares),
+    small_topic_warning = min(expected_shares) < minimum_topic_share
   )
 }
 
-model_grid <- map(k_candidates, ~ fit_lda(dtm_primary, .x, final = FALSE))
-# Ajusta todas las soluciones candidatas. Esto permite ver si el resultado cambia
-# mucho entre una estructura simple y otra mas desagregada.
+cosine_similarity_matrix <- function(beta_a, beta_b) {
+  # Calcula la similitud coseno entre todos los pares de topics de dos modelos.
+  # Uno significa perfiles de palabras identicos; cero, perfiles sin semejanza.
+  # Una corrida de Gibbs puede dejar un topic transitoriamente vacio. En ese
+  # caso sus probabilidades no finitas se convierten en cero y la estabilidad
+  # recibe una similitud de cero, en vez de ignorar silenciosamente el problema.
+  beta_a[!is.finite(beta_a)] <- 0
+  beta_b[!is.finite(beta_b)] <- 0
 
-model_selection <- map2_dfr(
-  model_grid,
-  k_candidates,
-  function(model, k) {
-    bind_cols(
-      tibble(
-        k = k,
-        log_likelihood = as.numeric(logLik(model)),
-        perplexity = perplexity(model, newdata = dtm_primary),
-        coherence_umass = umass_coherence(model, dtm_primary),
-        exclusivity = exclusivity_score(model)
-      ),
-      topic_prevalence(model)
-    )
-  }
-) |>
-  mutate(
-    # El score combina ajuste, interpretabilidad y equilibrio. La regla de 3%
-    # impide recomendar una solucion con topics casi sin documentos dominantes.
-    metric_score = as.numeric(scale(coherence_umass)) +
-      as.numeric(scale(exclusivity)) -
-      as.numeric(scale(perplexity)) -
-      as.numeric(scale(topic_share_sd)),
-    eligible_prevalence = min_topic_share >= minimum_topic_share,
-    selection_score = if_else(eligible_prevalence, metric_score, -Inf)
-  ) |>
-  arrange(desc(eligible_prevalence), desc(selection_score))
-
-if (!any(model_selection$eligible_prevalence)) {
-  stop("Ninguna solucion candidata supera el minimo de prevalencia por topic.")
+  numerator <- tcrossprod(beta_a, beta_b)
+  denominator <- outer(
+    sqrt(rowSums(beta_a^2)),
+    sqrt(rowSums(beta_b^2))
+  )
+  similarity <- numerator / pmax(denominator, .Machine$double.eps)
+  similarity[!is.finite(similarity)] <- 0
+  similarity
 }
+
+match_topic_matrices <- function(beta_a, beta_b) {
+  # Dos corridas pueden numerar de forma distinta el mismo topic. El algoritmo
+  # de asignacion empareja topics uno a uno maximizando la similitud total.
+  common_terms <- intersect(colnames(beta_a), colnames(beta_b))
+
+  if (length(common_terms) < 10L) {
+    stop("Los modelos no comparten vocabulario suficiente para comparar topics.")
+  }
+
+  similarity <- cosine_similarity_matrix(
+    beta_a[, common_terms, drop = FALSE],
+    beta_b[, common_terms, drop = FALSE]
+  )
+  assignment_solution <- lpSolve::lp.assign(
+    similarity,
+    direction = "max"
+  )$solution
+  assignment <- which(assignment_solution > 0.5, arr.ind = TRUE)
+  assignment <- assignment[order(assignment[, "row"]), , drop = FALSE]
+
+  if (nrow(assignment) != nrow(similarity)) {
+    stop("El emparejamiento no asigno exactamente un topic de cada modelo.")
+  }
+
+  tibble(
+    topic_a = assignment[, "row"],
+    topic_b = assignment[, "col"],
+    cosine_similarity = similarity[assignment]
+  )
+}
+
+compare_model_pair <- function(model_a, model_b, model_i, model_j) {
+  # Compara beta para estabilidad semantica y gamma para acuerdo en el topic
+  # dominante despues de corregir la permutacion de etiquetas.
+  matching <- match_topic_matrices(
+    posterior(model_a)$terms,
+    posterior(model_b)$terms
+  )
+
+  dominant_a <- max.col(posterior(model_a)$topics, ties.method = "first")
+  dominant_b <- max.col(posterior(model_b)$topics, ties.method = "first")
+  map_b_to_a <- setNames(matching$topic_a, matching$topic_b)
+  dominant_b_aligned <- unname(map_b_to_a[as.character(dominant_b)])
+
+  tibble(
+    model_i = model_i,
+    model_j = model_j,
+    mean_matched_cosine = mean(matching$cosine_similarity),
+    minimum_matched_cosine = min(matching$cosine_similarity),
+    dominant_topic_agreement = mean(dominant_a == dominant_b_aligned)
+  )
+}
+
+summarize_model_stability <- function(models, seeds, k, stage) {
+  # Compara todos los pares de semillas y elige como representante el modelo
+  # con mayor similitud media respecto de los demas: la mediana empirica.
+  model_pairs <- combn(seq_along(models), 2L, simplify = FALSE)
+
+  pairwise <- map_dfr(model_pairs, function(pair) {
+    compare_model_pair(
+      models[[pair[1L]]],
+      models[[pair[2L]]],
+      model_i = pair[1L],
+      model_j = pair[2L]
+    )
+  }) |>
+    mutate(
+      k = k,
+      stage = stage,
+      seed_i = seeds[model_i],
+      seed_j = seeds[model_j],
+      .before = 1L
+    )
+
+  medoid_scores <- map_dfr(seq_along(models), function(model_index) {
+    relevant_pairs <- pairwise |>
+      filter(model_i == model_index | model_j == model_index)
+
+    tibble(
+      model_index = model_index,
+      seed = seeds[model_index],
+      mean_similarity_to_others = mean(
+        relevant_pairs$mean_matched_cosine
+      )
+    )
+  })
+
+  medoid_index <- medoid_scores |>
+    arrange(desc(mean_similarity_to_others), seed) |>
+    slice(1L) |>
+    pull(model_index)
+
+  list(
+    pairwise = pairwise,
+    medoid_scores = medoid_scores |>
+      mutate(k = k, stage = stage, .before = 1L),
+    medoid_index = medoid_index
+  )
+}
+
+candidate_fits <- map(k_candidates, function(k_value) {
+  # Para cada k se ajustan cinco modelos sobre exactamente el mismo conjunto de
+  # entrenamiento; luego se evalua cada uno y se resume su estabilidad.
+  models <- map(
+    selection_seeds,
+    ~ fit_lda(dtm_train, k_value, seed_value = .x, final = FALSE)
+  )
+
+  seed_metrics <- map2_dfr(
+    models,
+    selection_seeds,
+    function(model, seed_value) {
+      bind_cols(
+        tibble(
+          k = k_value,
+          seed = seed_value,
+          heldout_perplexity = perplexity(model, newdata = dtm_test),
+          coherence_umass = umass_coherence(model, dtm_train),
+          exclusivity = exclusivity_score(model)
+        ),
+        topic_prevalence(model)
+      )
+    }
+  )
+
+  stability <- summarize_model_stability(
+    models,
+    selection_seeds,
+    k_value,
+    stage = "candidate_train"
+  )
+
+  list(
+    k = k_value,
+    models = models,
+    seed_metrics = seed_metrics,
+    stability = stability
+  )
+})
+
+candidate_seed_metrics <- map_dfr(candidate_fits, "seed_metrics")
+candidate_stability_pairs <- map_dfr(
+  candidate_fits,
+  ~ .x$stability$pairwise
+)
+candidate_medoid_scores <- map_dfr(
+  candidate_fits,
+  ~ .x$stability$medoid_scores
+)
+
+model_selection <- candidate_seed_metrics |>
+  group_by(k) |>
+  summarise(
+    heldout_perplexity_mean = mean(heldout_perplexity),
+    heldout_perplexity_sd = sd(heldout_perplexity),
+    coherence_umass_mean = mean(coherence_umass),
+    coherence_umass_sd = sd(coherence_umass),
+    exclusivity_mean = mean(exclusivity),
+    exclusivity_sd = sd(exclusivity),
+    min_expected_topic_share_mean = mean(min_expected_topic_share),
+    min_dominant_topic_share_mean = mean(min_dominant_topic_share),
+    any_small_topic_warning = any(small_topic_warning),
+    .groups = "drop"
+  ) |>
+  left_join(
+    candidate_stability_pairs |>
+      group_by(k) |>
+      summarise(
+        stability_mean = mean(mean_matched_cosine),
+        stability_minimum = min(minimum_matched_cosine),
+        dominant_agreement_mean = mean(dominant_topic_agreement),
+        .groups = "drop"
+      ),
+    by = "k"
+  ) |>
+  mutate(
+    # Cada metrica se transforma en un ranking transparente. Perplexity se
+    # minimiza; coherencia, exclusividad y estabilidad se maximizan.
+    rank_perplexity = min_rank(heldout_perplexity_mean),
+    rank_coherence = min_rank(desc(coherence_umass_mean)),
+    rank_exclusivity = min_rank(desc(exclusivity_mean)),
+    rank_stability = min_rank(desc(stability_mean)),
+    selection_rank_sum = rank_perplexity + rank_coherence +
+      rank_exclusivity + rank_stability
+  ) |>
+  arrange(selection_rank_sum, k)
 
 recommended_k <- model_selection |>
-  filter(eligible_prevalence) |>
-  slice_max(selection_score, n = 1L, with_ties = FALSE) |>
+  arrange(selection_rank_sum, k) |>
+  slice(1L) |>
   pull(k)
-# Guarda el k mejor posicionado por las metricas y el control de prevalencia.
-# Ademas se exportan k=4 y k=10 para comparar una lectura simple y una amplia.
+# En caso de empate se prefiere el k menor por parsimonia. Esta recomendacion es
+# estadistica y debe contrastarse con la legibilidad sustantiva de k=4 y k=10.
 
 # -----------------------------------------------------------------------------
-# 6. Estimar modelos finales: k=4, k=10 y k recomendado
+# 6. Estimar modelos finales y escoger una corrida estable
 # -----------------------------------------------------------------------------
-# La primera exploracion necesita mostrar tanto una sintesis facil de leer como
-# una particion mas detallada. Por eso se estiman k=4 y k=10 con mas iteraciones.
-# El modelo recomendado se conserva como referencia automatica.
+# Se vuelven a estimar sobre los 675 papers el k recomendado y los dos niveles
+# exploratorios. Cada solucion usa cinco semillas y conserva la corrida mas
+# central, evitando presentar un resultado atipico.
 
-fit_final_cached <- function(dtm, k, seed_value = seed) {
-  # Ejecuta el modelo final con los parametros completos de Gibbs.
-  fit_lda(dtm, k, seed_value = seed_value, final = TRUE)
+fit_final_ensemble <- function(dtm, k_value, stage_name) {
+  # Ajusta las cinco semillas finales y selecciona el medoid segun similitud beta.
+  models <- map(
+    selection_seeds,
+    ~ fit_lda(dtm, k_value, seed_value = .x, final = TRUE)
+  )
+  stability <- summarize_model_stability(
+    models,
+    selection_seeds,
+    k_value,
+    stage = stage_name
+  )
+
+  list(
+    model = models[[stability$medoid_index]],
+    selected_seed = selection_seeds[stability$medoid_index],
+    stability = stability
+  )
 }
 
-final_k4 <- fit_final_cached(dtm_primary, 4L, seed_value = seed + 400L)
-final_k10 <- fit_final_cached(dtm_primary, 10L, seed_value = seed + 1000L)
+final_k_values <- sort(unique(c(k_exploratory, recommended_k)))
+final_ensembles <- set_names(
+  map(
+    final_k_values,
+    ~ fit_final_ensemble(
+      dtm_primary,
+      .x,
+      stage_name = str_c("final_ti_ab_k", .x)
+    )
+  ),
+  as.character(final_k_values)
+)
 
-final_recommended <- if (recommended_k == 4L) {
-  final_k4
-} else if (recommended_k == 10L) {
-  final_k10
-} else {
-  fit_final_cached(dtm_primary, recommended_k, seed_value = seed + recommended_k)
-}
+final_k4 <- final_ensembles[["4"]]$model
+final_k10 <- final_ensembles[["10"]]$model
+final_recommended <- final_ensembles[[as.character(recommended_k)]]$model
 
-final_keywords <- fit_final_cached(
+final_keywords_ensemble <- fit_final_ensemble(
   dtm_sensitivity,
   recommended_k,
-  seed_value = seed + 10000L
+  stage_name = str_c("final_keywords_k", recommended_k)
 )
-# Este ultimo modelo comprueba si las keywords cambian la estructura elegida.
+final_keywords <- final_keywords_ensemble$model
+# La sensibilidad con keywords usa la misma cantidad de topics y el mismo
+# criterio de estabilidad que el modelo principal.
+
+final_stability_pairs <- bind_rows(
+  map_dfr(final_ensembles, ~ .x$stability$pairwise),
+  final_keywords_ensemble$stability$pairwise
+)
+final_medoid_scores <- bind_rows(
+  map_dfr(final_ensembles, ~ .x$stability$medoid_scores),
+  final_keywords_ensemble$stability$medoid_scores
+)
 
 make_topic_outputs <- function(model, corpus_data, model_name) {
-  # Convierte un modelo LDA en tres productos interpretables:
-  # terminos principales, etiquetas provisorias y topic dominante por paper.
+  # Convierte LDA en cuatro productos: terminos, etiquetas provisorias,
+  # probabilidades gamma completas y topic dominante por paper.
   terms <- top_terms_by_topic(model)
 
   labels <- terms |>
@@ -852,26 +1178,38 @@ make_topic_outputs <- function(model, corpus_data, model_name) {
       topic_label = str_c("Topic ", topic, ": ", topic_label)
     )
 
-  papers <- tidy(model, matrix = "gamma") |>
-    group_by(document) |>
+  gamma <- tidy(model, matrix = "gamma") |>
+    transmute(
+      UT = document,
+      topic = topic,
+      gamma = gamma
+    ) |>
+    left_join(labels |> select(topic, topic_label), by = "topic") |>
+    left_join(corpus_data, by = "UT") |>
+    mutate(model = model_name)
+
+  papers <- gamma |>
+    group_by(UT) |>
     slice_max(gamma, n = 1L, with_ties = FALSE) |>
     ungroup() |>
     transmute(
-      UT = document,
+      UT,
       dominant_topic = topic,
-      topic_probability = gamma
+      topic_probability = gamma,
+      topic_label,
+      year,
+      title,
+      journal,
+      keywords_analisis,
+      core_area,
+      model
     ) |>
-    left_join(
-      labels |> select(topic, topic_label),
-      by = c("dominant_topic" = "topic")
-    ) |>
-    left_join(corpus_data, by = "UT") |>
-    mutate(model = model_name) |>
     arrange(dominant_topic, desc(topic_probability))
 
   list(
     terms = terms |> mutate(model = model_name),
     labels = labels,
+    gamma = gamma,
     papers = papers
   )
 }
@@ -889,114 +1227,270 @@ outputs_keywords <- make_topic_outputs(
   str_c("Recommended_K", recommended_k, "_TI_AB_keywords")
 )
 
+keyword_topic_alignment <- match_topic_matrices(
+  posterior(final_recommended)$terms,
+  posterior(final_keywords)$terms
+) |>
+  rename(
+    primary_topic = topic_a,
+    keyword_topic = topic_b
+  ) |>
+  left_join(
+    outputs_recommended$labels |>
+      select(primary_topic = topic, primary_label = topic_label),
+    by = "primary_topic"
+  ) |>
+  left_join(
+    outputs_keywords$labels |>
+      select(keyword_topic = topic, keyword_label = topic_label),
+    by = "keyword_topic"
+  ) |>
+  arrange(primary_topic)
+# Esta tabla cuantifica si agregar keywords reproduce topics semejantes o cambia
+# de manera importante su vocabulario.
 # -----------------------------------------------------------------------------
 # 7. Comparar topics por tiempo y disciplina
 # -----------------------------------------------------------------------------
-# Esta seccion no vuelve a estimar topics. Usa la asignacion del modelo
-# recomendado para preguntar donde aparecen mas los temas encontrados.
+# Estas tablas no vuelven a estimar LDA. Resumen gamma del modelo recomendado
+# para describir donde y cuando aparecen los temas encontrados.
 
+topics_by_year_gamma <- outputs_recommended$gamma |>
+  group_by(year, topic, topic_label) |>
+  summarise(
+    n_papers = n_distinct(UT),
+    mean_gamma = mean(gamma),
+    median_gamma = median(gamma),
+    expected_papers = sum(gamma),
+    .groups = "drop"
+  ) |>
+  mutate(percent_gamma = 100 * mean_gamma) |>
+  arrange(year, topic)
+# expected_papers suma probabilidades: por ejemplo 8.4 equivale al peso tematico
+# agregado de aproximadamente 8.4 papers, sin obligarlos a un unico topic.
 
-
-topics_by_year <- outputs_recommended$papers |>
+topics_by_year_dominant <- outputs_recommended$papers |>
   count(year, dominant_topic, topic_label, name = "n_papers") |>
   group_by(year) |>
   mutate(percent = 100 * n_papers / sum(n_papers)) |>
-  ungroup()
-# Un ano aparece varias veces porque hay una fila por combinacion ano-topic.
-# Los anos con pocos papers deben interpretarse con cautela.
+  ungroup() |>
+  arrange(year, dominant_topic)
+# Esta version es mas intuitiva, pero debe tratarse como complemento porque
+# descarta los topics secundarios presentes en cada paper.
 
 core_area_long <- corpus |>
   select(UT, core_area) |>
   mutate(core_area = replace_na(core_area, "")) |>
   separate_rows(core_area, sep = "\\s*;\\s*|\\s*\\|\\s*") |>
   mutate(core_area = str_squish(core_area)) |>
-  filter(core_area != "")
+  filter(core_area != "") |>
+  distinct(UT, core_area)
+# Un paper puede pertenecer a mas de una core_area. Por eso las menciones entre
+# areas se superponen y no deben sumarse como si fueran papers unicos.
 
-topics_by_core_area <- outputs_recommended$papers |>
+core_area_sizes <- core_area_long |>
+  count(core_area, name = "n_papers") |>
+  mutate(
+    percent_of_corpus = 100 * n_papers / nrow(corpus),
+    classification_note = "Areas superpuestas: un paper puede aparecer en mas de una."
+  ) |>
+  arrange(desc(n_papers))
+
+topics_by_core_gamma <- outputs_recommended$gamma |>
+  select(UT, topic, topic_label, gamma) |>
+  inner_join(core_area_long, by = "UT", relationship = "many-to-many") |>
+  group_by(core_area, topic, topic_label) |>
+  summarise(
+    n_papers = n_distinct(UT),
+    mean_gamma = mean(gamma),
+    median_gamma = median(gamma),
+    expected_papers = sum(gamma),
+    .groups = "drop"
+  ) |>
+  mutate(percent_gamma = 100 * mean_gamma) |>
+  arrange(core_area, desc(mean_gamma))
+
+topics_by_core_dominant <- outputs_recommended$papers |>
   select(UT, dominant_topic, topic_label) |>
-  left_join(core_area_long, by = "UT") |>
+  inner_join(core_area_long, by = "UT", relationship = "many-to-many") |>
   count(core_area, dominant_topic, topic_label, name = "n_papers") |>
   group_by(core_area) |>
   mutate(percent = 100 * n_papers / sum(n_papers)) |>
   ungroup() |>
-  arrange(core_area, dominant_topic)
-# Si un paper tiene mas de una core_area, aparece en cada area declarada. Esto
-# es correcto para una clasificacion superpuesta, pero debe informarse al usar
-# los porcentajes.
+  arrange(core_area, desc(percent))
+
+top3_core_gamma <- topics_by_core_gamma |>
+  group_by(core_area) |>
+  slice_max(mean_gamma, n = 3L, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(core_area, desc(mean_gamma))
+# Esta es la tabla principal para "top topics por disciplina", porque conserva
+# toda la mezcla tematica de los papers.
+
+top3_core_dominant <- topics_by_core_dominant |>
+  group_by(core_area) |>
+  slice_max(percent, n = 3L, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(core_area, desc(percent))
+# Se exporta para comprobar si la conclusion cambia al usar un solo topic por paper.
+
+filter_dictionary <- bind_rows(
+  tibble(group = "connector", original = connector_terms),
+  tibble(group = "methodological", original = methodological_terms),
+  tibble(group = "generic_adjective", original = generic_adjectives),
+  tibble(group = "corpus_generic", original = corpus_generic_terms),
+  tibble(group = "artifact", original = artifact_terms),
+  tibble(group = "geographic", original = geographic_terms)
+) |>
+  transmute(
+    rule_type = "removed_token",
+    group,
+    original,
+    model_form = NA_character_,
+    keep_in_model = FALSE
+  ) |>
+  bind_rows(
+    term_normalization |>
+      transmute(
+        rule_type = "normalization",
+        group = "word_variant",
+        original = variant,
+        model_form = normalized,
+        keep_in_model = !normalized %in% generic_terms
+      ),
+    compound_terms |>
+      transmute(
+        rule_type = "compound",
+        group = "multiword_expression",
+        original = phrase,
+        model_form = token,
+        keep_in_model
+      )
+  ) |>
+  distinct() |>
+  arrange(rule_type, group, original)
+# El diccionario documenta todas las decisiones de remocion, unificacion y
+# proteccion de frases; permite reproducir y discutir el preprocesamiento.
+
+dominant_probability_summary <- outputs_recommended$papers |>
+  summarise(
+    minimum = min(topic_probability),
+    p05 = quantile(topic_probability, 0.05),
+    median = median(topic_probability),
+    mean = mean(topic_probability),
+    p95 = quantile(topic_probability, 0.95),
+    maximum = max(topic_probability),
+    below_040 = sum(topic_probability < 0.40),
+    below_050 = sum(topic_probability < 0.50)
+  )
+# Probabilidades dominantes bajas indican documentos tematicamente mixtos y
+# refuerzan que los analisis principales deben usar gamma completa.
 
 model_summary <- tibble(
   measure = c(
     "Corpus papers",
     "Papers in primary DTM",
     "Primary vocabulary",
+    "Training papers",
+    "Validation papers used",
+    "Validation papers without known terms",
+    "Papers flagged as low retained text",
     "Recommended k",
-    "Explicit exploratory k values",
-    "Candidate k minimum",
-    "Candidate k maximum",
-    "Seed",
+    "Exploratory k values",
+    "Candidate seeds per k",
+    "Selected seed for recommended model",
     "Primary text",
-    "Sensitivity text"
+    "Sensitivity text",
+    "Primary interpretation"
   ),
-  value = c(
+  value = as.character(c(
     nrow(corpus),
     nrow(dtm_primary),
     ncol(dtm_primary),
+    nrow(dtm_train),
+    nrow(dtm_test),
+    sum(!test_nonempty),
+    sum(document_coverage$low_text_flag),
     recommended_k,
     paste(k_exploratory, collapse = ", "),
-    min(k_candidates),
-    max(k_candidates),
-    seed,
+    length(selection_seeds),
+    final_ensembles[[as.character(recommended_k)]]$selected_seed,
     "Title + abstract",
-    "Title + abstract + keywords"
-  )
+    "Title + abstract + keywords",
+    "Average gamma; dominant topic is complementary"
+  ))
 )
 
+seed_stability <- bind_rows(
+  candidate_stability_pairs |>
+    mutate(record_type = "candidate_pair"),
+  candidate_medoid_scores |>
+    mutate(record_type = "candidate_medoid_score"),
+  final_stability_pairs |>
+    mutate(record_type = "final_pair"),
+  final_medoid_scores |>
+    mutate(record_type = "final_medoid_score")
+) |>
+  relocate(record_type)
+
 # -----------------------------------------------------------------------------
-# 8. Exportar el Excel de resultados
+# 8. Exportar un unico Excel de resultados auditables
 # -----------------------------------------------------------------------------
-# Las hojas se organizan para separar diagnostico, seleccion de k, terminos,
-# asignaciones de papers y comparaciones sustantivas.
+# Se evita crear bases intermedias. El libro separa cobertura, seleccion del
+# modelo, resultados principales y sensibilidades en hojas con nombres breves.
+
+dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
 write_xlsx(
   list(
     Model_summary = model_summary,
-    Coverage = coverage,
+    Corpus_coverage = coverage,
+    Document_coverage = document_coverage,
     Token_audit = token_audit,
-    Common_terms_audit = common_terms_audit,
-    Ngram_candidates = ngram_candidates,
-    Compound_terms = compound_terms,
-    Term_normalization = term_normalization,
-    Term_counts_audit = term_counts_audit,
     Model_selection = model_selection,
-    Labels_k4 = outputs_k4$labels,
+    Seed_metrics = candidate_seed_metrics,
+    Seed_stability = seed_stability,
+    Dominant_probability = dominant_probability_summary,
+    Topic_labels = outputs_recommended$labels,
+    Top_terms = outputs_recommended$terms,
+    Paper_topic_gamma = outputs_recommended$gamma |>
+      select(
+        UT, topic, gamma, topic_label, year, title, journal,
+        keywords_analisis, core_area
+      ),
+    Paper_dominant_topic = outputs_recommended$papers,
+    Topics_year_gamma = topics_by_year_gamma,
+    Topics_year_dominant = topics_by_year_dominant,
+    Core_area_sizes = core_area_sizes,
+    Topics_core_gamma = topics_by_core_gamma,
+    Topics_core_dominant = topics_by_core_dominant,
+    Top3_core_gamma = top3_core_gamma,
+    Top3_core_dominant = top3_core_dominant,
+    Keyword_sensitivity = keyword_topic_alignment,
     Top_terms_k4 = outputs_k4$terms,
-    Paper_topics_k4 = outputs_k4$papers,
-    Labels_k10 = outputs_k10$labels,
     Top_terms_k10 = outputs_k10$terms,
-    Paper_topics_k10 = outputs_k10$papers,
-    Topic_labels_primary = outputs_recommended$labels,
-    Top_terms_primary = outputs_recommended$terms,
-    Paper_topics_primary = outputs_recommended$papers,
-
-    Topics_by_year = topics_by_year,
-    Topics_by_core_area = topics_by_core_area,
-    Topic_labels_keywords = outputs_keywords$labels,
-    Top_terms_keywords = outputs_keywords$terms,
-    Paper_topics_keywords = outputs_keywords$papers
+    Ngram_candidates = ngram_candidates,
+    Compound_audit = term_counts_audit,
+    Filter_dictionary = filter_dictionary
   ),
   file.path(tables_dir, "topic_model_affi_latam.xlsx")
 )
 
 # -----------------------------------------------------------------------------
-# 9. Exportar figuras comparables
+# 9. Exportar figuras para interpretar y comparar soluciones
 # -----------------------------------------------------------------------------
-# Las figuras permiten ver rapidamente si k=4 entrega una sintesis clara y si
-# k=10 separa subtemas que quedan mezclados en la solucion parsimoniosa.
+# k=4 muestra la sintesis; k=10 muestra mayor diferenciacion; la figura principal
+# usa el k recomendado por validacion y estabilidad.
 
-plot_top_terms <- function(topic_terms, title_text, subtitle_text, file_name,
-                           width = 13, height = 9) {
-  # Construye y guarda un grafico horizontal de los terminos mas probables de
-  # cada topic. Se usa la misma escala visual para facilitar comparaciones.
+plot_top_terms <- function(
+  topic_terms,
+  title_text,
+  subtitle_text,
+  file_name,
+  width = 13,
+  height = 9
+) {
+  # Ordena los terminos dentro de cada topic y guarda barras comparables.
   plot_data <- topic_terms |>
     mutate(term = reorder_within(term, beta, topic))
 
@@ -1029,26 +1523,26 @@ plot_top_terms <- function(topic_terms, title_text, subtitle_text, file_name,
 plot_top_terms(
   outputs_k4$terms,
   "Terminos principales: k = 4",
-  "Modelo exploratorio parsimonioso, titulo + abstract",
+  "Sintesis parsimoniosa; titulo + abstract; modelo estable entre semillas",
   "topic_model_top_terms_k4.png"
 )
 
 plot_top_terms(
   outputs_k10$terms,
   "Terminos principales: k = 10",
-  "Modelo exploratorio desagregado, titulo + abstract",
+  "Lectura desagregada; titulo + abstract; modelo estable entre semillas",
   "topic_model_top_terms_k10.png"
 )
 
 plot_top_terms(
   outputs_recommended$terms,
   str_c("Terminos principales: k = ", recommended_k),
-  "Modelo recomendado por metricas combinadas, titulo + abstract",
+  "K recomendado por validacion, coherencia, exclusividad y estabilidad",
   "topic_model_top_terms.png"
 )
-
 
 
 print(model_summary)
 print(model_selection)
 print(outputs_recommended$labels)
+print(dominant_probability_summary)

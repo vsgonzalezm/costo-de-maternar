@@ -388,7 +388,7 @@ confirmed_no_affiliation <- tribble(
   "WOS:000379962400003", 3L, "Sin afiliacion al momento de la publicacion.",
   "WOS:000632971700002", 5L, "Profesional independiente; sin institucion.",
   "WOS:000632971700002", 10L, "Investigador independiente; sin institucion.",
-  "WOS:000796681800001", 1L, "Investigador independiente; sin institucion.",
+  "WOS:000796681800001", 1L, "Investigador independiente; sin institucion. Confirmado en chequeo manual de Tania (nov 2026).",
   "WOS:001491371500001", 19L, "Investigador independiente; sin institucion.",
   "WOS:001541599500001", 5L, "Investigador independiente; sin institucion."
 ) |>

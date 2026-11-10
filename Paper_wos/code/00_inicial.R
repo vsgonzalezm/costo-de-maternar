@@ -255,6 +255,95 @@ author_affiliation_map <- construir_mapa_autor_afiliacion(
   revision_original, c1_manual_cols, c3_manual_cols
 )
 
+# 2b. Correcciones del chequeo manual de Tania (9-nov-2026) ------------------
+# Origen: revision manual de Tania Hutt sobre los papers cuyo universo LatAm
+# (affi_latam_countries) no tenia ningun autor LatAm a nivel de autor en
+# Authors_long. En los tres casos la direccion LatAm ya estaba en C1 del paper,
+# pero el vinculo autor-afiliacion (author_affiliation_map) la dejaba sin
+# asignar o la asignaba a otro pais. Estas correcciones se aplican por UT +
+# posicion de autor y se validan contra el nombre del autor.
+#
+# modo = "reemplaza": sustituye el c1/c3 que tenia el autor en el mapa.
+# modo = "agrega":    suma la afiliacion a la que el autor ya tenia (el autor
+#                     declara mas de una afiliacion).
+#
+# Cambios (antes -> despues):
+#  1. WOS:001204896900001 (Voters' expectations...), pos. 4 MURR, ANDREAS E.
+#     UNIV WARWICK (England) -> CIDE, Mexico City, MEXICO. Reemplaza. Tania:
+#     "Andreas E. Murr es de afiliacion en Mexico". La direccion de Warwick
+#     sigue en C1 del paper, pero queda sin asignar a un autor.
+#  2. WOS:000388055800017 (Willingness to accept wind...), pos. 1 GARCIA, JORGE H.
+#     CICERO (Noruega) -> CICERO (Noruega) + Pontificia Univ. Javeriana, Bogota,
+#     COLOMBIA. Agrega. Tania: "Jorge Garcia tiene afiliacion en Colombia (y es
+#     primer autor)". CICERO se conserva porque es la direccion del corresponsal (RP).
+#  3. WOS:001541495600001 (Value of accessibility...), pos. 2 HERNANDEZ, JOSE IGNACIO
+#     POPULYTICS (Paises Bajos) -> Univ. San Sebastian, Concepcion, CHILE.
+#     Reemplaza. Tania: "Jose Ignacio Hernandez tiene afiliacion en Chile".
+#     Populytics sigue en C1 del paper, pero queda sin asignar a un autor.
+#  4. WOS:000796681800001 (Priors rule...), pos. 1 ARIAS, ERIC. Tania confirma que
+#     el primer autor NO tiene afiliacion. No cambia ningun dato en este script:
+#     el caso ya figura en confirmed_no_affiliation (05_descriptivos...). Se
+#     deja constancia aqui y se actualiza la nota en 05.
+# Ademas, el C3 del paper 2 no incluia a CIDE; se agrega a C3_manual.
+
+correcciones_tania <- tribble(
+  ~UT, ~author_position, ~autor_esperado, ~modo, ~c1_nuevo, ~c3_nuevo,
+  "WOS:001204896900001", 4L, "MURR", "reemplaza",
+  "CTR INVEST Y DOCENCIA ECON CIDE, DIV ESTUDIOS POLIT, MEXICO CITY, MEXICO.",
+  "CENTRO DE INVESTIGACION Y DOCENCIA ECONOMICAS",
+  "WOS:000388055800017", 1L, "GARCIA", "agrega",
+  "PONTIFICIA UNIV JAVERIANA, DEPT ECON, VISITING FAC, BOGOTA, COLOMBIA.",
+  "PONTIFICIA UNIVERSIDAD JAVERIANA",
+  "WOS:001541495600001", 2L, "HERNANDEZ", "reemplaza",
+  "UNIV SAN SEBASTIAN, FAC ECON, CTR ECON & SUSTAINABLE DEV, BUSINESS & GOVT, LIENTUR 1457, CONCEPCION, CHILE.",
+  "UNIVERSIDAD SAN SEBASTIAN"
+)
+
+aplicar_correcciones_tania <- function(mapas, uts, correcciones) {
+  for (i in seq_len(nrow(correcciones))) {
+    corr <- correcciones[i, ]
+    fila <- which(uts == corr$UT)
+    if (length(fila) != 1L) {
+      stop("Correccion de Tania: UT no encontrada o duplicada: ", corr$UT)
+    }
+    mapa <- mapas[[fila]]
+    j <- which(mapa$author_position == corr$author_position)
+    if (length(j) != 1L || !str_detect(mapa$author_name[j], corr$autor_esperado)) {
+      stop(
+        "Correccion de Tania: la posicion ", corr$author_position, " de ",
+        corr$UT, " no corresponde a ", corr$autor_esperado
+      )
+    }
+    antes_c1 <- mapa$c1_manual[j]
+    if (corr$modo == "agrega") {
+      mapa$c1_manual[j] <- str_c(
+        c(antes_c1, corr$c1_nuevo)[!is.na(c(antes_c1, corr$c1_nuevo))],
+        collapse = "; "
+      )
+      mapa$c3_manual[j] <- str_c(
+        c(mapa$c3_manual[j], corr$c3_nuevo)[
+          !is.na(c(mapa$c3_manual[j], corr$c3_nuevo))
+        ],
+        collapse = "; "
+      )
+    } else {
+      mapa$c1_manual[j] <- corr$c1_nuevo
+      mapa$c3_manual[j] <- corr$c3_nuevo
+    }
+    cat(
+      "Correccion Tania [", corr$modo, "] ", corr$UT, " pos. ",
+      corr$author_position, " ", mapa$author_name[j], "\n  C1 antes: ",
+      antes_c1, "\n  C1 ahora: ", mapa$c1_manual[j], "\n", sep = ""
+    )
+    mapas[[fila]] <- mapa
+  }
+  mapas
+}
+
+author_affiliation_map <- aplicar_correcciones_tania(
+  author_affiliation_map, revision_original$UT, correcciones_tania
+)
+
 revision_manual <- revision_original |>
   mutate(
     C1_manual = combinar_columnas_manuales(
@@ -277,6 +366,18 @@ revision_manual <- revision_original |>
     review_notes = columna_o_na(revision_original, "review_notes"),
     reviewer = columna_o_na(revision_original, "reviewer"),
     comentario_revision = columna_o_na(revision_original, "comentario_revision")
+  )
+
+# Chequeo manual de Tania: C3 del paper 2 (WOS:001204896900001) no incluia a CIDE.
+revision_manual <- revision_manual |>
+  mutate(
+    C3_manual = if_else(
+      UT == "WOS:001204896900001",
+      combinar_original_y_manual(
+        C3_manual, "CENTRO DE INVESTIGACION Y DOCENCIA ECONOMICAS"
+      ),
+      C3_manual
+    )
   )
 
 candidatos_corregidos <- candidatos_originales |>
@@ -302,6 +403,28 @@ candidatos_corregidos <- candidatos_originales |>
       "wos_original_plus_manual"
     )
   )
+
+# 2c. Correccion de RP (autor corresponsal) del chequeo manual de Tania -------
+# Origen: chequeo manual de Tania Hutt (9-nov-2026).
+#  5. WOS:000338925400064 (Race and marriage in the labor market..., AER 2014).
+#     RP estaba vacio (NA) en WoS, por lo que el liderazgo del corresponsal
+#     quedaba como Other/unknown. Tania confirma que ambos autores (Arceo-Gomez y
+#     Campos-Vazquez) tienen afiliacion en MEXICO; sus afiliaciones por autor ya
+#     eran Mexico (C1 de WoS), asi que solo cambia RP: NA -> "MEXICO.".
+#     Efecto: el corresponsal pasa de Other/unknown a Latin America.
+correcciones_rp_tania <- tribble(
+  ~UT, ~rp_nuevo,
+  "WOS:000338925400064", "MEXICO."
+)
+
+if (!all(correcciones_rp_tania$UT %in% candidatos_corregidos$UT)) {
+  stop("Correccion RP de Tania: UT no encontrada en la base.")
+}
+
+candidatos_corregidos <- candidatos_corregidos |>
+  left_join(correcciones_rp_tania, by = "UT") |>
+  mutate(RP = coalesce(rp_nuevo, RP)) |>
+  select(-rp_nuevo)
 
 # 3. Aplicacion de exclusiones documentadas --------------------------------
 
@@ -642,7 +765,7 @@ base_oficial <- base_oficial |>
 # origen. La base oficial conserva los campos necesarios para descriptivos,
 # autores, afiliaciones, liderazgo, metodos y topic modeling.
 columnas_oficiales <- c(
-  "UT", "TI", "PY", "SO", "DI", "DT", "AU", "AF", "RP",
+  "UT", "TI", "PY", "SO", "DI", "DT", "WE", "AU", "AF", "RP",
   "C1", "C1_original", "C1_manual", "C3", "C3_original", "C3_manual",
   "author_affiliation_map",
   "curation_c1", "curation_c3", "affi_latam", "affi_latam_countries",
