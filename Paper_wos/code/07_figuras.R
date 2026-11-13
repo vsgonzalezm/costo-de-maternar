@@ -18,9 +18,9 @@
 #
 # Entradas (Paper_wos/data/):
 #   raw/experimental/{latam,usa,europa}_exp.txt          -> numeradores Fig. 2
-#   raw/totales:denominador/por region-año/*_gral.txt    -> denominadores Fig. 2
+#   raw/totales denominador/por region-año/*_gral.txt    -> denominadores Fig. 2
 #   intermediate/base_oficial.rds                        -> numeradores Fig. 3
-#   raw/totales:denominador/por disciplina-pais-año/     -> denominadores Fig. 3
+#   raw/totales denominador/por disciplina-pais-año/     -> denominadores Fig. 3
 # No se usan raw/endogeno ni raw/laboratorio.
 #
 # Salidas (Paper_wos/outputs/):
@@ -53,11 +53,12 @@ tab_dir  <- here("Paper_wos", "outputs", "tables")
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 
-# La carpeta "totales:denominador" puede verse distinta segun el sistema
-# (en Windows ':' no es valido). Se busca por patron en vez de nombre fijo.
-dir_totales <- list.dirs(raw_dir, recursive = FALSE) |>
-  keep(~ str_detect(basename(.x), "^totales"))
-stopifnot(length(dir_totales) == 1)
+# La ruta usa un nombre valido en Windows y debe ser identica en todos los
+# computadores para que el flujo sea reproducible.
+dir_totales <- file.path(raw_dir, "totales denominador")
+if (!dir.exists(dir_totales)) {
+  stop("No existe la carpeta de denominadores: ", dir_totales)
+}
 dir_region     <- list.dirs(dir_totales, recursive = FALSE) |> keep(~ str_detect(basename(.x), "region"))
 dir_disciplina <- list.dirs(dir_totales, recursive = FALSE) |> keep(~ str_detect(basename(.x), "disciplina"))
 
