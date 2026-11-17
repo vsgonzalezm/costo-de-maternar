@@ -1521,19 +1521,27 @@ notes <- tribble(
 # Plantilla breve para revision manual. Reune solo los papers que requieren una
 # decision humana y no reemplaza las tablas del manuscrito ni la base oficial.
 review_instructions <- tribble(
-  ~section, ~instruction,
-  "Topic review", "Review the selected papers within each numbered topic together.",
-  "Topic review", "substantive_theme: summarize the paper's substantive subject in a short phrase.",
-  "Topic review", "fits_topic: enter yes, no, or unclear according to whether the paper belongs with the other papers assigned to that topic.",
-  "Topic review", "proposed_topic_name: propose a concise substantive name after reading the representative, borderline, and distant papers in that topic.",
-  "Topic review", "For a distant pair, verify whether both papers still share a defensible substantive theme; explain any inconsistency in review_notes.",
-  "Method review", "eligible_experimental: enter yes, no, or unclear after checking whether the paper reports an experiment rather than only mentioning experiments or using observational, theoretical, review, simulation, natural-experiment, or quasi-experimental evidence.",
-  "Method review", "specific_method: enter every applicable design using the labels in the Method labels sheet; separate multiple labels with a semicolon.",
-  "Method review", "method_family: enter every corresponding family using the Family map sheet; separate multiple families with a semicolon.",
-  "Method review", "evidence: copy a short phrase and, when available, page or section showing manipulation, treatment, random assignment, experimental task, or design.",
-  "Method review", "If eligible_experimental is no, leave method fields blank and explain the exclusion reason in review_notes. Do not infer a method from the title alone."
+  ~seccion, ~instruccion,
+  "Objetivo general", "Este archivo reune solamente los papers que requieren revision manual para validar los topicos y clasificar los metodos que aun quedaron en Other/not classified. No reemplaza la base oficial ni las tablas del manuscrito.",
+  "Regla general", "No modificar las columnas que ya contienen identificadores, texto del paper, probabilidades o distancias. Completar unicamente las columnas manuales indicadas en estas instrucciones.",
+  "Hoja Revision topicos", "Contiene 24 papers: tres casos por cada uno de los ocho topicos. Para cada topico se incluye un paper representativo y el par de papers mas diferentes entre si dentro de ese mismo topico.",
+  "Hoja Revision topicos", "topic identifica el topico numerado. review_reason indica por que se selecciono el paper: representative corresponde al caso mas representativo y distant_pair a uno de los dos casos mas diferentes. pair_id permite reconocer los dos integrantes del mismo par.",
+  "Hoja Revision topicos", "UT, year, title, abstract, journal y keywords_analisis permiten identificar y leer el paper. dominant_gamma es la proporcion del paper asignada a su topico dominante. pair_cosine_distance mide cuan diferentes son los dos papers del par: un valor mayor indica mayor distancia entre sus perfiles tematicos.",
+  "Tarea en Revision topicos", "Revisar juntos los tres papers de cada topic, leyendo al menos titulo, abstract y palabras clave. Si esos campos no bastan para decidir, consultar el texto completo del paper.",
+  "Tarea en Revision topicos", "substantive_theme: escribir para cada paper una frase breve que resuma su tema sustantivo, sin describir solamente el metodo utilizado.",
+  "Tarea en Revision topicos", "fits_topic: escribir yes, no o unclear segun si el paper comparte un tema sustantivo defendible con los otros dos papers del mismo topico.",
+  "Tarea en Revision topicos", "proposed_topic_name: despues de revisar los tres casos, proponer un nombre breve y sustantivo para el topico. Si los tres son coherentes, repetir el mismo nombre en sus tres filas; si no lo son, dejar constancia de la diferencia en review_notes.",
+  "Tarea en Revision topicos", "review_notes: explicar dudas, diferencias internas del topico, razones para marcar no o unclear y cualquier evidencia adicional utilizada para decidir.",
+  "Hoja Revision metodos", "Contiene los 41 papers que no pudieron asignarse automaticamente a una de las cuatro familias de diseno. experimental_method muestra la etiqueta disponible antes de la revision y puede estar vacia o ser demasiado general.",
+  "Tarea en Revision metodos", "eligible_experimental: escribir yes, no o unclear tras comprobar si el paper realmente reporta un experimento. No basta con que mencione experimentos; excluir estudios solamente observacionales, teoricos, de revision, simulaciones, experimentos naturales o cuasiexperimentos.",
+  "Tarea en Revision metodos", "specific_method: si eligible_experimental es yes, registrar todos los disenos aplicables usando exactamente las opciones de la hoja Etiquetas metodos. Separar mas de un metodo con punto y coma.",
+  "Tarea en Revision metodos", "method_family: registrar todas las familias correspondientes usando la hoja Mapa familias. Separar mas de una familia con punto y coma.",
+  "Tarea en Revision metodos", "evidence: copiar una frase breve y, cuando sea posible, indicar pagina o seccion donde se observe manipulacion, tratamiento, asignacion aleatoria, tarea experimental o el nombre explicito del diseno.",
+  "Tarea en Revision metodos", "review_notes: anotar dudas y justificar los casos no o unclear. Si eligible_experimental es no, dejar specific_method y method_family vacios. No inferir el metodo solamente a partir del titulo.",
+  "Hoja Etiquetas metodos", "Contiene el vocabulario permitido para completar specific_method. Usar estas etiquetas exactamente para mantener una clasificacion consistente.",
+  "Hoja Mapa familias", "Muestra como cada metodo especifico se agrupa en las cuatro familias del paper: survey-based experiments; field/lab interventions; conjoint/choice designs; audit/correspondence designs. Usarla para completar method_family.",
+  "Entrega", "Guardar el mismo archivo conservando todas las hojas y nombres de columnas. Antes de entregarlo, comprobar que cada decision manual tenga suficiente evidencia y que los casos unclear incluyan una explicacion en review_notes."
 )
-
 method_labels <- tibble(
   specific_method = c(
     "Survey experiment", "Vignette experiment/survey",
@@ -1594,11 +1602,11 @@ write_xlsx(list(`Table A2` = table_a2_comparison), file.path(tables_dir, "tableA
 write_xlsx(list(`ESCI audit` = esci_audit, Notes = filter(notes, output %in% c("All", "ESCI"))), file.path(tables_dir, "appendix_esci_audit.xlsx"))
 write_xlsx(
   list(
-    Instructions = review_instructions,
-    `Topic review` = topic_manual_review,
-    `Method review` = other_method_audit,
-    `Method labels` = method_labels,
-    `Family map` = method_family_map
+    Instrucciones = review_instructions,
+    `Revision topicos` = topic_manual_review,
+    `Revision metodos` = other_method_audit,
+    `Etiquetas metodos` = method_labels,
+    `Mapa familias` = method_family_map
   ),
   file.path(tables_dir, "revision_isi.xlsx")
 )
