@@ -73,10 +73,28 @@ max_document_proportion <- 1.00
 # restringido por campo, region y metodo, una palabra comun puede ser relevante.
 # Las frecuencias altas se auditan y cualquier exclusion queda en el diccionario.
 
-control_candidate <- list(burnin = 500L, iter = 1000L, thin = 100L)
+alpha_prior <- 0.10
+# Alpha controla cuanto mezcla el modelo los topics dentro de cada paper. El
+# valor por defecto de topicmodels para Gibbs es 50/k (10 cuando k = 5), que en
+# este corpus empujaba artificialmente cada paper hacia una mezcla casi uniforme
+# y producia gammas cercanos a 20% para todos los topics. Un alpha simetrico de
+# 0.10 permite documentos tematicamente mas concentrados sin obligarlos a tener
+# un unico topic. La eleccion queda explicita para que pueda auditarse.
+
+delta_prior <- 0.10
+# Delta controla la dispersion de palabras dentro de cada topic. Se conserva el
+# valor predeterminado de topicmodels, pero se declara para reproducibilidad.
+
+control_candidate <- list(
+  burnin = 500L, iter = 1000L, thin = 100L,
+  alpha = alpha_prior, delta = delta_prior
+)
 # Controles breves para comparar 35 modelos candidatos (7 k por 5 semillas).
 
-control_final <- list(burnin = 1500L, iter = 3000L, thin = 100L)
+control_final <- list(
+  burnin = 1500L, iter = 3000L, thin = 100L,
+  alpha = alpha_prior, delta = delta_prior
+)
 # Parametros del muestreo Gibbs de los modelos finales:
 # burnin descarta iteraciones iniciales; iter cuenta las posteriores; thin
 # conserva una de cada 100. El ajuste final usa mas iteraciones que la seleccion.
@@ -1529,6 +1547,8 @@ model_summary <- tibble(
     "Exploratory k values",
     "Candidate seeds per k",
     "Selected seed for recommended model",
+    "Document-topic prior alpha",
+    "Topic-term prior delta",
     "Primary text",
     "Sensitivity text",
     "Primary interpretation"
@@ -1545,6 +1565,8 @@ model_summary <- tibble(
     paste(k_exploratory, collapse = ", "),
     length(selection_seeds),
     final_ensembles[[as.character(recommended_k)]]$selected_seed,
+    alpha_prior,
+    delta_prior,
     "Title + abstract",
     "Title + abstract + keywords",
     "Average gamma; dominant topic is complementary"

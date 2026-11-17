@@ -676,12 +676,22 @@ patrones_des_exp <- tribble(
   ~des_exp, ~patron,
   "Field experiment",
   "\\bfield experiment[a-z]*\\b|\\bfield-experiment[a-z]*\\b|\\bfield: experiment[a-z]*\\b",
+  "Lab-in-the-field experiment",
+  "\\blab[- ]in[- ]the[- ]field experiment[a-z]*\\b|\\bframed field experiment[a-z]*\\b",
+  "Laboratory experiment",
+  "\\blaborator(y|ies) experiment[a-z]*\\b|\\blab experiment[a-z]*\\b",
+  "Experimental game",
+  "\\b(dictator|trust|public goods|investment) game[a-z]*\\b|\\beconomic experiment[a-z]*\\b",
+  "Controlled experiment",
+  "\\bcontrolled experimental setting\\b|\\bcontrolled experiment[a-z]*\\b",
+  "Randomized field intervention",
+  "\\brandomi[sz]ed (controlled )?(field )?(trial|experiment|evaluation)\\b|\\brandom(ly)? allocat(ed|ion).{0,80}(program|intervention|treatment)\\b|\\brandom assignment.{0,80}(program|intervention|treatment|monitoring)\\b",
   "Survey experiment",
-  "\\bsurvey experiment[a-z]*\\b|\\bsurvey-experiment[a-z]*\\b",
+  "\\bsurvey experiment[a-z]*\\b|\\bsurvey-experiment[a-z]*\\b|\\bsurvey[- ]based experiment[a-z]*\\b|\\bexperiment[a-z]* embedded in (a |the )?survey\\b",
   "Audit study",
   "\\baudit stud[a-z]*\\b",
   "Correspondence experiment/audit",
-  "\\bcorrespondence experiment[a-z]*\\b|\\bcorrespondence audit[a-z]*\\b|\\bcorrespondence test[a-z]*\\b",
+  "\\bcorrespondence experiment[a-z]*\\b|\\bcorrespondence audit[a-z]*\\b|\\bcorrespondence test[a-z]*\\b|\\bcorrespondence stud[a-z]*\\b|\\bcorrespondence design[a-z]*\\b|\\bmatched[- ]?pair correspondence\\b",
   "Conjoint",
   "\\bconjoint experiment[a-z]*\\b|\\bconjoint analy[a-z]*\\b|\\bconjoint-analy[a-z]*\\b|\\bconjoint stud[a-z]*\\b|\\bconjoint-study\\b|\\bconjoint study\\b",
   "List experiment",
@@ -689,7 +699,7 @@ patrones_des_exp <- tribble(
   "Factorial experiment/survey",
   "\\bfactorial experiment[a-z]*\\b|\\bfactorial survey[a-z]*\\b",
   "Vignette experiment/survey",
-  "\\bvignette experiment[a-z]*\\b|\\bvignette survey[a-z]*\\b",
+  "\\bvignette experiment[a-z]*\\b|\\bvignette survey[a-z]*\\b|\\bvignette[- ]based methodolog[a-z]*\\b|\\bvignette stud[a-z]*\\b",
   "Resume/CV audit",
   "\\bresume audit[a-z]*\\b|\\bcv audit[a-z]*\\b",
   "Choice experiment",
@@ -718,6 +728,11 @@ menciones_des_exp <- base_oficial |>
 
 des_exp_especifico <- c(
   "Field experiment",
+  "Lab-in-the-field experiment",
+  "Laboratory experiment",
+  "Experimental game",
+  "Controlled experiment",
+  "Randomized field intervention",
   "Survey experiment",
   "Audit study",
   "Correspondence experiment/audit",
@@ -748,14 +763,36 @@ des_exp_por_paper <- menciones_des_exp |>
     .groups = "drop"
   )
 
-papers_survey_manual <- c("WOS:001661562700001", "WOS:001730690100001")
+# Estas asignaciones manuales se reservan para casos cuyo abstract describe con
+# claridad el procedimiento, pero no usa una expresion suficientemente estable
+# para convertirla en regla automatica general. No se usa "randomized" por si
+# solo: la asignacion exige evidencia del contexto del diseno.
+des_exp_manual <- tribble(
+  ~UT, ~des_exp,
+  "WOS:001661562700001", "Survey experiment",
+  "WOS:001730690100001", "Survey experiment",
+  "WOS:000403542600002", "Correspondence experiment/audit",
+  "WOS:000678985800001", "Correspondence experiment/audit",
+  "WOS:001371819100001", "Field experiment",
+  "WOS:001440404900001", "Field experiment",
+  "WOS:001613498700003", "Field experiment"
+)
+
+des_exp_por_paper <- bind_rows(
+  des_exp_por_paper |>
+    separate_rows(des_exp, sep = "\\s*;\\s*"),
+  des_exp_manual
+) |>
+  distinct(UT, des_exp) |>
+  group_by(UT) |>
+  summarise(
+    des_exp = str_c(sort(unique(des_exp)), collapse = "; "),
+    .groups = "drop"
+  )
 
 base_oficial <- base_oficial |>
   left_join(des_exp_por_paper, by = "UT") |>
   mutate(
-    des_exp = if_else(
-      UT %in% papers_survey_manual, "Survey experiment", des_exp
-    ),
     des_exp_missing = is.na(des_exp) | str_squish(des_exp) == ""
   )
 

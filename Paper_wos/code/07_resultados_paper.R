@@ -332,6 +332,11 @@ method_family_map <- tribble(
   "List experiment", "Survey-based experiments",
   "Online experiment", "Survey-based experiments",
   "Field experiment", "Field/lab interventions",
+  "Lab-in-the-field experiment", "Field/lab interventions",
+  "Laboratory experiment", "Field/lab interventions",
+  "Experimental game", "Field/lab interventions",
+  "Controlled experiment", "Field/lab interventions",
+  "Randomized field intervention", "Field/lab interventions",
   "Conjoint", "Conjoint/choice designs",
   "Choice experiment", "Conjoint/choice designs",
   "Audit study", "Audit/correspondence designs",
@@ -1370,6 +1375,90 @@ figure7 <- ggplot(
   ) +
   theme_paper
 
+# Beta y gamma responden preguntas distintas. La figura principal usa beta para
+# mostrar que palabras caracterizan cada topic. Estos dos diagnosticos usan
+# gamma: el primero resume cuanto pesa cada topic en todo el corpus y el segundo
+# muestra cuan concentrada o mezclada es la asignacion dominante de los papers.
+topic_prevalence <- topic_gamma |>
+  group_by(topic) |>
+  summarise(
+    mean_gamma = mean(gamma),
+    expected_papers = sum(gamma),
+    .groups = "drop"
+  ) |>
+  left_join(topic_words, by = "topic") |>
+  mutate(
+    topic_label = factor(
+      str_c("Topic ", topic),
+      levels = str_c("Topic ", sort(unique(topic)))
+    ),
+    percent_gamma = 100 * mean_gamma
+  )
+
+figure_topic_prevalence <- ggplot(
+  topic_prevalence,
+  aes(topic_label, percent_gamma, fill = factor(topic))
+) +
+  geom_col(width = 0.7, show.legend = FALSE) +
+  geom_text(
+    aes(label = str_c(round(expected_papers, 1), " expected papers")),
+    vjust = -0.45,
+    size = 3.2
+  ) +
+  scale_fill_manual(values = topic_colors) +
+  scale_y_continuous(
+    labels = scales::label_percent(scale = 1),
+    expand = expansion(mult = c(0, 0.14))
+  ) +
+  labs(
+    title = "Overall topic prevalence",
+    subtitle = "Average topic proportion across the 611 papers",
+    x = NULL,
+    y = "Mean topic proportion (gamma)",
+    caption = paste(
+      "Expected papers is the sum of gamma weights, not a hard assignment.",
+      "The five topic shares sum to 100%."
+    )
+  ) +
+  theme_paper
+
+topic_assignment_strength <- paper_dominant |>
+  transmute(
+    UT,
+    topic = dominant_topic,
+    dominant_gamma = topic_probability,
+    topic_label = factor(
+      str_c("Topic ", dominant_topic),
+      levels = str_c("Topic ", sort(unique(dominant_topic)))
+    )
+  )
+
+figure_topic_assignment_strength <- ggplot(
+  topic_assignment_strength,
+  aes(topic_label, dominant_gamma, fill = factor(topic))
+) +
+  geom_violin(alpha = 0.55, color = NA, trim = TRUE, show.legend = FALSE) +
+  geom_boxplot(
+    width = 0.16,
+    outlier.shape = NA,
+    color = "grey25",
+    fill = "white",
+    linewidth = 0.45
+  ) +
+  scale_fill_manual(values = topic_colors) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
+  labs(
+    title = "Strength of each paper's dominant-topic assignment",
+    subtitle = "Distribution of the largest gamma value within each paper",
+    x = NULL,
+    y = "Dominant topic proportion (gamma)",
+    caption = paste(
+      "Gamma values sum to 1 across the five topics for each paper.",
+      "Lower values indicate substantively mixed papers, not missing coverage."
+    )
+  ) +
+  theme_paper
+
 # -----------------------------------------------------------------------------
 # 9. Auditoria ESCI y notas
 # -----------------------------------------------------------------------------
@@ -1440,7 +1529,16 @@ write_xlsx(
 write_xlsx(list(`Figure 4 data` = method_year, `Other audit` = other_method_audit, `Family map` = method_family_map), file.path(tables_dir, "figure4_data.xlsx"))
 write_xlsx(list(`Figure 5 time` = figure5_plot_data, `Figure 5 discipline` = figure5_discipline_data, `Origin totals` = table_figure5_origin, Notes = filter(notes, str_detect(output, "All|Figure 5"))), file.path(tables_dir, "figure5_data.xlsx"))
 write_xlsx(list(`Figure 6 data` = figure6_plot_data, `Figure 6 discipline` = table_figure6_by_discipline, `Figure 6b data` = figure6b_data, `Leadership detail` = leadership_separate, Notes = filter(notes, str_detect(output, "All|Figure 6"))), file.path(tables_dir, "figure6_data.xlsx"))
-write_xlsx(list(`Figure 7 data` = figure7_data, `Topics discipline` = topics_discipline_plot, Notes = filter(notes, output %in% c("All", "Table 6"))), file.path(tables_dir, "figure7_data.xlsx"))
+write_xlsx(
+  list(
+    `Figure 7 data` = figure7_data,
+    `Topic prevalence` = topic_prevalence,
+    `Assignment strength` = topic_assignment_strength,
+    `Topics discipline` = topics_discipline_plot,
+    Notes = filter(notes, output %in% c("All", "Table 6"))
+  ),
+  file.path(tables_dir, "figure7_data.xlsx")
+)
 write_xlsx(list(`Table A2` = table_a2_comparison), file.path(tables_dir, "tableA2_first_vs_corresponding.xlsx"))
 write_xlsx(list(`ESCI audit` = esci_audit, Notes = filter(notes, output %in% c("All", "ESCI"))), file.path(tables_dir, "appendix_esci_audit.xlsx"))
 
@@ -1471,6 +1569,14 @@ save_publication_figure(
 save_publication_figure(
   figure_topics_by_discipline, "figure_topics_by_discipline",
   width = 12, height = 10
+)
+save_publication_figure(
+  figure_topic_prevalence, "figure7b_topic_prevalence",
+  width = 9, height = 6
+)
+save_publication_figure(
+  figure_topic_assignment_strength, "figure7c_topic_assignment_strength",
+  width = 9, height = 6
 )
 
 # -----------------------------------------------------------------------------
