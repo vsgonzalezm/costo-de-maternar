@@ -116,7 +116,7 @@ base_oficial <- readRDS(official_path)
 
 required_official <- c(
   "UT", "TI", "PY", "SO", "WE", "RP", "core_area",
-  "affi_latam_countries", "des_exp"
+  "affi_latam_countries", "des_exp", "AB", "keywords_analisis"
 )
 missing_official <- setdiff(required_official, names(base_oficial))
 
@@ -164,6 +164,8 @@ papers <- base_oficial |>
     UT,
     year = as.integer(PY),
     title = TI,
+    abstract = AB,
+    keywords = keywords_analisis,
     journal = SO,
     wos_index = WE,
     corresponding_address = RP,
@@ -390,10 +392,20 @@ other_method_audit <- method_families |>
   select(UT) |>
   left_join(
     papers |>
-      select(UT, year, title, journal, experimental_method),
+      select(
+        UT, year, title, abstract, keywords, journal,
+        experimental_method
+      ),
     by = "UT"
   ) |>
-  arrange(year, UT)
+  arrange(year, UT) |>
+  mutate(
+    eligible_experimental = NA_character_,
+    specific_method = NA_character_,
+    method_family = NA_character_,
+    evidence = NA_character_,
+    review_notes = NA_character_
+  )
 
 discipline_sizes <- core_area_long |>
   group_by(core_area) |>
@@ -1458,7 +1470,10 @@ figure_topic_assignment_strength <- ggplot(
     x = NULL,
     y = "Dominant topic proportion (gamma)",
     caption = paste(
-      "Gamma values sum to 1 across the five topics for each paper.",
+      str_c(
+        "Gamma values sum to 1 across the ", recommended_k,
+        " topics for each paper."
+      ),
       "Lower values indicate substantively mixed papers, not missing coverage."
     )
   ) +
@@ -1497,6 +1512,33 @@ notes <- tribble(
   "Figure 6 by discipline", figure6_discipline_note,
   "Table A2", "Supplementary comparison of first vs. corresponding author affiliation (n and %, agreement, missing corresponding-author address), total, by period and by discipline, to report the magnitude of the difference and justify excluding the corresponding author from the main analysis.",
   "ESCI", "WE identifies ESCI, SSCI, SCI-EXPANDED, and other WoS citation indexes."
+)
+
+# Plantilla breve para revision manual. Reune solo los papers que requieren una
+# decision humana y no reemplaza las tablas del manuscrito ni la base oficial.
+review_instructions <- tribble(
+  ~section, ~instruction,
+  "Topic review", "Review the selected papers within each numbered topic together.",
+  "Topic review", "substantive_theme: summarize the paper's substantive subject in a short phrase.",
+  "Topic review", "fits_topic: enter yes, no, or unclear according to whether the paper belongs with the other papers assigned to that topic.",
+  "Topic review", "proposed_topic_name: propose a concise substantive name after reading the representative, borderline, and distant papers in that topic.",
+  "Topic review", "For a distant pair, verify whether both papers still share a defensible substantive theme; explain any inconsistency in review_notes.",
+  "Method review", "eligible_experimental: enter yes, no, or unclear after checking whether the paper reports an experiment rather than only mentioning experiments or using observational, theoretical, review, simulation, natural-experiment, or quasi-experimental evidence.",
+  "Method review", "specific_method: enter every applicable design using the labels in the Method labels sheet; separate multiple labels with a semicolon.",
+  "Method review", "method_family: enter every corresponding family using the Family map sheet; separate multiple families with a semicolon.",
+  "Method review", "evidence: copy a short phrase and, when available, page or section showing manipulation, treatment, random assignment, experimental task, or design.",
+  "Method review", "If eligible_experimental is no, leave method fields blank and explain the exclusion reason in review_notes. Do not infer a method from the title alone."
+)
+
+method_labels <- tibble(
+  specific_method = c(
+    "Survey experiment", "Vignette experiment/survey",
+    "Factorial experiment/survey", "List experiment", "Online experiment",
+    "Field experiment", "Lab-in-the-field experiment",
+    "Laboratory experiment", "Experimental game", "Controlled experiment",
+    "Randomized field intervention", "Conjoint", "Choice experiment",
+    "Audit study", "Correspondence experiment/audit", "Resume/CV audit"
+  )
 )
 
 # -----------------------------------------------------------------------------
@@ -1546,6 +1588,16 @@ write_xlsx(
 )
 write_xlsx(list(`Table A2` = table_a2_comparison), file.path(tables_dir, "tableA2_first_vs_corresponding.xlsx"))
 write_xlsx(list(`ESCI audit` = esci_audit, Notes = filter(notes, output %in% c("All", "ESCI"))), file.path(tables_dir, "appendix_esci_audit.xlsx"))
+write_xlsx(
+  list(
+    Instructions = review_instructions,
+    `Topic review` = topic_manual_review,
+    `Method review` = other_method_audit,
+    `Method labels` = method_labels,
+    `Family map` = method_family_map
+  ),
+  file.path(tables_dir, "revision_isi.xlsx")
+)
 
 save_publication_figure(
   figure4, "figure4_methods_over_time",

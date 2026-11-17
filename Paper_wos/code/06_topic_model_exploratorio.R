@@ -286,7 +286,10 @@ corpus_generic_terms <- c(
   "provided", "providing",
   # Terminos retirados tras la revision sustantiva de modelos previos.
   "concern", "concerns", "rate", "effectiveness", "change", "exposure",
-  "perception", "attitude", "monitoring", "strong", "belief",
+  "perception", "attitude", "monitoring", "strong", "belief", "framed",
+  # Public y policy son demasiado amplios de forma aislada. Antes de retirarlos
+  # se protegen abajo sus combinaciones sustantivas observadas en el corpus.
+  "public", "policy", "policies",
   # Verbos de proposito y evaluacion academica que no identifican el tema.
   "investigate", "investigates", "investigated", "investigating",
   "examine", "examines", "examined", "examining",
@@ -347,6 +350,7 @@ compound_terms <- tribble(
   "goal setting", "goal_setting", TRUE,
   "last mile delivery", "last_mile_delivery", TRUE,
   "service delivery", "service_delivery", TRUE,
+  "public policies", "public_policy", TRUE,
   "public policy", "public_policy", TRUE,
   "public attitudes", "public_attitude", TRUE,
   "all rights reserved", "all_rights_reserved", FALSE,
@@ -388,6 +392,33 @@ compound_terms <- tribble(
   "collective action", "collective_action", TRUE,
   "public opinion", "public_opinion", TRUE,
   "public support", "public_support", TRUE,
+  "public goods", "public_good", TRUE,
+  "public good", "public_good", TRUE,
+  "public services", "public_service", TRUE,
+  "public service", "public_service", TRUE,
+  "public spaces", "public_space", TRUE,
+  "public space", "public_space", TRUE,
+  "public transport", "public_transport", TRUE,
+  "public procurement", "public_procurement", TRUE,
+  "public management", "public_management", TRUE,
+  "public sector", "public_sector", TRUE,
+  "public administration", "public_administration", TRUE,
+  "public officials", "public_official", TRUE,
+  "public official", "public_official", TRUE,
+  "social policies", "social_policy", TRUE,
+  "social policy", "social_policy", TRUE,
+  "trade policies", "trade_policy", TRUE,
+  "trade policy", "trade_policy", TRUE,
+  "climate policies", "climate_policy", TRUE,
+  "climate policy", "climate_policy", TRUE,
+  "crime policies", "crime_policy", TRUE,
+  "crime policy", "crime_policy", TRUE,
+  "environmental policies", "environmental_policy", TRUE,
+  "environmental policy", "environmental_policy", TRUE,
+  "conservation policies", "conservation_policy", TRUE,
+  "conservation policy", "conservation_policy", TRUE,
+  "security policies", "security_policy", TRUE,
+  "security policy", "security_policy", TRUE,
   "labor market", "labor_market", TRUE,
   "social norms", "social_norms", TRUE,
   "vote buying", "vote_buying", TRUE,
@@ -504,6 +535,7 @@ term_normalization <- tribble(
   "programs", "program",
   "rights", "right",
   "services", "service",
+  "schools", "school",
   "students", "student",
   "taxes", "tax",
   "voters", "voter",
@@ -1220,6 +1252,7 @@ make_topic_outputs <- function(model, corpus_data, model_name) {
       topic_label,
       year,
       title,
+      abstract,
       journal,
       keywords_analisis,
       core_area,
@@ -1332,26 +1365,13 @@ topic_distant_pairs <- map_dfr(
 
 review_representative <- outputs_recommended$papers |>
   group_by(dominant_topic) |>
-  slice_max(topic_probability, n = 3L, with_ties = FALSE) |>
+  slice_max(topic_probability, n = 1L, with_ties = FALSE) |>
   ungroup() |>
   transmute(
     topic = dominant_topic,
     review_reason = "Representative: highest dominant gamma",
     pair_id = NA_character_,
-    UT, year, title, journal,
-    dominant_gamma = topic_probability,
-    pair_cosine_distance = NA_real_
-  )
-
-review_borderline <- outputs_recommended$papers |>
-  group_by(dominant_topic) |>
-  slice_min(topic_probability, n = 3L, with_ties = FALSE) |>
-  ungroup() |>
-  transmute(
-    topic = dominant_topic,
-    review_reason = "Borderline: lowest dominant gamma",
-    pair_id = NA_character_,
-    UT, year, title, journal,
+    UT, year, title, abstract, journal, keywords_analisis,
     dominant_gamma = topic_probability,
     pair_cosine_distance = NA_real_
   )
@@ -1371,16 +1391,32 @@ review_distant <- topic_distant_pairs |>
       pair_cosine_distance = cosine_distance
     )
   }) |>
-  left_join(corpus |> select(UT, year, journal), by = "UT") |>
-  select(topic, review_reason, pair_id, UT, year, title, journal,
+  left_join(
+    corpus |> select(UT, year, abstract, journal, keywords_analisis),
+    by = "UT"
+  ) |>
+  select(topic, review_reason, pair_id, UT, year, title, abstract, journal,
+         keywords_analisis,
          dominant_gamma, pair_cosine_distance)
 
 topic_manual_review <- bind_rows(
   review_representative,
-  review_borderline,
   review_distant
 ) |>
-  arrange(topic, review_reason, desc(dominant_gamma), pair_id)
+  arrange(topic, review_reason, desc(dominant_gamma), pair_id) |>
+  mutate(
+    substantive_theme = NA_character_,
+    fits_topic = NA_character_,
+    proposed_topic_name = NA_character_,
+    review_notes = NA_character_
+  )
+
+if (
+  n_distinct(topic_manual_review$topic) != recommended_k ||
+    nrow(topic_manual_review) != 3L * recommended_k
+) {
+  stop("La revision manual debe contener tres papers por topic.")
+}
 
 # -----------------------------------------------------------------------------
 # 7. Comparar topics por tiempo y disciplina
