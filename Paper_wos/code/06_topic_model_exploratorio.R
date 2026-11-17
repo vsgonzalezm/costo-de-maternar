@@ -83,6 +83,13 @@ control_final <- list(burnin = 1500L, iter = 3000L, thin = 100L)
 tables_dir <- here("Paper_wos", "outputs", "tables")
 figures_dir <- here("Paper_wos", "outputs", "figures")
 
+analysis_first_year <- 1995L
+analysis_last_year <- 2025L
+expected_analysis_papers <- 611L
+# El paper analiza 1995-2025: no hay registros antes de 1995 y 2026 se excluye
+# porque esta incompleto. La base oficial conserva sus 675 papers, pero el topic
+# model principal usa solo el periodo comparable del manuscrito.
+
 
 
 # -----------------------------------------------------------------------------
@@ -111,6 +118,10 @@ if (length(missing) > 0L) {
   )
 }
 
+if (nrow(corpus_raw) != 675L || anyDuplicated(corpus_raw$UT) > 0L) {
+  stop("La base oficial debe contener 675 UT unicas antes del corte temporal.")
+}
+
 corpus <- corpus_raw |>
   transmute(
     UT = as.character(UT),
@@ -126,10 +137,11 @@ corpus <- corpus_raw |>
     # correcciones manuales cuando existen y keywords disponibles de WoS.
     # Aqui se utiliza esa variable final sin reconstruirla nuevamente.
     keywords_analisis = na_if(str_squish(keywords_analisis), "")
-  )
+  ) |>
+  filter(between(year, analysis_first_year, analysis_last_year))
 
-if (nrow(corpus) != 675L || anyDuplicated(corpus$UT) > 0L) {
-  stop("El corpus de topic modeling debe contener 675 UT unicas.")
+if (nrow(corpus) != expected_analysis_papers || anyDuplicated(corpus$UT) > 0L) {
+  stop("El corpus 1995-2025 debe contener 611 UT unicas.")
 }
 
 # -----------------------------------------------------------------------------
@@ -259,6 +271,9 @@ corpus_generic_terms <- c(
   "included", "due", "statistical", "adoption", "reduction", "reductions",
   "insight", "insights", "effort", "efforts", "extent", "provide", "provides",
   "provided", "providing",
+  # Terminos retirados tras la revision sustantiva de modelos previos.
+  "concern", "concerns", "rate", "effectiveness", "change", "exposure",
+  "perception", "attitude", "monitoring", "strong", "belief",
   # Verbos de proposito y evaluacion academica que no identifican el tema.
   "investigate", "investigates", "investigated", "investigating",
   "examine", "examines", "examined", "examining",
@@ -319,6 +334,7 @@ compound_terms <- tribble(
   "goal setting", "goal_setting", TRUE,
   "last mile delivery", "last_mile_delivery", TRUE,
   "service delivery", "service_delivery", TRUE,
+  "public policy", "public_policy", TRUE,
   "public attitudes", "public_attitude", TRUE,
   "all rights reserved", "all_rights_reserved", FALSE,
   "rights reserved", "rights_reserved", FALSE,
@@ -1249,6 +1265,121 @@ keyword_topic_alignment <- match_topic_matrices(
 # Esta tabla cuantifica si agregar keywords reproduce topics semejantes o cambia
 # de manera importante su vocabulario.
 # -----------------------------------------------------------------------------
+# 6b. Seleccionar papers para revision sustantiva de cada topic
+# -----------------------------------------------------------------------------
+# La interpretacion manual no debe basarse solo en las palabras principales.
+# Para cada topic se seleccionan tres tipos de documentos:
+#   1) representativos: mayor gamma del topic dominante;
+#   2) fronterizos: menor gamma entre los papers asignados a ese topic;
+#   3) pareja mas distante: los dos papers con menor similitud coseno en TF-IDF.
+# La distancia TF-IDF compara vocabulario sustantivo retenido. No crea etiquetas
+# tematicas ni cambia el modelo; solo orienta que papers conviene leer.
+
+tfidf_long <- tokens_primary |>
+  bind_tf_idf(word, UT, n)
+
+tfidf_matrix <- tfidf_long |>
+  cast_sparse(UT, word, tf_idf)
+
+tfidf_norms <- sqrt(Matrix::rowSums(tfidf_matrix ^ 2))
+if (any(tfidf_norms == 0)) {
+  stop("Hay papers sin norma TF-IDF y no puede calcularse distancia textual.")
+}
+
+tfidf_unit <- Matrix::Diagonal(x = 1 / tfidf_norms) %*% tfidf_matrix
+rownames(tfidf_unit) <- rownames(tfidf_matrix)
+
+most_distant_pair <- function(topic_id) {
+  # Busca la pareja con mayor distancia coseno dentro de los papers cuyo topic
+  # dominante es topic_id. Una distancia alta indica vocabulario menos similar.
+  topic_papers <- outputs_recommended$papers |>
+    filter(dominant_topic == topic_id)
+
+  ids <- intersect(topic_papers$UT, rownames(tfidf_unit))
+  if (length(ids) < 2L) {
+    return(tibble())
+  }
+
+  similarity <- as.matrix(tcrossprod(tfidf_unit[ids, , drop = FALSE]))
+  similarity[lower.tri(similarity, diag = TRUE)] <- Inf
+  pair_index <- which(similarity == min(similarity), arr.ind = TRUE)[1L, ]
+  pair_ids <- ids[pair_index]
+
+  topic_papers |>
+    filter(UT %in% pair_ids) |>
+    arrange(match(UT, pair_ids)) |>
+    summarise(
+      topic = topic_id,
+      pair_id = str_c("Topic_", topic_id, "_max_distance"),
+      UT_1 = UT[1],
+      title_1 = title[1],
+      gamma_1 = topic_probability[1],
+      UT_2 = UT[2],
+      title_2 = title[2],
+      gamma_2 = topic_probability[2],
+      cosine_similarity = similarity[pair_index[1], pair_index[2]],
+      cosine_distance = 1 - cosine_similarity
+    )
+}
+
+topic_distant_pairs <- map_dfr(
+  sort(unique(outputs_recommended$papers$dominant_topic)),
+  most_distant_pair
+)
+
+review_representative <- outputs_recommended$papers |>
+  group_by(dominant_topic) |>
+  slice_max(topic_probability, n = 3L, with_ties = FALSE) |>
+  ungroup() |>
+  transmute(
+    topic = dominant_topic,
+    review_reason = "Representative: highest dominant gamma",
+    pair_id = NA_character_,
+    UT, year, title, journal,
+    dominant_gamma = topic_probability,
+    pair_cosine_distance = NA_real_
+  )
+
+review_borderline <- outputs_recommended$papers |>
+  group_by(dominant_topic) |>
+  slice_min(topic_probability, n = 3L, with_ties = FALSE) |>
+  ungroup() |>
+  transmute(
+    topic = dominant_topic,
+    review_reason = "Borderline: lowest dominant gamma",
+    pair_id = NA_character_,
+    UT, year, title, journal,
+    dominant_gamma = topic_probability,
+    pair_cosine_distance = NA_real_
+  )
+
+review_distant <- topic_distant_pairs |>
+  pmap_dfr(function(
+    topic, pair_id, UT_1, title_1, gamma_1, UT_2, title_2, gamma_2,
+    cosine_similarity, cosine_distance
+  ) {
+    tibble(
+      topic = topic,
+      review_reason = "Most textually distant pair within topic",
+      pair_id = pair_id,
+      UT = c(UT_1, UT_2),
+      title = c(title_1, title_2),
+      dominant_gamma = c(gamma_1, gamma_2),
+      pair_cosine_distance = cosine_distance
+    )
+  }) |>
+  left_join(corpus |> select(UT, year, journal), by = "UT") |>
+  select(topic, review_reason, pair_id, UT, year, title, journal,
+         dominant_gamma, pair_cosine_distance)
+
+topic_manual_review <- bind_rows(
+  review_representative,
+  review_borderline,
+  review_distant
+) |>
+  arrange(topic, review_reason, desc(dominant_gamma), pair_id)
+
+# -----------------------------------------------------------------------------
 # 7. Comparar topics por tiempo y disciplina
 # -----------------------------------------------------------------------------
 # Estas tablas no vuelven a estimar LDA. Resumen gamma del modelo recomendado
@@ -1467,6 +1598,8 @@ write_xlsx(
     Top3_core_gamma = top3_core_gamma,
     Top3_core_dominant = top3_core_dominant,
     Keyword_sensitivity = keyword_topic_alignment,
+    Topic_manual_review = topic_manual_review,
+    Topic_distant_pairs = topic_distant_pairs,
     Top_terms_k4 = outputs_k4$terms,
     Top_terms_k10 = outputs_k10$terms,
     Ngram_candidates = ngram_candidates,

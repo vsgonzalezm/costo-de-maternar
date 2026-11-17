@@ -20,6 +20,16 @@ library(here)
 library(wesanderson)
 library(patchwork)
 
+# En Windows, las carpetas de denominadores contienen "año". Este ajuste hace
+# que R pueda listar esas rutas con tildes y eñes de manera consistente.
+if (!l10n_info()$`UTF-8`) {
+  invisible(if (.Platform$OS.type == "windows") {
+    Sys.setlocale("LC_CTYPE", "Spanish_Chile.utf8")
+  } else {
+    Sys.setlocale("LC_CTYPE", "en_US.UTF-8")
+  })
+}
+
 # -----------------------------------------------------------------------------
 # 1. Rutas, parametros y estilo grafico
 # -----------------------------------------------------------------------------
@@ -34,24 +44,18 @@ official_path <- here(
 )
 descriptive_path <- file.path(tables_dir, "descriptivos_affi_latam.xlsx")
 topic_path <- file.path(tables_dir, "topic_model_affi_latam.xlsx")
-output_table_path <- file.path(
-  tables_dir,
-  "resultados_paper_affi_latam.xlsx"
-)
 
-first_year <- 1990L
-last_year <- 2026L
-last_month_2026 <- "July"
-# Figuras 5 y 6 (y suplementario): solo hasta 2025 completo.
-last_year_main <- 2025L
-# 2026 se conserva, pero se identifica como ano parcial en tablas y figuras.
-# El ultimo bloque de cinco anos se rotula 2025-26 (no hay datos despues de 2026).
+analysis_first_year <- 1995L
+analysis_last_year <- 2025L
+expected_analysis_papers <- 611L
+# La base oficial conserva 675 papers hasta julio de 2026. Todos los outputs
+# principales usan 1995-2025: no hay registros antes de 1995 y 2026 es parcial.
 
 five_year_levels <- c(
-  "1990-94", "1995-99", "2000-04", "2005-09",
-  "2010-14", "2015-19", "2020-24", "2025-26"
+  "1995-99", "2000-04", "2005-09",
+  "2010-14", "2015-19", "2020-24", "2025"
 )
-decade_levels <- c("1990s", "2000s", "2010s", "2020-26")
+decade_levels <- c("1995-99", "2000-09", "2010-19", "2020-25")
 
 theme_paper <- theme_minimal(base_size = 11) +
   theme(
@@ -78,30 +82,27 @@ save_publication_figure <- function(plot, file_stem, width, height) {
 }
 
 five_year_period <- function(year) {
-  # Convierte un ano en bloques de cinco anos desde 1990.
-  start <- first_year + 5L * floor((as.integer(year) - first_year) / 5L)
+  # Convierte un ano en bloques de cinco anos desde 1995.
+  start <- analysis_first_year +
+    5L * floor((as.integer(year) - analysis_first_year) / 5L)
   label <- str_c(start, "-", str_sub(as.character(start + 4L), -2L))
-  # No hay papers despues de 2026: el ultimo bloque se rotula 2025-26 (parcial)
-  # para no sugerir cobertura hasta 2029.
-  if_else(label == "2025-29", "2025-26", label)
+  if_else(label == "2025-29", "2025", label)
 }
 
 figure_period <- function(period) {
-  # Figuras 5 y 6: agrupa 1995-2009 (pocos papers) y rotula 2025 como ano unico,
-  # porque 2026 se excluye por ser parcial.
+  # Figuras 5 y 6 agrupan 1995-2009 porque hay pocos papers en esos periodos.
   factor(period, ordered = FALSE) |>
     fct_collapse("1995-2009" = c("1995-99", "2000-04", "2005-09")) |>
-    fct_recode("2025" = "2025-26") |>
     fct_relevel("1995-2009")
 }
 
 decade_period <- function(year) {
-  # La ultima categoria termina en julio de 2026 y no es una decada completa.
+  # Los extremos reflejan la cobertura real 1995-2025.
   case_when(
-    year < 2000L ~ "1990s",
-    year < 2010L ~ "2000s",
-    year < 2020L ~ "2010s",
-    TRUE ~ "2020-26"
+    year < 2000L ~ "1995-99",
+    year < 2010L ~ "2000-09",
+    year < 2020L ~ "2010-19",
+    TRUE ~ "2020-25"
   )
 }
 
@@ -135,25 +136,27 @@ topic_gamma <- read_excel(topic_path, sheet = "Paper_topic_gamma")
 paper_dominant <- read_excel(topic_path, sheet = "Paper_dominant_topic")
 topic_terms <- read_excel(topic_path, sheet = "Top_terms")
 topic_summary <- read_excel(topic_path, sheet = "Model_summary")
+topic_manual_review <- read_excel(topic_path, sheet = "Topic_manual_review")
+topic_distant_pairs <- read_excel(topic_path, sheet = "Topic_distant_pairs")
 
 recommended_k <- topic_summary |>
   filter(measure == "Recommended k") |>
   pull(value) |>
   as.integer()
 
-if (recommended_k != 7L) {
+if (length(recommended_k) != 1L || is.na(recommended_k) || recommended_k < 2L) {
   stop(
-    "Las etiquetas sustantivas de 07 fueron definidas para k = 7. ",
+    "06 no informa un unico k recomendado valido. ",
     "Revise el topic model antes de continuar."
   )
 }
 
 if (
-  n_distinct(topic_gamma$UT) != 675L ||
-    nrow(topic_gamma) != 675L * recommended_k ||
-    n_distinct(paper_dominant$UT) != 675L
+  n_distinct(topic_gamma$UT) != expected_analysis_papers ||
+    nrow(topic_gamma) != expected_analysis_papers * recommended_k ||
+    n_distinct(paper_dominant$UT) != expected_analysis_papers
 ) {
-  stop("Los resultados de 06 no cubren los 675 papers y siete topics.")
+  stop("Los resultados de 06 no cubren los 611 papers de 1995-2025.")
 }
 
 papers <- base_oficial |>
@@ -177,10 +180,15 @@ papers <- base_oficial |>
       levels = decade_levels,
       ordered = TRUE
     )
-  )
+  ) |>
+  filter(between(year, analysis_first_year, analysis_last_year))
 
-if (any(is.na(papers$year)) || any(papers$year > last_year)) {
-  stop("La base contiene anos faltantes o posteriores al corte definido.")
+if (
+  nrow(papers) != expected_analysis_papers ||
+    any(is.na(papers$year)) ||
+    anyDuplicated(papers$UT) > 0L
+) {
+  stop("El universo analitico debe contener 611 UT unicas de 1995-2025.")
 }
 
 core_area_long <- papers |>
@@ -191,11 +199,67 @@ core_area_long <- papers |>
   distinct(UT, core_area, .keep_all = TRUE)
 
 # -----------------------------------------------------------------------------
-# 3. Table 2: produccion por disciplina y periodos de cinco anos
+# 3. Table 2: produccion experimental y total por region, 1995-2025
+# -----------------------------------------------------------------------------
+# Los conteos regionales provienen de los TXT de WoS usados en Figure 2.
+# Las regiones no son mutuamente excluyentes: un paper con afiliaciones en mas
+# de una region puede estar presente en mas de una fila.
+
+raw_dir <- here("Paper_wos", "data", "raw")
+denominator_dir <- file.path(raw_dir, "totales denominador")
+region_dir <- list.dirs(denominator_dir, recursive = FALSE) |>
+  keep(~ str_detect(basename(.x), "region"))
+
+if (length(region_dir) != 1L) {
+  stop("Debe existir una unica carpeta de denominadores por region.")
+}
+
+read_wos_year_counts <- function(path) {
+  # Lee las exportaciones Analyze Results de WoS y conserva ano y conteo.
+  lines <- read_lines(path)
+  lines <- lines[str_detect(lines, "^\\d{4}\\t\\d+")]
+  tibble(line = lines) |>
+    separate(line, into = c("year", "n"), sep = "\\t", extra = "drop") |>
+    transmute(year = as.integer(year), n = as.numeric(n))
+}
+
+regional_files <- tribble(
+  ~region, ~experimental_file, ~total_file,
+  "Latin America",
+  file.path(raw_dir, "experimental", "latam_exp.txt"),
+  file.path(region_dir, "latam_gral.txt"),
+  "United States",
+  file.path(raw_dir, "experimental", "usa_exp.txt"),
+  file.path(region_dir, "usa_gral.txt"),
+  "Europe",
+  file.path(raw_dir, "experimental", "europa_exp.txt"),
+  file.path(region_dir, "europa_gral.txt")
+)
+
+table2_regions <- regional_files |>
+  mutate(
+    experimental = map(experimental_file, read_wos_year_counts),
+    total = map(total_file, read_wos_year_counts)
+  ) |>
+  transmute(
+    region,
+    experimental_n = map_dbl(
+      experimental,
+      ~ sum(.x$n[between(.x$year, analysis_first_year, analysis_last_year)])
+    ),
+    total_social_science_n = map_dbl(
+      total,
+      ~ sum(.x$n[between(.x$year, analysis_first_year, analysis_last_year)])
+    )
+  ) |>
+  arrange(match(region, c("Latin America", "United States", "Europe")))
+
+# -----------------------------------------------------------------------------
+# 4. Table 3: produccion por disciplina y periodos de cinco anos
 # -----------------------------------------------------------------------------
 # Un paper con dos core areas cuenta una vez en cada una.
 
-table2_long <- core_area_long |>
+table3_long <- core_area_long |>
   count(core_area, period_5year, name = "n_papers") |>
   complete(
     core_area,
@@ -207,14 +271,14 @@ table2_long <- core_area_long |>
     fill = list(n_papers = 0L)
   )
 
-table2_disciplines <- table2_long |>
+table3_disciplines <- table3_long |>
   mutate(period_5year = as.character(period_5year)) |>
   pivot_wider(names_from = period_5year, values_from = n_papers) |>
   mutate(Total = rowSums(across(all_of(five_year_levels)))) |>
   arrange(desc(Total), core_area)
 
 # -----------------------------------------------------------------------------
-# 4. Table 3: menciones de paises LatAm por decada
+# 5. Table 4: menciones de paises LatAm por periodo
 # -----------------------------------------------------------------------------
 # Cada UT cuenta una vez por pais, pero puede aparecer en varios paises.
 
@@ -230,11 +294,11 @@ country_mentions <- papers |>
   filter(!is.na(country), country != "") |>
   distinct(UT, country, .keep_all = TRUE)
 
-if (n_distinct(country_mentions$UT) != 675L) {
-  stop("No todos los papers conservan al menos una mencion de pais LatAm.")
+if (n_distinct(country_mentions$UT) != expected_analysis_papers) {
+  stop("No todos los papers 1995-2025 conservan una mencion de pais LatAm.")
 }
 
-table3_countries <- country_mentions |>
+table4_countries <- country_mentions |>
   count(country, decade, name = "n_papers") |>
   complete(
     country,
@@ -247,121 +311,152 @@ table3_countries <- country_mentions |>
   ) |>
   mutate(decade = as.character(decade)) |>
   pivot_wider(names_from = decade, values_from = n_papers) |>
-  mutate(Total = rowSums(across(all_of(decade_levels)))) |>
+  mutate(
+    Total = rowSums(across(all_of(decade_levels))),
+    Percent_of_papers = 100 * Total / expected_analysis_papers
+  ) |>
   arrange(desc(Total), country)
 
 # -----------------------------------------------------------------------------
-# 5. Tables 4 and Figure 4: metodos experimentales
+# 6. Table 5 and Figure 4: familias de diseno experimental
 # -----------------------------------------------------------------------------
-# Los metodos separados por punto y coma se cuentan individualmente. Etiquetas
-# genericas o faltantes forman Other / not classified.
+# Los metodos detectados en 00 se agrupan en cuatro familias definidas antes del
+# analisis. Un paper puede pertenecer a mas de una familia. Other identifica solo
+# papers sin ninguna familia mapeada y se exporta con UT para revision.
 
-generic_method_labels <- c(
-  "Experimental methods",
-  "Other experimental design"
+method_family_map <- tribble(
+  ~experimental_method, ~method_family,
+  "Survey experiment", "Survey-based experiments",
+  "Vignette experiment/survey", "Survey-based experiments",
+  "Factorial experiment/survey", "Survey-based experiments",
+  "List experiment", "Survey-based experiments",
+  "Online experiment", "Survey-based experiments",
+  "Field experiment", "Field/lab interventions",
+  "Conjoint", "Conjoint/choice designs",
+  "Choice experiment", "Conjoint/choice designs",
+  "Audit study", "Audit/correspondence designs",
+  "Correspondence experiment/audit", "Audit/correspondence designs",
+  "Resume/CV audit", "Audit/correspondence designs"
 )
 
-methods_long <- papers |>
+substantive_family_levels <- c(
+  "Survey-based experiments",
+  "Field/lab interventions",
+  "Conjoint/choice designs",
+  "Audit/correspondence designs"
+)
+method_family_levels <- c(substantive_family_levels, "Other/not classified")
+
+methods_raw <- papers |>
   select(UT, year, period_5year, experimental_method) |>
-  mutate(
-    experimental_method = replace_na(
-      experimental_method,
-      "Other / not classified"
-    )
-  ) |>
+  mutate(experimental_method = replace_na(experimental_method, "")) |>
   separate_rows(experimental_method, sep = "\\s*;\\s*") |>
-  mutate(
-    experimental_method = str_squish(experimental_method),
-    experimental_method = if_else(
-      experimental_method %in% generic_method_labels |
-        experimental_method == "",
-      "Other / not classified",
-      experimental_method
-    )
-  ) |>
+  mutate(experimental_method = str_squish(experimental_method)) |>
   distinct(UT, experimental_method, .keep_all = TRUE)
 
-table4_methods_long <- methods_long |>
+methods_mapped <- methods_raw |>
+  inner_join(method_family_map, by = "experimental_method") |>
+  distinct(UT, year, period_5year, method_family)
+
+method_families <- bind_rows(
+  methods_mapped,
+  papers |>
+    anti_join(methods_mapped |> distinct(UT), by = "UT") |>
+    transmute(
+      UT, year, period_5year,
+      method_family = "Other/not classified"
+    )
+) |>
+  mutate(
+    method_family = factor(method_family, levels = method_family_levels)
+  )
+
+if (n_distinct(method_families$UT) != expected_analysis_papers) {
+  stop("Table 5 debe clasificar los 611 papers en una familia u Other.")
+}
+
+other_method_audit <- method_families |>
+  filter(method_family == "Other/not classified") |>
+  select(UT) |>
+  left_join(
+    papers |>
+      select(UT, year, title, journal, experimental_method),
+    by = "UT"
+  ) |>
+  arrange(year, UT)
+
+discipline_sizes <- core_area_long |>
+  group_by(core_area) |>
+  summarise(n_papers_in_discipline = n_distinct(UT), .groups = "drop")
+
+table5_method_families <- method_families |>
   inner_join(
     core_area_long |> select(UT, core_area),
     by = "UT",
     relationship = "many-to-many"
   ) |>
-  distinct(UT, core_area, experimental_method, period_5year) |>
-  count(
-    core_area,
-    experimental_method,
-    period_5year,
-    name = "n_papers"
-  )
-
-table4_methods_disciplines <- table4_methods_long |>
-  mutate(period_5year = as.character(period_5year)) |>
-  pivot_wider(
-    names_from = period_5year,
-    values_from = n_papers,
-    values_fill = 0L
-  ) |>
-  mutate(
-    across(any_of(five_year_levels), ~ replace_na(.x, 0L)),
-    Total = rowSums(across(any_of(five_year_levels)))
-  ) |>
-  arrange(core_area, desc(Total), experimental_method)
-
-method_order <- methods_long |>
-  count(experimental_method, name = "total") |>
-  arrange(
-    experimental_method == "Other / not classified",
-    desc(total)
-  ) |>
-  pull(experimental_method)
-
-method_year <- methods_long |>
-  count(year, experimental_method, name = "n_papers") |>
+  distinct(UT, core_area, method_family) |>
+  count(core_area, method_family, name = "n_papers") |>
   complete(
-    year = seq.int(min(papers$year), max(papers$year)),
-    experimental_method = method_order,
+    core_area,
+    method_family = factor(
+      method_family_levels,
+      levels = method_family_levels
+    ),
     fill = list(n_papers = 0L)
   ) |>
+  left_join(discipline_sizes, by = "core_area") |>
   mutate(
-    experimental_method = factor(
-      experimental_method,
-      levels = method_order
-    )
+    percent_within_discipline =
+      100 * n_papers / n_papers_in_discipline
+  ) |>
+  arrange(core_area, method_family)
+
+method_year <- method_families |>
+  filter(method_family %in% substantive_family_levels) |>
+  mutate(method_family = droplevels(method_family)) |>
+  count(year, method_family, name = "n_papers") |>
+  complete(
+    year = analysis_first_year:analysis_last_year,
+    method_family = factor(
+      substantive_family_levels,
+      levels = substantive_family_levels
+    ),
+    fill = list(n_papers = 0L)
   )
 
 method_colors <- set_names(
-  wes_palette("Zissou1", length(method_order), type = "continuous"),
-  method_order
+  wes_palette("Zissou1", length(substantive_family_levels), type = "continuous"),
+  substantive_family_levels
 )
 
 figure4 <- ggplot(
   method_year,
-  aes(year, n_papers, color = experimental_method)
+  aes(year, n_papers, color = method_family)
 ) +
-  geom_line(linewidth = 0.7, show.legend = FALSE) +
-  geom_point(size = 1.2, show.legend = FALSE) +
+  geom_line(linewidth = 0.8, show.legend = FALSE) +
+  geom_point(size = 1.3, show.legend = FALSE) +
   facet_wrap(
-    ~ experimental_method,
-    ncol = 3,
+    ~ method_family,
+    ncol = 2,
     scales = "fixed",
     labeller = label_wrap_gen(width = 28)
   ) +
   scale_color_manual(values = method_colors, drop = FALSE) +
-  scale_x_continuous(breaks = seq(2000, 2025, 5)) +
+  scale_x_continuous(breaks = seq(1995, 2025, 5)) +
   scale_y_continuous(
     breaks = scales::breaks_pretty(n = 4),
     expand = expansion(mult = c(0, 0.08))
   ) +
   labs(
-    title = "Experimental methods over time",
-    subtitle = "Annual number of Latin America-affiliated papers",
+    title = "Experimental design families over time",
+    subtitle = "Annual number of Latin America-affiliated papers, 1995-2025",
     x = NULL,
     y = "Number of papers",
-    caption = str_c(
-      "Methods are not mutually exclusive. Other includes papers without a ",
-      "specific method label. 2026 includes records through ",
-      last_month_2026, "."
+    caption = paste(
+      "Design families are not mutually exclusive.",
+      "Papers without a mapped family are tracked as Other in Table 5",
+      "and are not shown in this figure."
     )
   ) +
   theme_paper +
@@ -427,15 +522,15 @@ paper_origin <- authors_long |>
       TRUE ~ "Latam only"
     ),
     origin = factor(origin, levels = origin_levels)
-  )
+  ) |>
+  semi_join(papers |> select(UT), by = "UT")
 
-if (nrow(paper_origin) != 675L || !all(paper_origin$has_latam)) {
-  stop("Figure 5: todos los 675 papers deben tener al menos un autor LatAm.")
+if (
+  nrow(paper_origin) != expected_analysis_papers ||
+    !all(paper_origin$has_latam)
+) {
+  stop("Figure 5: los 611 papers deben tener al menos un autor LatAm.")
 }
-
-# Solo hasta 2025 completo (2026 es parcial).
-paper_origin <- paper_origin |>
-  semi_join(papers |> filter(year <= last_year_main), by = "UT")
 
 table_figure5_origin <- paper_origin |>
   count(origin, name = "n_papers", .drop = FALSE) |>
@@ -466,7 +561,7 @@ table_figure5_origin <- table_figure5_origin |>
 
 # Origen por disciplina (total en el tiempo). Las disciplinas se superponen: un
 # paper cuenta en cada disciplina a la que pertenece, asi que la suma de filas
-# supera 675 (mismo criterio que Table 2).
+# supera 611 (mismo criterio de conteo no excluyente que Table 3).
 table_figure5_by_discipline <- paper_origin |>
   select(UT, origin) |>
   inner_join(
@@ -492,8 +587,7 @@ figure5_discipline_note <- str_c(
   "Origin categories as in Figure 5 (mutually exclusive within each discipline). ",
   "Disciplines are not mutually exclusive: a paper counts in every discipline ",
   "it belongs to, so discipline totals add to more than ", nrow(paper_origin), ". ",
-  "Cells show n (% of the discipline's papers); totals cover 1990-2025 ",
-  "(2026 excluded: partial year)."
+  "Cells show n (% of the discipline's papers); totals cover 1995-2025."
 )
 
 table_figure5_by_discipline <- table_figure5_by_discipline |>
@@ -559,7 +653,7 @@ figure5_by_discipline <- ggplot(
       str_c(
         figure5_origin_note,
         " Disciplines overlap, so a paper counts in each of its disciplines.",
-        " 1990-2025; 2026 excluded (partial year)."
+        " 1995-2025."
       ),
       width = 150
     )
@@ -619,7 +713,7 @@ figure5 <- ggplot(
     y = "Share of papers in period",
     caption = str_wrap(
       str_c(
-        figure5_origin_note, " 1990-2025; 2026 excluded (partial year).",
+        figure5_origin_note, " 1995-2025.",
         " 2025 is a single year."
       ),
       width = 150
@@ -632,21 +726,20 @@ figure5 <- ggplot(
   )
 
 # -----------------------------------------------------------------------------
-# 6. Table 5: topics principales por disciplina
+# 7. Table 6: topics principales por disciplina
 # -----------------------------------------------------------------------------
-# Se prueban topic dominante y promedio de gamma. Gamma conserva la mezcla
-# completa de topics de cada paper.
+# No se asignan nombres sustantivos en esta etapa. Cada topic se identifica por
+# su numero y sus seis terminos con mayor beta. La interpretacion final requiere
+# lectura manual de los papers exportados por 06.
 
-topic_dictionary <- tribble(
-  ~topic, ~topic_label,
-  1L, "Natural resources, communities, and service provision",
-  2L, "Consumption, food, and sustainability",
-  3L, "Electoral behavior and politics",
-  4L, "Public opinion, political attitudes, and policy preferences",
-  5L, "Education, gender, and labor inequality",
-  6L, "Economic preferences and willingness to pay",
-  7L, "Information, risk, and cognitive decision-making"
-)
+topic_words <- topic_terms |>
+  group_by(topic) |>
+  slice_max(beta, n = 6L, with_ties = FALSE) |>
+  arrange(desc(beta), .by_group = TRUE) |>
+  summarise(
+    top_terms = str_c(term, collapse = ", "),
+    .groups = "drop"
+  )
 
 topic_core_gamma <- topic_gamma |>
   select(UT, topic, gamma) |>
@@ -662,7 +755,7 @@ topic_core_gamma <- topic_gamma |>
     expected_papers = sum(gamma),
     .groups = "drop"
   ) |>
-  left_join(topic_dictionary, by = "topic") |>
+  left_join(topic_words, by = "topic") |>
   group_by(core_area) |>
   arrange(desc(mean_gamma), topic, .by_group = TRUE) |>
   mutate(
@@ -687,7 +780,7 @@ topic_core_dominant <- paper_dominant |>
   ) |>
   ungroup() |>
   rename(topic = dominant_topic) |>
-  left_join(topic_dictionary, by = "topic") |>
+  left_join(topic_words, by = "topic") |>
   group_by(core_area) |>
   arrange(desc(value_percent), topic, .by_group = TRUE) |>
   mutate(
@@ -696,30 +789,30 @@ topic_core_dominant <- paper_dominant |>
   ) |>
   ungroup()
 
-table5_all_topics <- bind_rows(
+table6_all_topics <- bind_rows(
   topic_core_gamma |>
     transmute(
-      approach, core_area, topic_rank, topic, topic_label,
+      approach, core_area, topic_rank, topic, top_terms,
       value_percent, n_papers_in_area, expected_papers,
       n_dominant_papers = NA_integer_
     ),
   topic_core_dominant |>
     transmute(
-      approach, core_area, topic_rank, topic, topic_label,
+      approach, core_area, topic_rank, topic, top_terms,
       value_percent, n_papers_in_area,
       expected_papers = NA_real_, n_dominant_papers
     )
 ) |>
   arrange(approach, core_area, topic_rank)
 
-table5_top3_topics <- table5_all_topics |>
+table6_top3_topics <- table6_all_topics |>
   filter(topic_rank <= 3L)
 
 # Esta tabla pone ambas medidas en una misma fila. Se conserva completa en el
 # Excel; el grafico usa solo los tres topics con mayor gamma por disciplina.
 topics_discipline_plot <- topic_core_gamma |>
   transmute(
-    core_area, topic, topic_label,
+    core_area, topic, top_terms,
     gamma_rank = topic_rank,
     average_gamma_percent = value_percent,
     expected_papers,
@@ -739,10 +832,7 @@ topics_discipline_plot <- topic_core_gamma |>
     dominant_topic_percent = replace_na(dominant_topic_percent, 0),
     n_dominant_papers = replace_na(n_dominant_papers, 0L),
     is_top3_gamma = gamma_rank <= 3L,
-    topic_display = str_wrap(
-      str_c("T", topic, ". ", topic_label),
-      width = 38
-    )
+    topic_display = str_c("Topic ", topic)
   ) |>
   arrange(core_area, gamma_rank)
 
@@ -932,9 +1022,8 @@ corresponding_region <- papers |>
   ) |>
   select(UT, corresponding_region)
 
-# Solo hasta 2025: 2026 es parcial y se excluye de las Figuras 5 y 6.
+# El objeto papers ya esta restringido a 1995-2025.
 leadership_paper <- papers |>
-  filter(year <= last_year_main) |>
   select(UT, year, period_5year, corresponding_address) |>
   left_join(first_author_region, by = "UT") |>
   left_join(corresponding_region, by = "UT") |>
@@ -1020,7 +1109,7 @@ figure6_plot_data <- bind_rows(
 )
 
 figure6_discipline_note <- str_c(
-  "First-author affiliation, 1990-2025 (2026 excluded: partial year). ",
+  "First-author affiliation, 1995-2025. ",
   "Mutually exclusive categories: Latin America (the first author has a Latin ",
   "American affiliation; priority if several regions are declared), US/Europe, ",
   "and Other/unknown. Disciplines are not mutually exclusive, so a paper counts ",
@@ -1046,7 +1135,7 @@ figure6_caption <- str_wrap(
     "First-author affiliation of Latin America-affiliated papers. Mutually ",
     "exclusive categories; Latin America takes priority if the first author ",
     "declares several regions. Disciplines overlap, so a paper counts in each of ",
-    "its disciplines. 1990-2025; 2026 excluded (partial year). 2025 is a single year."
+    "its disciplines. The analysis covers 1995-2025; 2025 is a single year."
   ),
   width = 150
 )
@@ -1091,7 +1180,7 @@ figure6_disc <- ggplot(
   ) +
   guides(fill = guide_legend(nrow = 1)) +
   labs(
-    subtitle = "By discipline (1990-2025)",
+    subtitle = "By discipline (1995-2025)",
     x = "Share of papers in discipline",
     y = NULL,
     caption = figure6_caption
@@ -1172,7 +1261,7 @@ figure6b <- ggplot(
     y = "Share of papers with a Latin American first author",
     caption = str_wrap(
       str_c(
-        "Annual values, 1990-2025; 2026 excluded (partial year). Disciplines ",
+        "Annual values, 1995-2025. Disciplines ",
         "overlap, so a paper counts in each of its disciplines. Years with fewer ",
         "than ", min_n_figure6b, " papers in a group are not shown. Point size shows the number of papers. ",
         "The y-axis starts at 25%."
@@ -1235,7 +1324,7 @@ table_a2_comparison <- bind_rows(
 # -----------------------------------------------------------------------------
 # 8. Figure 7: terminos principales del topic model
 # -----------------------------------------------------------------------------
-# Las etiquetas se basan en la lectura preliminar de papers representativos.
+# Los topics se muestran por numero y palabras; no se asignan nombres sustantivos.
 
 topic_colors <- set_names(
   wes_palette("FantasticFox1", recommended_k, type = "continuous"),
@@ -1243,11 +1332,11 @@ topic_colors <- set_names(
 )
 
 figure7_data <- topic_terms |>
-  left_join(topic_dictionary, by = "topic") |>
   group_by(topic) |>
   slice_max(beta, n = 10L, with_ties = FALSE) |>
   ungroup() |>
   mutate(
+    topic_label = str_c("Topic ", topic),
     term_display = str_replace_all(term, "_", " "),
     term_display = tidytext::reorder_within(
       term_display,
@@ -1270,12 +1359,12 @@ figure7 <- ggplot(
   tidytext::scale_y_reordered() +
   scale_fill_manual(values = topic_colors) +
   labs(
-    title = "Substantive topics in Latin America-affiliated papers",
+    title = "Topic-model terms in Latin America-affiliated papers",
     subtitle = str_c("Top terms from the k = ", recommended_k, " LDA model"),
-    x = "Term probability within topic",
+    x = "Term probability within topic (beta)",
     y = NULL,
     caption = paste(
-      "Topic labels are substantive interpretations;",
+      "Topics remain numbered pending manual substantive review;",
       "multiword expressions are retained as single terms."
     )
   ) +
@@ -1301,76 +1390,59 @@ esci_audit <- papers |>
 
 notes <- tribble(
   ~output, ~note,
-  "All", "The analytical corpus contains 675 papers with at least one Latin American affiliation.",
-  "All", str_c("2026 is partial and includes records available through ", last_month_2026, "."),
-  "Table 2", "Core disciplines are not mutually exclusive; a paper can contribute to more than one discipline.",
-  "Table 3", "Country mentions are not mutually exclusive; each paper counts once per Latin American country affiliation.",
-  "Table 4 / Figure 4", "Experimental methods are not mutually exclusive; Other includes records without a specific method label.",
-  "Table 5", "Average gamma is the primary topic measure; dominant-topic counts are a complementary simplification.",
+  "All", "The official database contains 675 papers; the main analysis uses 611 papers published in 1995-2025. No eligible records occur before 1995 and 2026 is excluded because it is incomplete.",
+  "Table 2", "Regional totals sum annual Web of Science counts over 1995-2025.",
+  "Table 3", "Core disciplines are not mutually exclusive; a paper can contribute to more than one discipline.",
+  "Table 4", "Country mentions are not mutually exclusive. Percentages use the 611 analytical papers as denominator and therefore do not sum to 100%.",
+  "Table 5 / Figure 4", "Design families are not mutually exclusive. Other contains papers without a label mapped to the four predefined families and is retained for audit, but is not plotted in Figure 4.",
+  "Table 6", "Average gamma is the primary topic measure; dominant-topic counts are a complementary simplification. Topics remain numbered pending manual substantive review.",
   "Figure 5", figure5_origin_note,
   "Figure 5 by discipline", figure5_discipline_note,
-  "Figure 5 / Figure 6", str_c("Restricted to 1990-", last_year_main, "; 2026 (partial) is excluded from these figures."),
+  "Figure 5 / Figure 6", "Restricted to 1995-2025.",
   "Figure 6", "Leadership is measured only by the first author's affiliation (Latin America, US/Europe, Other/unknown; Latin America takes priority if several regions are declared). Panels: total over time and by discipline.",
   "Figure 6 by discipline", figure6_discipline_note,
   "Table A2", "Supplementary comparison of first vs. corresponding author affiliation (n and %, agreement, missing corresponding-author address), total, by period and by discipline, to report the magnitude of the difference and justify excluding the corresponding author from the main analysis.",
   "ESCI", "WE identifies ESCI, SSCI, SCI-EXPANDED, and other WoS citation indexes."
 )
 
-# La primera hoja funciona como mapa del libro y de las figuras externas.
-results_index <- tribble(
-  ~item, ~location, ~description,
-  "Table 2", "Table2_disciplines", "Production by core discipline and five-year period.",
-  "Table 3", "Table3_countries", "Latin American country mentions by decade; countries overlap.",
-  "Table 4", "Table4_methods_disciplines", "Experimental methods by discipline and period.",
-  "Table 5", "Table5_top3_topics", "Top three topics per discipline using gamma and dominant-topic measures.",
-  "Topic appendix", "Appendix_topics_full", "All topics by discipline under both topic measures.",
-  "Topic plot data", "Topics_plot_data", "Exact values for the topic-by-discipline comparison; all seven topics are retained.",
-  "Figure 5", "Table_Figure5_origin", "Origin of papers (mutually exclusive); totals with a note on the classification criterion in Notes.",
-  "Figure 5 by discipline", "Table_Fig5_by_discipline", "Origin of papers by core discipline, totals over time; disciplines overlap.",
-  "Figure 6 by discipline", "Table_Fig6_by_discipline", "First-author affiliation by core discipline, 1990-2025; disciplines overlap.",
-  "Table A2", "Table_A2_first_vs_corr", "Supplementary: first vs. corresponding author affiliation (magnitude of the difference).",
-  "Leadership detail", "Leadership_separate", "First and corresponding authors reported separately (1990-2025).",
-  "ESCI audit", "ESCI_audit", "Annual identification of records indexed in ESCI.",
-  "Topic labels", "Topic_dictionary", "Substantive label assigned to each topic.",
-  "Method notes", "Notes", "Definitions and non-mutual-exclusivity notes.",
-  "Figure 4", "outputs/figures/figure4_methods_over_time.png", "Annual papers by experimental method.",
-  "Figure 5", "outputs/figures/figure5_origin_over_time.png", "Origin of papers by five-year period (100% stacked bars; n per period above bars).",
-  "Figure 5 by discipline", "outputs/figures/figure5_origin_by_discipline.png", "Origin of papers as a share of each discipline's total (100% stacked bars; disciplines overlap).",
-  "Figure 6", "outputs/figures/figure6_leadership.png", "First-author affiliation: total over time (1995-2025) and by discipline (100% stacked bars).",
-  "Figure 7", "outputs/figures/figure7_topic_terms.png", "Top terms defining each topic.",
-  "Topics by discipline", "outputs/figures/figure_topics_by_discipline.png", "Replacement for the former heatmap: top-three gamma topics with dominant-topic percentage as comparison."
-)
-
 # -----------------------------------------------------------------------------
-# 10. Exportar un libro y las figuras
+# 10. Exportar un Excel separado por tabla o figura
 # -----------------------------------------------------------------------------
 
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
+# Cada archivo corresponde a un output del manuscrito. Las hojas adicionales
+# contienen datos del grafico o auditorias necesarias para reproducirlo.
+write_xlsx(list(`Table 2` = table2_regions, Notes = filter(notes, output %in% c("All", "Table 2"))), file.path(tables_dir, "table2_regional_totals.xlsx"))
+write_xlsx(list(`Table 3` = table3_disciplines, Notes = filter(notes, output %in% c("All", "Table 3"))), file.path(tables_dir, "table3_disciplines.xlsx"))
+write_xlsx(list(`Table 4` = table4_countries, Notes = filter(notes, output %in% c("All", "Table 4"))), file.path(tables_dir, "table4_countries.xlsx"))
 write_xlsx(
   list(
-    README = results_index,
-    Table2_disciplines = table2_disciplines,
-    Table3_countries = table3_countries,
-    Table4_methods_disciplines = table4_methods_disciplines,
-    Table5_top3_topics = table5_top3_topics,
-    Appendix_topics_full = table5_all_topics,
-    Topics_plot_data = topics_discipline_plot,
-    Table_Figure5_origin = table_figure5_origin,
-    Figure5_plot_data = figure5_plot_data,
-    Table_Fig5_by_discipline = table_figure5_by_discipline,
-    Leadership_separate = leadership_separate,
-    Figure6_plot_data = figure6_plot_data,
-    Table_Fig6_by_discipline = table_figure6_by_discipline,
-    Figure6b_plot_data = figure6b_data,
-    Table_A2_first_vs_corr = table_a2_comparison,
-    ESCI_audit = esci_audit,
-    Topic_dictionary = topic_dictionary,
-    Notes = notes
+    `Table 5` = table5_method_families,
+    `Other audit` = other_method_audit,
+    `Family map` = method_family_map,
+    Notes = filter(notes, output %in% c("All", "Table 5 / Figure 4"))
   ),
-  output_table_path
+  file.path(tables_dir, "table5_method_families.xlsx")
 )
+write_xlsx(
+  list(
+    `Top 3` = table6_top3_topics,
+    `All topics` = table6_all_topics,
+    `Plot data` = topics_discipline_plot,
+    `Manual review` = topic_manual_review,
+    `Distant pairs` = topic_distant_pairs,
+    Notes = filter(notes, output %in% c("All", "Table 6"))
+  ),
+  file.path(tables_dir, "table6_topics.xlsx")
+)
+write_xlsx(list(`Figure 4 data` = method_year, `Other audit` = other_method_audit, `Family map` = method_family_map), file.path(tables_dir, "figure4_data.xlsx"))
+write_xlsx(list(`Figure 5 time` = figure5_plot_data, `Figure 5 discipline` = figure5_discipline_data, `Origin totals` = table_figure5_origin, Notes = filter(notes, str_detect(output, "All|Figure 5"))), file.path(tables_dir, "figure5_data.xlsx"))
+write_xlsx(list(`Figure 6 data` = figure6_plot_data, `Figure 6 discipline` = table_figure6_by_discipline, `Figure 6b data` = figure6b_data, `Leadership detail` = leadership_separate, Notes = filter(notes, str_detect(output, "All|Figure 6"))), file.path(tables_dir, "figure6_data.xlsx"))
+write_xlsx(list(`Figure 7 data` = figure7_data, `Topics discipline` = topics_discipline_plot, Notes = filter(notes, output %in% c("All", "Table 6"))), file.path(tables_dir, "figure7_data.xlsx"))
+write_xlsx(list(`Table A2` = table_a2_comparison), file.path(tables_dir, "tableA2_first_vs_corresponding.xlsx"))
+write_xlsx(list(`ESCI audit` = esci_audit, Notes = filter(notes, output %in% c("All", "ESCI"))), file.path(tables_dir, "appendix_esci_audit.xlsx"))
 
 save_publication_figure(
   figure4, "figure4_methods_over_time",
@@ -1411,7 +1483,7 @@ diagnostics <- tibble(
     "Official papers",
     "Discipline mentions",
     "Latin American country mentions",
-    "Papers with a specific method",
+    "Papers mapped to at least one design family",
     "Papers in Other / not classified",
     "ESCI papers",
     "First-author Other/unknown",
@@ -1421,12 +1493,8 @@ diagnostics <- tibble(
     n_distinct(papers$UT),
     nrow(core_area_long),
     nrow(country_mentions),
-    n_distinct(methods_long$UT[
-      methods_long$experimental_method != "Other / not classified"
-    ]),
-    n_distinct(methods_long$UT[
-      methods_long$experimental_method == "Other / not classified"
-    ]),
+    n_distinct(methods_mapped$UT),
+    n_distinct(other_method_audit$UT),
     sum(str_detect(
       papers$wos_index,
       regex("EMERGING SOURCES", ignore_case = TRUE)
@@ -1437,5 +1505,5 @@ diagnostics <- tibble(
 )
 
 cat("\nResultados del paper creados correctamente\n")
-cat("Tabla: ", output_table_path, "\n", sep = "")
+cat("Excels separados guardados en: ", tables_dir, "\n", sep = "")
 print(diagnostics)

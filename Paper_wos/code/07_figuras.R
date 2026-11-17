@@ -12,7 +12,7 @@
 #
 # Figura 2. Papers experimentales por cada 1.000 papers de ciencias sociales
 #           en WoS, por region de afiliacion (Latam, USA, Europa) y anio,
-#           1990-2025. No mutuamente excluyente entre regiones.
+#           1995-2025. No mutuamente excluyente entre regiones.
 # Figura 3. Papers experimentales con afiliacion latinoamericana por cada
 #           1.000 papers de la disciplina (Latam), por disciplina y anio.
 #
@@ -26,13 +26,14 @@
 # Salidas (Paper_wos/outputs/):
 #   figures/fig2_produccion_relativa_region.png (+ _suavizada)
 #   figures/fig3_produccion_relativa_disciplina_latam.png
-#   tables/fig2_produccion_relativa_region.csv
-#   tables/fig3_produccion_relativa_disciplina_latam.csv
+#   tables/figure2_data.xlsx
+#   tables/figure3_data.xlsx
 #-----------------------------------------------
 
 library(tidyverse)
 library(here)
 library(scales)
+library(writexl)
 
 # Leer bien rutas con acentos ("region-año"): forzar UTF-8 segun sistema
 if (!l10n_info()$`UTF-8`) {
@@ -43,7 +44,7 @@ if (!l10n_info()$`UTF-8`) {
   })
 }
 
-anio_min <- 1990
+anio_min <- 1995
 anio_max <- 2025   # 2026 es parcial: se excluye de las figuras principales
 
 data_dir <- here("Paper_wos", "data")
@@ -109,7 +110,10 @@ fig2_data <- regiones |>
   ungroup() |>
   mutate(region = factor(region, levels = names(paleta_region)))
 
-write_csv(fig2_data, file.path(tab_dir, "fig2_produccion_relativa_region.csv"))
+write_xlsx(
+  list(`Figure 2 data` = fig2_data),
+  file.path(tab_dir, "figure2_data.xlsx")
+)
 
 tema_base <- theme_minimal(base_size = 13) +
   theme(
@@ -122,7 +126,7 @@ tema_base <- theme_minimal(base_size = 13) +
 
 nota_fig2 <- paste(
   "Note: Web of Science Core Collection, social sciences. Regions by author affiliation; a paper can count in more than one region.",
-  "\nLatin America numerator rebuilt from the validated corpus (unique UT); USA and Europe numerators are direct WoS counts. 2026 excluded (partial)."
+  "\nLatin America numerator rebuilt from the validated corpus (unique UT); USA and Europe numerators are direct WoS counts. Analysis period: 1995-2025."
 )
 
 fig2_plot <- ggplot(fig2_data, aes(year, rate_per_1000, color = region)) +
@@ -132,7 +136,7 @@ fig2_plot <- ggplot(fig2_data, aes(year, rate_per_1000, color = region)) +
   scale_x_continuous(breaks = seq(anio_min, anio_max, 5)) +
   labs(
     title = "Figure 2. Relative production of papers using experimental methods",
-    subtitle = "Experimental papers per 1,000 social science papers, by region of affiliation, 1990-2025",
+    subtitle = "Experimental papers per 1,000 social science papers, by region of affiliation, 1995-2025",
     x = NULL, y = "Experimental papers\nper 1,000 papers", caption = nota_fig2
   ) +
   tema_base
@@ -143,7 +147,7 @@ ggsave(file.path(fig_dir, "fig2_produccion_relativa_region.png"), fig2_plot,
 # Variante suavizada (media movil 3 anios), por si los primeros anios distorsionan
 fig2_plot_mm3 <- fig2_plot +
   aes(y = rate_per_1000_mm3) +
-  labs(subtitle = "Experimental papers per 1,000 social science papers, 3-year moving average, 1990-2025")
+  labs(subtitle = "Experimental papers per 1,000 social science papers, 3-year moving average, 1995-2025")
 
 ggsave(file.path(fig_dir, "fig2_produccion_relativa_region_suavizada.png"), fig2_plot_mm3,
        width = 11, height = 6.4, dpi = 320, bg = "white")
@@ -211,7 +215,10 @@ fig3_data <- den_disciplina |>
   mutate(rate_per_1000_mm3 = mm3(rate_per_1000)) |>
   ungroup()
 
-write_csv(fig3_data, file.path(tab_dir, "fig3_produccion_relativa_disciplina_latam.csv"))
+write_xlsx(
+  list(`Figure 3 data` = fig3_data),
+  file.path(tab_dir, "figure3_data.xlsx")
+)
 
 totales_disc <- fig3_data |> group_by(discipline) |> summarise(n = sum(experimental_n))
 etiquetas_disc <- setNames(paste0(totales_disc$discipline, " (n = ", totales_disc$n, ")"),
@@ -220,7 +227,7 @@ etiquetas_disc <- setNames(paste0(totales_disc$discipline, " (n = ", totales_dis
 nota_fig3 <- paste(
   "Note: Latin American-affiliated experimental papers (validated corpus) per 1,000 WoS papers in each discipline by authors in 14 Latin American countries.",
   "\nPoints: annual rate; line: 3-year moving average. Disciplines overlap (WoS categories). Denominator sums countries, so multi-country papers count more than once.",
-  "\n2026 excluded (partial)."
+  "\nAnalysis period: 1995-2025."
 )
 
 fig3_plot <- ggplot(fig3_data, aes(year)) +
@@ -230,7 +237,7 @@ fig3_plot <- ggplot(fig3_data, aes(year)) +
   scale_x_continuous(breaks = seq(anio_min, anio_max, 10)) +
   labs(
     title = "Figure 3. Relative production of experimental papers by discipline, Latin America",
-    subtitle = "Experimental papers per 1,000 papers in the discipline, 1990-2025",
+    subtitle = "Experimental papers per 1,000 papers in the discipline, 1995-2025",
     x = NULL, y = "Experimental papers\nper 1,000 papers", caption = nota_fig3
   ) +
   tema_base +

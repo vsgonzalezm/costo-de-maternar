@@ -20,11 +20,11 @@ This is part of a broader discussion on how knowledge is produced in the global 
 
 - Review here the sociology of science literature on global south knowledge production and identify the key ideas that frame this paper in the following section.
 
-In this paper, our goal is to examine the academic production in the social sciences that uses experimental methods and is produced in Latin America, that is, by authors affiliated with Latin American institutions. We benchmark this production against the U.S. and Europe, examine how it has changed over time (1990–2025), how it varies by discipline, country and type of experimental design, who leads and with whom it is produced, and what the main substantive topics are. We broadly define social sciences as xxx and examine these patterns by core disciplines: political science, economics, sociology, psychology, business/administration, and other social sciences (e.g., education, communication).
+In this paper, our goal is to examine the academic production in the social sciences that uses experimental methods and is produced in Latin America, that is, by authors affiliated with Latin American institutions. We benchmark this production against the U.S. and Europe, examine how it has changed over time (1995–2025), how it varies by discipline, country and type of experimental design, who leads and with whom it is produced, and what the main substantive topics are. We broadly define social sciences as xxx and examine these patterns by core disciplines: political science, economics, sociology, psychology, business/administration, and other social sciences (e.g., education, communication).
 
 Research questions (revise after finishing the theoretical framework):
 
-RQ1. How has the production of experimental research by Latin American-affiliated authors evolved between 1990 and 2025, relative to the U.S. and Europe, and how does it vary across disciplines, countries and types of experimental design?
+RQ1. How has the production of experimental research by Latin American-affiliated authors evolved between 1995 and 2025, relative to the U.S. and Europe, and how does it vary across disciplines, countries and types of experimental design?
 
 RQ2. How is this production organized in terms of authorship and collaboration (leadership by first authors, collaboration with U.S. and European institutions), and which substantive topics does it address?
 
@@ -68,7 +68,7 @@ Approach
 
 Data
 
-- Detailed description of the selection of WoS (Core Collection indexes), queries, delimitation of disciplines and countries and regions, period 1990–2025.
+- Detailed description of the selection of WoS (Core Collection indexes), queries, delimitation of disciplines and countries and regions. The search covered 1990–2025, but the main analyses begin in 1995 because there are no eligible records in 1990–1994.
 
 - The three main corpora are defined by affiliation: at least one author affiliated with an institution in Latin America, the U.S., or Europe.
 
@@ -108,23 +108,25 @@ Explain that the paper focuses on the origin of production, but we also looked a
 
 In text: Number of experimental methods publications total and in the last decade, by region (U.S., Europe and Latam-affiliated corpus). Consider adding a disclaimer here that WoS began including ESCI in 2015.
 
-Table 2. Total production of EM papers Latam by discipline, 5-year ranges (e.g., 1990–94, 1995–99, 2000–04, etc.).
+Table 2. Total number of experimental-method papers and total social-science production by region (Latin America, U.S. and Europe), 1995–2025.
 
-Table 3. Total production of EM papers Latam by country mention, total over time and accumulated by decade (might move it to the appendix later). Not mutually exclusive by country.
+Table 3. Total production of Latin America-affiliated experimental-method papers by discipline and five-year range, 1995–2025. Disciplines are not mutually exclusive.
 
-Table 4. Type of experimental method by discipline, over time (to make it more current). See figure 4 for details.
+Table 4. Total production by Latin American country mention, total and accumulated by period, 1995–2025, with each country's share of the analytical corpus. Countries are not mutually exclusive, so percentages do not sum to 100%.
 
-Table 5. Top three topics by discipline, or all if there are not so many topics (and a full one in the appendix) in the Latam-affiliated corpus. Note: test doing it by dominant topic of the paper and by average proportion.
+Table 5. Experimental-design family by discipline: number of papers and percentage within discipline. Use four families (survey-based experiments; field/lab interventions; conjoint/choice designs; audit/correspondence designs). Families and disciplines are not mutually exclusive. Retain an audit of papers classified as Other/not classified.
 
-Figure 2. Relative production of papers using experimental methods, relative to total social science production, by region of affiliation and year, 1990–2025 (U.S., Europe and Latam). Notes: total mentions, so it is not mutually exclusive. TBD: If the counts in the first few years is too low and distorts the figure, start later (e.g., 1995 or 2000) or use smoothing.
+Table 6. Top three topics by discipline, with the full topic distribution in the appendix, in the Latin America-affiliated corpus. Compare dominant-topic counts and average topic proportion; topics remain numbered until manual substantive review.
+
+Figure 2. Relative production of papers using experimental methods, relative to total social science production, by region of affiliation and year, 1995–2025 (U.S., Europe and Latin America). Regional mentions are not mutually exclusive. Show annual values and a three-year moving-average alternative.
 
 Figure 3. Relative production of papers by discipline, relative to the discipline total, over time.
 
-Figure 4. Number of papers by type of method over time. Total mention of specific method word, plus a "other" or "not classified" category. Note: not mutually exclusive; a paper can be classified in more than one method.
+Figure 4. Number of papers by experimental-design family over time, using the four families in Table 5. Families are not mutually exclusive. Other/not classified is audited in Table 5 but not plotted.
 
-Figure 5. Origin of experimental papers relative to total experimental papers by discipline: Latam production only, collaboration Latam–Europe, collaboration Latam–U.S. (at least one author), collaboration Latam–other (including both Europe and the U.S.; report the n of these cases in the text). Period: 1990–2025 (2026 excluded because the year is incomplete).
+Figure 5. Origin of experimental papers relative to total experimental papers by discipline: Latin America production only, collaboration Latin America–Europe, collaboration Latin America–U.S. (at least one author), and collaboration Latin America–other. Period: 1995–2025.
 
-Figure 6. Leadership: first-author affiliation (Latin America vs. U.S./Europe) among Latam-affiliated experimental papers, by discipline, plus the total, over time, 1990–2025 (2026 excluded because the year is incomplete).
+Figure 6. Leadership: first-author affiliation (Latin America vs. U.S./Europe) among Latin America-affiliated experimental papers, by discipline, plus the total, over time, 1995–2025.
 
 Figure 7. Topic model resulting substantive topics and top words (total) in the Latam-affiliated corpus.
 
@@ -149,4 +151,4 @@ Robustness:
 
 - Exploratory: 2026 data (until June), flagged as partial.
 
-Table A2 (or Figure A1). First vs. corresponding author affiliation among Latam-affiliated experimental papers, 1990–2025: n and share of papers with Latin American vs. U.S./Europe/other affiliation under each definition, total and by discipline and by period, plus n and share of papers where the two definitions agree or disagree, and n of papers with missing corresponding-author information by period. Purpose: report the magnitude of the difference and explain why corresponding author was dropped from the main analysis. \[TO COMPLETE with the reason once the comparison is run (e.g., coverage of the reprint field in earlier records, or little difference between the two definitions); refer to this table from the Methods and the Limitations.\]
+Table A2 (or Figure A1). First vs. corresponding author affiliation among Latin America-affiliated experimental papers, 1995–2025: n and share of papers with Latin American vs. U.S./Europe/other affiliation under each definition, total and by discipline and by period, plus n and share of papers where the two definitions agree or disagree, and n of papers with missing corresponding-author information by period. Purpose: report the magnitude of the difference and explain why corresponding author was dropped from the main analysis. \[TO COMPLETE with the reason once the comparison is run (e.g., coverage of the reprint field in earlier records, or little difference between the two definitions); refer to this table from the Methods and the Limitations.\]
