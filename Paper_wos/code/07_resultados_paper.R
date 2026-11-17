@@ -1380,10 +1380,14 @@ figure7 <- ggplot(
   ) +
   tidytext::scale_y_reordered() +
   scale_fill_manual(values = topic_colors) +
+  scale_x_continuous(
+    labels = scales::label_percent(accuracy = 1),
+    expand = expansion(mult = c(0, 0.03))
+  ) +
   labs(
     title = "Topic-model terms in Latin America-affiliated papers",
     subtitle = str_c("Top terms from the k = ", recommended_k, " LDA model"),
-    x = "Term probability within topic (beta)",
+    x = "Term probability within topic (beta, %)",
     y = NULL,
     caption = paste(
       "Topics remain numbered pending manual substantive review;",

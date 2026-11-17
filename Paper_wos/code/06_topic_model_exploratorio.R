@@ -287,6 +287,7 @@ corpus_generic_terms <- c(
   # Terminos retirados tras la revision sustantiva de modelos previos.
   "concern", "concerns", "rate", "effectiveness", "change", "exposure",
   "perception", "attitude", "monitoring", "strong", "belief", "framed",
+  "compliance", "cost", "time", "preference", "theoretical", "framework",
   # Public y policy son demasiado amplios de forma aislada. Antes de retirarlos
   # se protegen abajo sus combinaciones sustantivas observadas en el corpus.
   "public", "policy", "policies",
