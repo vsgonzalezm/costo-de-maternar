@@ -274,8 +274,13 @@ table3_long <- core_area_long |>
 table3_disciplines <- table3_long |>
   mutate(period_5year = as.character(period_5year)) |>
   pivot_wider(names_from = period_5year, values_from = n_papers) |>
-  mutate(Total = rowSums(across(all_of(five_year_levels)))) |>
+  mutate(
+    Total = rowSums(across(all_of(five_year_levels))),
+    Percent_of_papers = round(100 * Total / expected_analysis_papers, 1)
+  ) |>
   arrange(desc(Total), core_area)
+# El porcentaje usa como denominador los 611 papers analiticos. Como un paper
+# puede pertenecer a mas de una disciplina, los porcentajes no suman 100%.
 
 # -----------------------------------------------------------------------------
 # 5. Table 4: menciones de paises LatAm por periodo

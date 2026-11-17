@@ -106,29 +106,40 @@ Explain that the paper focuses on the origin of production, but we also looked a
 
 ## Results
 
-In text: Number of experimental methods publications total and in the last decade, by region (U.S., Europe and Latam-affiliated corpus). Consider adding a disclaimer here that WoS began including ESCI in 2015.
+In text: Number of experimental-method publications in total and during 2016--2025, by region (U.S., Europe and the Latin America-affiliated corpus). Report these absolute counts together with the regional rates and state that WoS began indexing ESCI in 2015. Refer to the appendix robustness analysis excluding ESCI.
 
-Table 2. Total number of experimental-method papers and total social-science production by region (Latin America, U.S. and Europe), 1995–2025.
+Table 2. Total number of experimental-method papers and total social-science production by region (Latin America, U.S. and Europe), 1995--2025. These absolute counts contextualize the relative rates in Figure 2.
 
-Table 3. Total production of Latin America-affiliated experimental-method papers by discipline and five-year range, 1995–2025. Disciplines are not mutually exclusive.
+Table 3. Total production of Latin America-affiliated experimental-method papers by discipline and five-year range, 1995--2025, including each discipline's total and share of the 611-paper analytical corpus. Disciplines are not mutually exclusive, so percentages do not sum to 100%.
 
-Table 4. Total production by Latin American country mention, total and accumulated by period, 1995–2025, with each country's share of the analytical corpus. Countries are not mutually exclusive, so percentages do not sum to 100%.
+Table 4. Total production by Latin American country affiliation, for 1995--99, 2000--09, 2010--19 and 2020--25, including the total and each country's share of the 611-paper analytical corpus. Countries are not mutually exclusive, so percentages do not sum to 100%.
 
-Table 5. Experimental-design family by discipline: number of papers and percentage within discipline. Use four families (survey-based experiments; field/lab interventions; conjoint/choice designs; audit/correspondence designs). Families and disciplines are not mutually exclusive. Retain an audit of papers classified as Other/not classified.
+Table 5. Experimental-design family by discipline: number of papers and percentage within discipline. Use four families (survey-based experiments; field/lab interventions; conjoint/choice designs; audit/correspondence designs). Families and disciplines are not mutually exclusive. Retain a paper-level audit of Other/not classified and complete its manual review before freezing the table.
 
-Table 6. Top three topics by discipline, with the full topic distribution in the appendix, in the Latin America-affiliated corpus. Compare dominant-topic counts and average topic proportion; topics remain numbered until manual substantive review.
+Table 6. Top three topics by discipline in the Latin America-affiliated corpus, using average topic proportion (mean gamma) as the primary measure and dominant-topic counts as a complementary simplification. Report the full topic distribution in the appendix. The final model uses k = 5, selected by held-out perplexity, coherence, exclusivity and stability across seeds. Topics remain numbered until manual review of representative, ambiguous and substantively distant papers.
 
-Figure 2. Relative production of papers using experimental methods, relative to total social science production, by region of affiliation and year, 1995–2025 (U.S., Europe and Latin America). Regional mentions are not mutually exclusive. Show annual values and a three-year moving-average alternative.
+Figure 2. Experimental-method papers per 1,000 social-science papers, by region of affiliation and year, 1995--2025 (U.S., Europe and Latin America). Regional mentions are not mutually exclusive. Show annual values and a three-year moving-average alternative, and interpret the rates alongside the absolute counts in Table 2. Validate the European query before using this comparison in the manuscript.
 
-Figure 3. Relative production of papers by discipline, relative to the discipline total, over time.
+Figure 3. Latin America-affiliated experimental-method papers per 1,000 papers in each discipline, over time, 1995--2025. Show annual values and a three-year moving-average alternative. Disciplines are not mutually exclusive. The denominator sums country-level WoS counts, so a multi-country paper may contribute to more than one country total; disclose this counting rule.
 
-Figure 4. Number of papers by experimental-design family over time, using the four families in Table 5. Families are not mutually exclusive. Other/not classified is audited in Table 5 but not plotted.
+Figure 4. Number of papers by experimental-design family over time, 1995--2025, using the four families in Table 5. Families are not mutually exclusive. Other/not classified is audited in Table 5 but not plotted; freeze the figure only after the manual method review.
 
-Figure 5. Origin of experimental papers relative to total experimental papers by discipline: Latin America production only, collaboration Latin America–Europe, collaboration Latin America–U.S. (at least one author), and collaboration Latin America–other. Period: 1995–2025.
+Figure 5. Origin and international collaboration of Latin America-affiliated experimental papers, shown (a) over time and (b) by discipline, 1995--2025. Use mutually exclusive categories: Latin America only, Latin America--Europe, Latin America--U.S., Latin America--Europe and U.S., and Latin America--other. Disciplines are not mutually exclusive.
 
-Figure 6. Leadership: first-author affiliation (Latin America vs. U.S./Europe) among Latin America-affiliated experimental papers, by discipline, plus the total, over time, 1995–2025.
+Figure 6. Leadership measured by first-author affiliation (Latin America, U.S./Europe, or other/unknown) among Latin America-affiliated experimental papers, shown for the total over time and by discipline, 1995--2025. Report the corresponding-author comparison separately in Table A2.
 
-Figure 7. Topic model resulting substantive topics and top words (total) in the Latam-affiliated corpus.
+Figure 7. Top words for the k = 5 topic model in the Latin America-affiliated corpus. The x-axis reports beta, the probability of a word conditional on a topic. Keep topics numbered until the substantive validation and labeling stage; treat topic prevalence and assignment-strength plots as diagnostics rather than additional numbered manuscript figures.
+
+### Items still pending before results are frozen
+
+- Complete Figure 1 and Table 1 with the query and filtering flow, including the overlap and deduplication stages.
+- Produce the in-text regional counts for the full period and 2016--2025 directly from the final denominators.
+- Validate the European experimental and general-production queries before interpreting Figure 2.
+- Complete the manual review of papers classified as Other/not classified before finalizing Table 5 and Figure 4.
+- Complete the substantive review and labeling of the five topics before finalizing Table 6 and Figure 7.
+- Implement the appendix robustness results excluding ESCI; the current ESCI audit identifies coverage but does not yet re-estimate the main outputs without ESCI.
+- Complete Table A1 for the focus-based corpus and the appendix summary of partial 2026 data.
+- Combine the temporal and discipline components of Figure 5 into a single two-panel manuscript figure, or decide which component belongs in the appendix.
 
 ## Discussion and conclusion
 

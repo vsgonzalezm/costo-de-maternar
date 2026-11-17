@@ -36,10 +36,6 @@ k_candidates <- 4:10
 # Valores de k que se comparan. k representa el numero de topics que el modelo
 # debe encontrar. Probar varios valores evita fijar arbitrariamente un unico k.
 
-k_exploratory <- c(4L, 10L)
-# Soluciones que se exportan explicitamente para lectura manual:
-# 4 topics entrega una sintesis parsimoniosa y 10 una lectura mas detallada.
-
 selection_seeds <- c(1101L, 2202L, 3303L, 4404L, 5505L)
 # Cada k se estima cinco veces. LDA puede converger a soluciones distintas
 # segun la inicializacion; repetirlo permite medir estabilidad y no elegir k
@@ -99,7 +95,6 @@ control_final <- list(
 # burnin descarta iteraciones iniciales; iter cuenta las posteriores; thin
 # conserva una de cada 100. El ajuste final usa mas iteraciones que la seleccion.
 tables_dir <- here("Paper_wos", "outputs", "tables")
-figures_dir <- here("Paper_wos", "outputs", "figures")
 
 analysis_first_year <- 1995L
 analysis_last_year <- 2025L
@@ -1131,15 +1126,17 @@ recommended_k <- model_selection |>
   arrange(selection_rank_sum, k) |>
   slice(1L) |>
   pull(k)
-# En caso de empate se prefiere el k menor por parsimonia. Esta recomendacion es
-# estadistica y debe contrastarse con la legibilidad sustantiva de k=4 y k=10.
+# En caso de empate se prefiere el k menor por parsimonia. La recomendacion
+# integra perplexity fuera de muestra, coherencia, exclusividad y estabilidad
+# entre semillas. Su interpretacion sustantiva se valida despues revisando los
+# papers representativos, ambiguos y distantes de cada topic.
 
 # -----------------------------------------------------------------------------
 # 6. Estimar modelos finales y escoger una corrida estable
 # -----------------------------------------------------------------------------
-# Se vuelven a estimar sobre los 675 papers el k recomendado y los dos niveles
-# exploratorios. Cada solucion usa cinco semillas y conserva la corrida mas
-# central, evitando presentar un resultado atipico.
+# Se vuelve a estimar sobre los 611 papers del periodo 1995-2025 solamente el k
+# recomendado. Se usan cinco semillas y se conserva la corrida mas central,
+# evitando presentar una solucion atipica dependiente de una inicializacion.
 
 fit_final_ensemble <- function(dtm, k_value, stage_name) {
   # Ajusta las cinco semillas finales y selecciona el medoid segun similitud beta.
@@ -1161,22 +1158,12 @@ fit_final_ensemble <- function(dtm, k_value, stage_name) {
   )
 }
 
-final_k_values <- sort(unique(c(k_exploratory, recommended_k)))
-final_ensembles <- set_names(
-  map(
-    final_k_values,
-    ~ fit_final_ensemble(
-      dtm_primary,
-      .x,
-      stage_name = str_c("final_ti_ab_k", .x)
-    )
-  ),
-  as.character(final_k_values)
+final_recommended_ensemble <- fit_final_ensemble(
+  dtm_primary,
+  recommended_k,
+  stage_name = str_c("final_ti_ab_k", recommended_k)
 )
-
-final_k4 <- final_ensembles[["4"]]$model
-final_k10 <- final_ensembles[["10"]]$model
-final_recommended <- final_ensembles[[as.character(recommended_k)]]$model
+final_recommended <- final_recommended_ensemble$model
 
 final_keywords_ensemble <- fit_final_ensemble(
   dtm_sensitivity,
@@ -1188,11 +1175,11 @@ final_keywords <- final_keywords_ensemble$model
 # criterio de estabilidad que el modelo principal.
 
 final_stability_pairs <- bind_rows(
-  map_dfr(final_ensembles, ~ .x$stability$pairwise),
+  final_recommended_ensemble$stability$pairwise,
   final_keywords_ensemble$stability$pairwise
 )
 final_medoid_scores <- bind_rows(
-  map_dfr(final_ensembles, ~ .x$stability$medoid_scores),
+  final_recommended_ensemble$stability$medoid_scores,
   final_keywords_ensemble$stability$medoid_scores
 )
 
@@ -1248,8 +1235,6 @@ make_topic_outputs <- function(model, corpus_data, model_name) {
   )
 }
 
-outputs_k4 <- make_topic_outputs(final_k4, corpus, "K4_TI_AB")
-outputs_k10 <- make_topic_outputs(final_k10, corpus, "K10_TI_AB")
 outputs_recommended <- make_topic_outputs(
   final_recommended,
   corpus,
@@ -1544,7 +1529,7 @@ model_summary <- tibble(
     "Validation papers without known terms",
     "Papers flagged as low retained text",
     "Recommended k",
-    "Exploratory k values",
+    "Candidate k values",
     "Candidate seeds per k",
     "Selected seed for recommended model",
     "Document-topic prior alpha",
@@ -1562,9 +1547,9 @@ model_summary <- tibble(
     sum(!test_nonempty),
     sum(document_coverage$low_text_flag),
     recommended_k,
-    paste(k_exploratory, collapse = ", "),
+    paste(k_candidates, collapse = ", "),
     length(selection_seeds),
-    final_ensembles[[as.character(recommended_k)]]$selected_seed,
+    final_recommended_ensemble$selected_seed,
     alpha_prior,
     delta_prior,
     "Title + abstract",
@@ -1592,7 +1577,6 @@ seed_stability <- bind_rows(
 # modelo, resultados principales y sensibilidades en hojas con nombres breves.
 
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
 write_xlsx(
   list(
@@ -1622,80 +1606,12 @@ write_xlsx(
     Keyword_sensitivity = keyword_topic_alignment,
     Topic_manual_review = topic_manual_review,
     Topic_distant_pairs = topic_distant_pairs,
-    Top_terms_k4 = outputs_k4$terms,
-    Top_terms_k10 = outputs_k10$terms,
     Ngram_candidates = ngram_candidates,
     Compound_audit = term_counts_audit,
     Filter_dictionary = filter_dictionary
   ),
   file.path(tables_dir, "topic_model_affi_latam.xlsx")
 )
-
-# -----------------------------------------------------------------------------
-# 9. Exportar figuras para interpretar y comparar soluciones
-# -----------------------------------------------------------------------------
-# k=4 muestra la sintesis; k=10 muestra mayor diferenciacion; la figura principal
-# usa el k recomendado por validacion y estabilidad.
-
-plot_top_terms <- function(
-  topic_terms,
-  title_text,
-  subtitle_text,
-  file_name,
-  width = 13,
-  height = 9
-) {
-  # Ordena los terminos dentro de cada topic y guarda barras comparables.
-  plot_data <- topic_terms |>
-    mutate(term = reorder_within(term, beta, topic))
-
-  plot <- ggplot(plot_data, aes(beta, term, fill = factor(topic))) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(~ topic, scales = "free_y") +
-    scale_y_reordered() +
-    scale_fill_hue() +
-    labs(
-      title = title_text,
-      subtitle = subtitle_text,
-      x = "Probabilidad del termino dentro del topic",
-      y = NULL
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-      panel.grid.minor = element_blank(),
-      strip.text = element_text(face = "bold")
-    )
-
-  ggsave(
-    file.path(figures_dir, file_name),
-    plot,
-    width = width,
-    height = height,
-    dpi = 320
-  )
-}
-
-plot_top_terms(
-  outputs_k4$terms,
-  "Terminos principales: k = 4",
-  "Sintesis parsimoniosa; titulo + abstract; modelo estable entre semillas",
-  "topic_model_top_terms_k4.png"
-)
-
-plot_top_terms(
-  outputs_k10$terms,
-  "Terminos principales: k = 10",
-  "Lectura desagregada; titulo + abstract; modelo estable entre semillas",
-  "topic_model_top_terms_k10.png"
-)
-
-plot_top_terms(
-  outputs_recommended$terms,
-  str_c("Terminos principales: k = ", recommended_k),
-  "K recomendado por validacion, coherencia, exclusividad y estabilidad",
-  "topic_model_top_terms.png"
-)
-
 
 print(model_summary)
 print(model_selection)
