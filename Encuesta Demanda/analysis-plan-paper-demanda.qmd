@@ -1,0 +1,299 @@
+---
+title: "Analysis plan and results outline: demand-side paper"
+subtitle: "Potential fertility, motherhood and occupational level in hiring (AsPredicted #297542)"
+author: "Prepared for Tania Hutt, Isidora and Vale"
+date: 2026-11-16
+lang: en
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+  docx:
+    toc: true
+    number-sections: true
+---
+
+::: callout-note
+## What this document is
+
+A proposal for the "Plan de análisis acordado" milestone (20 November) in `workplan-paper-demanda`. It is based on the preregistration (`docs/Preregistration/AsPredicted #297542.pdf`), scripts `00`–`21` in `code/`, and the outputs in `outputs/`.
+
+**Version 2 (16 November).** Tania's decisions are recorded in @sec-decisions. The contrasts for H1, H2 and H16 were corrected and the "most penalised group" test and the exploratory conversion analysis were run (new scripts `20` and `21`). No regression model was refitted: the new contrasts are computed from the models saved by script `07`. Numbers are final for those contrasts and still preliminary for the robustness work listed in @sec-todo.
+:::
+
+# Summary {#sec-summary}
+
+**The paper's argument, as the results now support it.** Employers penalise women for the children they are expected to have, not only for the children they have. A woman who says she plans a child within two years is rated as riskier, less promising and less hireable than an identical woman with no plans. The same statement by a man changes almost nothing. Current motherhood is penalised from the second child. The two penalties add up: mothers who plan another child soon are the lowest-rated group on hiring, risk and growth. Occupational level (professional vs. technical) does not moderate any of this.
+
+**What changed with the corrected contrasts.** Three points differ from the earlier reading and from the abstract.
+
+1. **Competence is not unaffected.** Childless women who plan a child within two years are rated less competent (−0.28). Mothers with the same plans are not (+0.01), and the difference between the two is significant (p = .005). The preregistration predicted the opposite pattern (a competence penalty for mothers, H2, and none stated for childless women, H1).
+2. **The gender difference in the hiring penalty is weaker than it looked.** It is significant for all applicants taken together (−0.19, p = .018, the preregistered SET 2b test) but not within childless applicants (−0.22, p = .12) or within parents (−0.17, p = .09) separately. For perceived risk the gender difference is large and significant in every version.
+3. **H16 is not supported.** The motherhood penalty is larger for single than for married women in point estimates, but the difference is not significant, and men show the same pattern.
+
+**Displays.** Two tables and five figures in the main text, built around four primary outcomes (hiring recommendation, perceived risk, growth potential, competence) plus the four cost items. Everything else goes to the supplement.
+
+**Still to do before the freeze (11 December).** The attention-check analysis at the level of hypotheses, ordinal and top-box models for the outcomes with ceiling effects, order checks, and hiring experience as a moderator (@sec-todo).
+
+# The preregistration in brief {#sec-prereg}
+
+Factorial survey experiment with supervisors and managers in Chile (Netquest panel). Each respondent rated two applicant profiles on 7-point scales. Occupational level (professional vs. technical) varies between respondents. Six attributes vary within: gender, marital status, parental status (none / one / two children), family plans (none / in 5 years / in 2 years), experience, test performance.
+
+| Hypotheses | Claim | Preregistered model set |
+|---|---|---|
+| H1 | Childless women with plans in 2 years are rated worse than those with no plans or plans in 5 years (cost, risk, growth) | SET 2b (gender × plans); SET 4b |
+| H2 | Same for mothers, plus competence | SET 2b; SET 4b |
+| H3 | Mothers are rated worse than childless women (cost, risk, growth, competence), independent of plans. Mothers with short-term plans are the most penalised group | SET 2a (gender × parental) |
+| H4–H9 | Each penalty in H1–H3 is smaller or absent for men | SET 2a, 2b, 3, 4b |
+| H10–H15 | Occupational level moderates H1–H3 (existence of moderation; direction varies by outcome) | SET 5, 5a–5e (pooled) |
+| H16 | The motherhood penalty is larger for single than for married mothers; no such gap among fathers | SET 4a (gender × marital × parental) |
+
+Other commitments that constrain the paper:
+
+- **Outcomes.** Hiring recommendation (1 item), 9 third-order evaluations, 6 predicted behaviours. Items are grouped into four constructs (cost, risk, growth, competence) and aggregated only if Cronbach's alpha ≥ .70. All item-level results are reported regardless.
+- **Estimation.** Regressions that account for two profiles nested in each respondent, all controlling for presentation order and template, "estimated separately for each outcome, each construct, and each type of occupation".
+- **Anchor.** The predicted contrast between a man and a woman who are both single, childless and without plans, from SET 1.
+- **Attention check.** No exclusion. All analyses reported on the full and the restricted sample.
+- **Secondary (exploratory).** Moderation by evaluator gender, parental status, hiring experience and workplace-norm attitudes.
+- Anything not listed is exploratory and must be labelled as such.
+
+The numbering H4–H9 is not itemised in the preregistration. The scripts use: H4/H5 = plans in 2/5 years among the childless, H6/H7 = the same among parents, H8/H9 = one/two children. The paper should state this mapping once, in the methods.
+
+# Where the analysis stands {#sec-status}
+
+## Data
+
+- 1,449 respondents and 2,898 profile evaluations (727 professional, 722 technical). The preregistered target was about 800 per arm.
+- 304 respondents (21%) failed the attention check (did not choose "RUT").
+- Composite reliability (script `06`): risk α = .71, growth α = .84, competence α = .76, so these three are indices. Cost α = .50, so the cost items are analysed one by one.
+- The indices `idx_investment` and `idx_evaluation` are not in the preregistration.
+
+## Pipeline
+
+| Scripts | Content | Status |
+|---|---|---|
+| `01`–`06` | Data preparation, labels, quality flags, timing, reliability | Done |
+| `07`–`09` | 11 pooled model sets × 21 outcomes (OLS, CR2 errors clustered by respondent, sum contrasts); tables; coefficient plots | Done |
+| `10`–`11` | Marginal means and contrasts; hypothesis figures | Done. Rows for H1, H2, H4–H7 and H16 are superseded by script `20` |
+| `12`–`14` | Ceiling diagnostics, stochastic dominance, attention-check sensitivity | Partly done |
+| `15`–`18` | SET 1–4b separately by occupation | Done |
+| `19` | Moderation by evaluator characteristics | Done; hiring experience is missing |
+| **`20`** | **Corrected contrasts: H1/H2 and H4–H7 from SET 4b, H16 as a difference of penalties, "most penalised group", cell means, draft of Figure 4** | **New, done** |
+| **`21`** | **Exploratory conversion analysis** | **New, done** |
+
+The table of confirmatory tests for the paper is `outputs/20_contrasts_corrected/20_confirmatory_contrasts_corrected.csv`. It contains the corrected rows, carries over the unchanged rows from script `10` (anchor, H3, H8, H9), and recomputes the Benjamini–Hochberg adjustment over the full confirmatory set with corrected outcome families. Script `10` was left untouched because script `11` reads its figure objects. Script `20` checks that it reproduces script `10` exactly where the two should agree (H2, H6, H7).
+
+## Findings: confirmatory contrasts, pooled sample (1–7 scale points)
+
+Stars are based on **BH-adjusted** p-values (\* < .05, \*\* < .01, \*\*\* < .001). The adjustment now covers 18 contrasts per outcome, so it is stricter than in the earlier outputs.
+
+| Hyp. | Contrast | Hiring | Risk | Growth | Competence | Operational cost | Expects accommodations |
+|---|---|---|---|---|---|---|---|
+| Anchor | Woman vs. man, all else equal | −0.05 | +0.29\*\*\* | −0.03 | +0.08 | +0.14 | +0.49\*\*\* |
+| H1 | Childless women: 2 years vs. no plans | −0.25\* | +0.59\*\*\* | −0.27\* | −0.28\* | +0.19 | +0.67\*\* |
+| H1 | Childless women: 2 years vs. 5 years | −0.06 | +0.44\*\* | −0.16 | −0.13 | +0.06 | +0.34 |
+| H1 | Childless women: 5 years vs. no plans | −0.18 | +0.15 | −0.11 | −0.15 | +0.13 | +0.33 |
+| H2 | Mothers: 2 years vs. no plans | −0.21\* | +0.48\*\*\* | −0.16 | +0.01 | +0.27 | +0.62\*\*\* |
+| H2 | Mothers: 2 years vs. 5 years | −0.18 | +0.22\* | −0.11 | −0.04 | +0.24 | +0.43\*\* |
+| H2 | Mothers: 5 years vs. no plans | −0.03 | +0.25\* | −0.05 | +0.05 | +0.04 | +0.19 |
+| H3 | Women: one child vs. childless | −0.03 | +0.15 | −0.10 | −0.07 | −0.06 | +0.50\*\*\* |
+| H3 | Women: two children vs. childless | −0.33\*\*\* | +0.37\*\*\* | −0.21\* | −0.14 | +0.04 | +0.74\*\*\* |
+| H3 | Mothers with plans in 2 years vs. the other five groups of women | −0.27\*\*\* | +0.43\*\*\* | −0.20\* | −0.07 | +0.20 | +0.80\*\*\* |
+| H4 | Childless, 2 years vs. none: women − men | −0.22 | +0.42\* | −0.16 | −0.26 | +0.03 | +0.25 |
+| H5 | Childless, 5 years vs. none: women − men | −0.14 | −0.06 | −0.02 | −0.11 | +0.12 | −0.14 |
+| H6 | Parents, 2 years vs. none: women − men | −0.17 | +0.46\*\*\* | −0.08 | +0.01 | +0.38 | +0.33 |
+| H7 | Parents, 5 years vs. none: women − men | +0.08 | +0.16 | +0.03 | +0.07 | +0.12 | −0.04 |
+| H8 | One child vs. childless: women − men | −0.03 | +0.21 | −0.10 | −0.12 | +0.01 | +0.28 |
+| H9 | Two children vs. childless: women − men | −0.24\* | +0.29\* | −0.15 | −0.11 | −0.03 | +0.24 |
+| H16 | Motherhood penalty, single − married women | −0.14 | +0.16 | −0.02 | +0.01 | +0.20 | +0.07 |
+| H16 | … women − men | +0.04 | −0.05 | +0.06 | +0.21 | +0.08 | 0.00 |
+
+### What the corrected results say
+
+**H1 and H2: supported for hiring and risk; the 2-years vs. 5-years part only for risk.**
+
+- Childless women with plans in 2 years: hiring −0.25 (95% CI −0.43 to −0.06), about a quarter of a standard deviation; risk +0.59; growth −0.27.
+- Mothers with plans in 2 years: hiring −0.21, risk +0.48.
+- The penalty is the same size in both groups for hiring, risk, growth and the cost items (equality tests: p between .30 and .97). The one exception is competence, as noted in the summary.
+- Compared with plans in 5 years, plans in 2 years clearly raise risk (+0.44 and +0.22) but the hiring difference is not significant in either group.
+- Men: plans in 2 years change hiring by −0.02 (childless) and −0.04 (fathers), and risk by +0.17 and +0.02, none significant.
+
+**H4–H7: supported for risk; for hiring only when all applicants are pooled.** The gender difference in the risk penalty is +0.42 among the childless and +0.46 among parents. For hiring it is −0.22 (p = .12) and −0.17 (p = .09). Each of these tests uses a third or two thirds of the sample. The preregistered SET 2b test, which pools childless applicants and parents, gives −0.19 (p = .018; script `10`). The paper should report the pooled test as the confirmatory one for hiring and show the two group-specific estimates next to it.
+
+**H3: partly supported.** No penalty for one child; a clear one for two (hiring −0.33, risk +0.37). The "most penalised group" claim is supported: mothers with plans in 2 years are rated worse than the other five groups of women on hiring (−0.27), risk (+0.43) and growth (−0.20), and they rank last of 12 gender × parental × plans groups on hiring, risk, growth, operational cost, expected accommodations and expected use of benefits. They are not the lowest on competence (3rd of 6 among women). The extreme comparison: a mother of two with plans in 2 years is rated 0.68 lower on hiring and 0.84 higher on risk than a childless woman with no plans.
+
+A detail worth a sentence in the paper: childless women with no plans receive the highest hiring recommendation of all 12 groups (6.04, against 5.87 for the equivalent men).
+
+**H16: not supported.** In point estimates the motherhood penalty is larger for single women (hiring −0.25, p = .002) than for married women (−0.11, p = .12), but the difference between the two is not significant (−0.14, p = .16), and men show a similar gap (−0.18, p = .07), so the three-way difference is essentially zero (+0.04). What does hold is a descriptive pattern: being married helps mothers (+0.17 on hiring, p = .002) and does nothing for childless women (+0.03).
+
+**H10–H15 and evaluator moderation: unchanged.** Of 190 occupational-moderation contrasts, 11 have p < .05 and one survives adjustment. Of 224 evaluator-moderation tests, 7 have p < .05 and none survives.
+
+## Exploratory conversion analysis (supplement)
+
+Question: evaluators expect women and men with family signals to request accommodations. Is that expectation tied to a worse evaluation equally for both?
+
+Script `21` regresses each evaluation on the evaluator's expectation that the applicant will request accommodations, interacted with applicant gender. The preferred version compares each respondent's two profiles with each other (first differences), which removes individual response styles.
+
+| Outcome | Slope, men | Slope, women | Difference | p | BH-adjusted p |
+|---|---|---|---|---|---|
+| Hiring recommendation | −0.12 | −0.18 | −0.06 | .037 | .11 |
+| Good investment | −0.13 | −0.20 | −0.08 | .016 | .10 |
+| Perceived risk | +0.31 | +0.36 | +0.05 | .066 | .13 |
+| Operational cost | +0.16 | +0.22 | +0.06 | .22 | .26 |
+| Growth potential | −0.07 | −0.10 | −0.03 | .12 | .18 |
+| Competence | −0.08 | −0.06 | +0.02 | .46 | .46 |
+
+Reading: a higher expectation of accommodations goes with a worse evaluation for both genders. The association is somewhat stronger for women on hiring, good investment and risk, in the expected direction, but no difference survives adjustment. With expected use of benefits there is no gender difference at all. This is weak support for the "conversion" idea. It belongs in the supplement with its caveats (the expectation is measured after the vignette and is not randomised), and the main text should not lean on it. The stronger evidence for the asymmetry remains the experimental one: the same family signal raises expected accommodations for both genders but changes risk and hiring only for women.
+
+## Is `idx_investment` redundant with hiring?
+
+Yes for the paper's purposes. Across the 41 contrasts in script `20`, the estimates for `idx_investment` and for the hiring item correlate at .94. The two items in the index correlate at .57. It stays in the supplement.
+
+# Issues: resolved and open {#sec-fixes}
+
+## Resolved in this version
+
+| Issue | What was wrong | What was done |
+|---|---|---|
+| H1 not specific to childless women | Script `10` took H1 from SET 2b, which has no parental × plans term, so the "childless" estimate was the effect for all women | H1 and H2 both estimated from SET 4b in script `20`; equality tested formally; 2-years vs. 5-years contrast added (it is part of H1 as preregistered) |
+| H16 tested the wrong quantity | Script `10` compared married with single applicants among parents | H16 is now the motherhood penalty among single women minus among married women, and that difference for women minus men (SET 4a) |
+| "Most penalised group" untested | Stated in H3, never estimated | Cell means for all gender × parental × plans groups, contrast of the target group against the others, and its rank |
+| Outcome families inconsistent | Long-term commitment was adjusted with the competence family although it belongs to the risk construct | Corrected families in script `20`; BH recomputed over the full confirmatory set |
+| Pooled vs. by-occupation | Preregistration says SET 1–4b are estimated by occupation | Decision: pooled in the main text, declared as a deviation; by-occupation in the supplement (@sec-decisions) |
+
+## Open
+
+1. **Attention check at the level of hypotheses.** The preregistration commits to all analyses on the full and the restricted sample. Script `14` does this for regression coefficients only. Script `20` should be re-run on the 1,145 respondents who chose "RUT", and the two sets of estimates shown side by side.
+2. **Ceiling effects.** Seven items, including hiring (68% of answers are 6 or 7), are flagged in script `12`. No ordinal model exists yet. Plan: ordered logit with cluster-robust errors and a top-box (6 or 7) linear probability model for the primary contrasts.
+3. **The anchor is not profile-specific.** It comes from the additive model, so it equals the average gender gap. Keep it as preregistered and add the gap among childless applicants with no plans from the cell means in script `20` (hiring: 6.04 for women, 5.87 for men).
+4. **Carry-over between the two profiles.** Order × attribute check and a first-profile-only analysis.
+5. **Hiring experience.** 17% of respondents have never taken part in hiring decisions. It is a preregistered secondary moderator and is missing from script `19`.
+6. **Sample shortfall.** 1,449 instead of about 1,600. Report it with the realised number of respondents per block.
+7. **Figures 2 and 3 need rebuilding** from script `20` so that they match the corrected table. The existing figures from script `11` use the superseded H1 estimates.
+8. **Documentation mismatch.** `docs/SPEC_05b_marginal_means.md` quotes α = .631 for cost; script `06` gives .504 for the three-item definition. The paper should use the script `06` values.
+
+# Analysis plan {#sec-plan}
+
+## Estimands and inference
+
+- **Model.** OLS on the 1–7 scale, CR2 standard errors clustered by respondent, controls for presentation order and template, sum-coded factors.
+- **Quantities reported.** Contrasts of predicted means, averaged over the observed profiles (not a balanced grid, because the design is D-efficient and not fully crossed). Every gendered hypothesis is tested with the difference between women and men, as a single estimate with its own standard error. "Significant for women, not for men" is never used as evidence.
+- **Effect sizes.** Scale points with 95% confidence intervals, and in standard-deviation units for the primary outcomes.
+- **Multiple testing.** Benjamini–Hochberg within outcome family, across all confirmatory contrasts. Raw and adjusted p-values both reported.
+
+## Outcome hierarchy
+
+| Tier | Outcomes | Where |
+|---|---|---|
+| Primary | Hiring recommendation; perceived risk index; growth potential index; competence index | Main text |
+| Primary, item level | Cost items: operational cost, salary cost, expects use of benefits, expects accommodations | Main text (figures), full detail in supplement |
+| Secondary | The remaining individual items | Supplement |
+| Exploratory | `idx_investment`, `idx_evaluation` | Supplement, labelled exploratory |
+
+## Analysis tiers
+
+| Tier | Content | Scripts |
+|---|---|---|
+| A. Confirmatory core | Anchor; H1–H3 with their gender differences (H4–H9); most penalised group; H16 | `20` (with rows carried from `10`) |
+| B. Confirmatory moderation | H10–H15 on the pooled sample; by-occupation models | `10`, `15`–`18` |
+| C. Preregistered robustness | Full vs. restricted sample for every contrast in A and B | To do |
+| D. Additional robustness | Ordinal and top-box models; stochastic dominance; first profile only; order interactions; excluding respondents without hiring experience | `12`, `13`, to do |
+| E. Preregistered secondary | Moderation by evaluator gender, parental status, hiring experience, workplace norms | `19`, plus hiring experience |
+| F. Exploratory | Conversion analysis; non-preregistered indices; industry and job-level moderation | `21`, `19` |
+
+# Main text vs. supplement {#sec-displays}
+
+## Main text: two tables and five figures
+
+| Display | Content | Hypotheses | Source |
+|---|---|---|---|
+| **Table 1** | Design and sample: attributes and levels; respondent characteristics by occupational arm; N; attention-check rate | — | `03`, `02` |
+| **Figure 1** | Baseline gender gap. Women vs. men across the primary outcomes and cost items, for all profiles and for childless applicants without plans | Anchor | `11_fig1_anchor_dumbbell`, extended with `20` |
+| **Figure 2** | Potential-fertility penalty. Effect of plans in 2 and in 5 years (vs. none) for women and men, panels by outcome, separately for childless applicants and parents | H1, H2, H4–H7 | To rebuild from `20` |
+| **Figure 3** | Motherhood penalty. Effect of one and two children (vs. none) for women and men, same outcomes | H3, H8, H9 | `11_fig3_parental_threshold`, `3d` |
+| **Figure 4** | Combined penalties. Predicted hiring recommendation and perceived risk for the parental × plans groups, by gender | H3 (most penalised group) | Draft: `20_fig4_draft_cell_means.png` |
+| **Figure 5** | Occupational level. The headline contrasts in the professional and technical arms side by side, with the interaction estimate | H10–H15 | `11_fig4_null_moderation`, `18` |
+| **Table 2** | Summary of confirmatory tests. One row per hypothesis, columns for the primary outcomes: estimate, 95% CI, adjusted p, verdict | All | `20_summary_primary_outcomes.csv` |
+
+Design choices behind this list:
+
+- Figures 2 and 3 use the same layout (women and men side by side, same outcome panels, same axis), so the reader learns it once.
+- Figure 4 is the only display that shows levels instead of differences. It answers "who ends up lowest" directly.
+- H16 and evaluator moderation get a short paragraph each in the text and their displays in the supplement.
+- Table 2 is what a reviewer will check against the preregistration. It lists every hypothesis, including the ones that failed.
+
+## Supplement
+
+| Section | Content |
+|---|---|
+| S1 | Preregistration, hypothesis numbering, and a table of deviations (pooling, cost construct, sample size, corrected contrasts) |
+| S2 | Vignette text and example screen; design (D-efficiency, blocks); attribute balance in the realised sample |
+| S3 | Sample description; data-quality flags; response times |
+| S4 | Reliability of the four constructs; decision rule; item wording |
+| S5 | Full regression tables, all pooled model sets, primary outcomes |
+| S6 | By-occupation models (SET 1–4b) and the corresponding contrasts, with the justification for pooling |
+| S7 | All contrasts for all 16 items and 3 indices, raw and adjusted p-values; auxiliary contrasts (men, equality tests) |
+| S8 | Attention check: full vs. restricted sample for every hypothesis |
+| S9 | Scale robustness: response distributions, ordinal and top-box models, stochastic dominance |
+| S10 | Order effects and first-profile-only estimates |
+| S11 | H16 in detail: penalties by marital status and gender, one and two children |
+| S12 | Evaluator moderation (gender, parental status, hiring experience, workplace norms; industry and job level as exploratory) |
+| S13 | Exploratory: conversion analysis; `idx_investment` and `idx_evaluation` |
+
+# Draft outline of the results section {#sec-outline}
+
+Six subsections. Each lists the claim, the display, and the evidence.
+
+**1. Sample and baseline gender gap.** *(Table 1, Figure 1)*
+With no family signal, women and men receive similar hiring recommendations (−0.05) and growth ratings. Women are already expected to request more accommodations (+0.49) and are seen as riskier (+0.29). The point: part of the penalty for potential fertility is present before any plan is stated.
+
+**2. Anticipated fertility is penalised for women, not for men.** *(Figure 2)*
+Plans in 2 years lower women's hiring recommendation (−0.25 childless, −0.21 mothers) and raise perceived risk (+0.59, +0.48). For men the effects are close to zero. The gender difference is large for risk in both groups. For hiring it is significant when childless applicants and parents are pooled (−0.19) and of similar size but not significant within each group. Plans in 5 years have small effects; the 2-versus-5-years difference is clear for risk only.
+Sociological reading: evaluators respond to the timing of an expected absence. Risk is where the gendered reading of the same statement is sharpest.
+
+**3. Motherhood is penalised from the second child.** *(Figure 3)*
+One child changes almost nothing except expected accommodations (+0.50). Two children lower hiring (−0.33) and growth (−0.21) and raise risk (+0.37). Fathers of two are expected to ask for as many accommodations as mothers of two but are not penalised. The gender difference for two children holds for hiring (−0.24) and risk (+0.29). H3 is reported as partly supported, with the second-child threshold presented as the finding.
+
+**4. Penalties accumulate.** *(Figure 4)*
+Mothers with plans in 2 years are the lowest-rated of the 12 groups on hiring, risk, growth, operational cost and expected accommodations, and are rated worse than the other groups of women taken together (hiring −0.27, risk +0.43). At the other end, childless women with no plans receive the highest hiring recommendation of any group.
+
+**5. What changes and what does not: expectations, cost and competence.** *(Figures 2–3, Table 2)*
+Family signals raise expected accommodations for both genders; risk and hiring move for women. Competence is the nuanced part. It is lower for childless women with imminent plans (−0.28) and slightly lower for mothers of two (−0.14, not significant after adjustment), and unchanged for mothers with imminent plans. Wording to use in place of "competence ratings are unaffected": *"Effects on perceived competence are smaller and less consistent than effects on risk: they appear for childless women who plan a child soon, but not for mothers with the same plans."* The conversion analysis is cited in one sentence, with a pointer to the supplement.
+
+**6. Scope: occupational level, marital status, evaluators, robustness.** *(Figure 5, Table 2, supplement)*
+
+- Occupational level does not moderate the penalties (H10–H15 not supported). Report it as a finding: the penalty is not confined to one class position. This is also the justification for pooling.
+- H16 is not supported. Marriage helps mothers but the motherhood penalty does not differ significantly by marital status, and the pattern is not specific to women.
+- Evaluator characteristics do not moderate the penalties; the design can only detect large moderation (about 0.7 scale points).
+- One paragraph on robustness: attention check, ordinal and top-box models, first profile only.
+
+# Work before the freeze {#sec-todo}
+
+Owners follow the workplan (analysis: Isidora; tables and figures: Vale).
+
+| Priority | Task | Feeds | Status |
+|---|---|---|---|
+| 1 | H1 and H2 from SET 4b; equality test | Figure 2, Table 2 | Done (`20`) |
+| 1 | H16 as a difference of penalties | Table 2, S11 | Done (`20`) |
+| 1 | Most penalised group; cell means | Figure 4 | Done (`20`) |
+| 1 | Hypothesis contrasts on the restricted sample (attention check) | S8 | To do |
+| 2 | Rebuild Figures 2 and 3 from script `20` | Main text | To do |
+| 2 | Ordered logit and top-box models for flagged outcomes | S9 | To do |
+| 3 | First-profile-only and order × attribute checks | S10 | To do |
+| 3 | Hiring experience as moderator and as exclusion | S12 | To do |
+| 3 | Deviations table | S1 | To do |
+| 4 | Conversion analysis | S13 | Done (`21`) |
+
+# Decisions taken {#sec-decisions}
+
+Decided by Tania on 16 November.
+
+1. **Primary specification: pooled models in the main text.** The paper explains why (the preregistered moderation tests H10–H15 are null; omnibus tests of all attribute × occupation interactions give p between .12 and .96) and declares it as a deviation from the preregistered by-occupation estimation. The by-occupation models go in the supplement (S6).
+2. **The competence claim is softened.** Suggested wording in @sec-outline, subsection 5. The abstract (`docs/abstract.docx`) still has the old sentence and has not been edited.
+3. **The conversion analysis is run and reported in the supplement** as exploratory (S13).
+4. **`idx_investment` stays in the supplement.** It is redundant with the hiring item.
+5. **H1 and H16 are corrected,** and the "most penalised group" test is added (script `20`).
+
+Still open: how H3 is labelled in Table 2. The recommendation is "partly supported".
