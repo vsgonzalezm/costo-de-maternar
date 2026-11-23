@@ -19,7 +19,28 @@ tiene un `<NN>_MANIFEST.csv`. Así, cualquier tabla/figura se rastrea a su scrip
 | 12–14 | `robustness_ceiling`, `…stochastic_dominance`, `…attention_check` | Techo/piso, dominancia, sensibilidad al attention check |
 | **Split por ocupación (profesional / técnico)** | | |
 | 15–18 | `fit_models_split`, `tables_split`, `figures_coefficients_split`, `marginal_means_split` | SET 1–4b por condición |
+| **Paper (noviembre 2026)** | | |
+| 19 | `moderation` | Moderación por características del evaluador (exploratorio; no está en `00_run_all.R`) |
+| 20 | `contrasts_corrected` | H1/H2 y H4–H7 desde SET 4b, H16 como diferencia de penalizaciones (SET 4a), "grupo más penalizado" (H3), medias por celda. **Reemplaza** las filas H1, H2, H4–H7 y H16 de `10`; la tabla confirmatoria del paper es `20_confirmatory_contrasts_corrected.csv` |
+| 21 | `exploratory_conversion` | Exploratorio (suplementario): asociación entre acomodaciones esperadas y evaluación, por género del postulante |
 
 Otros: `helpers_tables_figures.R` (funciones compartidas 08/09/16/17), `design/` (diseño de viñetas,
 previo a la encuesta), `archive/` (versiones anteriores; `2026-10-02_pre_limpieza/` es copia íntegra
 de los scripts antes de esta limpieza).
+
+## Base lista para el análisis
+
+`data/processed/base_demanda_analysis_ready.csv` (la escribe `02_labels_timing_quality_flags.R` y la lee
+`00_setup.R`; todos los scripts de modelos parten de ella). Es la única base que hay que usar: 2.898 filas
+(1.449 encuestados x 2 perfiles). `base_demanda_long_final.csv` y `..._with_labels_and_flags.csv` son pasos intermedios.
+
+Cambios de noviembre 2026 en 01 y 02 (copia de los scripts anteriores en `archive/2026-11-23_pre_validacion/`):
+
+- `CARGO_DIRECCION_O_JEFATURA` (02): 1 si el cargo de P10 es dueño/a, gerente o director/a, subgerente o jefe/a-supervisor/a; 0 si es administrativo/a, asistente u otro cargo. No elimina casos. Sirve para repetir los modelos solo con ese grupo.
+- `NETQUEST_EXTRA_SLOT_FLAG` (02): marca a los 49 encuestados que llegaron después a una viñeta (`VISITAS_1`) ya usada por otra persona. Reemplaza a `NETQUEST_EXTRA_BLOCK_FLAG`, que marcaba bloques completos (68 personas).
+- Flags `UNDER_P10_*` con `<=`: los tiempos de Netquest tienen un piso (10 s en CARGO y TAREA, 20 s en el perfil 2) y con `<` el flag de TAREA no marcaba a nadie.
+- Etiquetas con entidades HTML (`O&apos;Higgins` en `ZONA_label`) corregidas.
+- `abierta_costoso_simple` y `abierta_inversion_simple` (01): reglas ampliadas tras revisar las respuestas que caían en "Otro"; el patrón `car` ya no captura cargo/carrera. En inversión hay una categoría nueva, "Ausencias/familia".
+- `UNDER_P10_ALL_3_TASKS` es un flag por perfil, no por persona: 64 filas TRUE (46 personas con algun perfil TRUE), pero los resumenes por encuestado (02, 03, 04) cuentan solo el primer perfil (31). Para filtrar personas usar `max()` por `key`.
+
+Pendiente: la variable `CAMBIO20260729` de Netquest (159 casos del 29-30 jul) no se conserva en la base; falta confirmar con Tania qué cambió ese día.

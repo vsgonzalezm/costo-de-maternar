@@ -239,7 +239,7 @@ show_freq_respondent('BEHAVIOR FLAGS: Time capture error count', base_long_final
 show_freq_respondent('BEHAVIOR FLAGS: Time capture error 2+', base_long_final, 'TIME_CAPTURE_ERROR_2PLUS')
 show_freq_respondent('BEHAVIOR FLAGS: Duration below 6 minutes', base_long_final, 'DURATION_LT_6MIN')
 show_freq_respondent('BEHAVIOR FLAGS: Duration above p75', base_long_final, 'DURATION_GT_P75')
-show_freq_respondent('BEHAVIOR FLAGS: Netquest extra block', base_long_final, 'NETQUEST_EXTRA_BLOCK_FLAG')
+show_freq_respondent('BEHAVIOR FLAGS: Netquest extra slot arrival', base_long_final, 'NETQUEST_EXTRA_SLOT_FLAG')
 show_num_respondent('BEHAVIOR: Postulante 1 screen time', base_long_final, 'TIME_SCREEN_POSTULANTE_1')
 show_num_respondent('BEHAVIOR: Postulante 2 screen time', base_long_final, 'TIME_SCREEN_POSTULANTE_2')
 

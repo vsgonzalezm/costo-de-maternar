@@ -3,6 +3,8 @@
 # Author: valentinagonzalez
 # Modified: Tania Hutt - arreglo de errores
 # Date: agosto 2026
+# Nov 2026: flags de tiempo con <=, variable CARGO_DIRECCION_O_JEFATURA, flag de llegadas repetidas a una viñeta
+#   (NETQUEST_EXTRA_SLOT_FLAG, reemplaza al de bloques) y decodificacion de entidades HTML en labels.
 # Purpose: Adds value labels from Netquest codebook sheets, cleans NULL markers, creates timing/duration/attention/block flags, and exports the final analysis CSV.
 # ============================================================================
 
@@ -201,6 +203,18 @@ profile_labels <- bind_rows(
   make_profile_labels(2)
 )
 
+# Netquest deja entidades HTML en algunas etiquetas (ej. "O&apos;Higgins" en ZONA, hoja Labels).
+decode_html <- function(x) {
+  x %>%
+    str_replace_all("&apos;|&#39;", "'") %>%
+    str_replace_all("&quot;", "\"") %>%
+    str_replace_all("&lt;", "<") %>%
+    str_replace_all("&gt;", ">") %>%
+    str_replace_all("&amp;", "&")
+}
+respondent_labels <- respondent_labels %>% mutate(across(where(is.character), decode_html))
+profile_labels    <- profile_labels %>% mutate(across(where(is.character), decode_html))
+
 # --- 4. BLOCK DUPLICATION / EXTRA RESPONSES ---
 
 
@@ -212,13 +226,21 @@ block_counts <- raw_data %>%
     expected_mean = nrow(raw_data) / n_blocks,
     expected_upper = ceiling(expected_mean),
     extra_over_expected_upper = n_respondents - expected_upper,
-    NETQUEST_EXTRA_BLOCK_FLAG = extra_over_expected_upper >= 2
+    BLOCK_EXCESS_2PLUS = extra_over_expected_upper >= 2   # descriptivo (block_balance_check.csv); no se usa como flag
   ) %>%
   arrange(desc(extra_over_expected_upper), bloque_id)
 
-extra_blocks <- block_counts %>%
-  filter(NETQUEST_EXTRA_BLOCK_FLAG) %>%
-  pull(bloque_id)
+# Flag por encuestado (nov 2026): Netquest entrego 1.449 casos para 1.400 viñetas (VISITAS_1 va de 1 a 1.400).
+# Hay 49 personas que cayeron en una viñeta que ya habia usado otra; se marca a la que llego despues
+# (por startTime; si hay empate, por key). Antes se marcaban los bloques completos con mas casos (68 personas),
+# lo que dejaba afuera a la mayoria de las 49. No se usa para excluir casos; queda como marca.
+extra_slot_keys <- raw_data %>%
+  arrange(startTime, key) %>%
+  group_by(VISITAS_1) %>%
+  mutate(orden_llegada = row_number()) %>%
+  ungroup() %>%
+  filter(orden_llegada > 1) %>%
+  pull(key)
 
 write_csv(block_counts, out_path("block_balance_check.csv"))
 
@@ -298,11 +320,17 @@ for (time_var in analysis_time_vars) {
     pull(p10)
 
   flag_name <- paste0("UNDER_P10_", str_to_upper(time_var))
-  base_with_time_flags[[flag_name]] <- base_with_time_flags[[time_var]] < threshold
+  # <= y no <: los tiempos de Netquest tienen un piso (10 s en CARGO y TAREA, 20 s en el perfil 2).
+  # Con <, el p10 de TAREA coincide con el piso y el flag no marcaba a nadie.
+  base_with_time_flags[[flag_name]] <- base_with_time_flags[[time_var]] <= threshold
 }
 
 under_p10_flags <- str_subset(names(base_with_time_flags), "^UNDER_P10_")
 
+# OJO: UNDER_P10_ALL_3_TASKS se calcula POR PERFIL (usa el tiempo de pantalla de cada perfil), asi que los dos
+# perfiles de una misma persona pueden tener valores distintos (nov 2026: 28 personas TRUE en un perfil, 18 en los dos).
+# Por eso hay 64 filas TRUE (46 personas con algun perfil TRUE), pero el resumen por encuestado (qc_summary, 03, 04)
+# cuenta solo el primer perfil (distinct(key)): 31 personas. Para filtrar personas, usar max() por key.
 if (length(under_p10_flags) == 3) {
   base_with_time_flags <- base_with_time_flags %>%
     mutate(
@@ -346,7 +374,7 @@ base_labeled_flags <- base_with_time_flags %>%
     by = "key"
   ) %>%
   mutate(
-    NETQUEST_EXTRA_BLOCK_FLAG = bloque_id %in% extra_blocks,
+    NETQUEST_EXTRA_SLOT_FLAG = key %in% extra_slot_keys,
     DURATION_MINUTES = duration / 60,
     DURATION_LT_6MIN = DURATION_MINUTES < 6,
     DURATION_GT_P75 = DURATION_MINUTES > p75_duration,
@@ -356,7 +384,13 @@ base_labeled_flags <- base_with_time_flags %>%
     FAILED_ATTENTION_CHECK = case_when(
       check_atencion_memoria_label == "RUT" ~ 0L,
       TRUE ~ 1L
-    )
+    ),
+    # Control nuevo (nov 2026) para analisis de sensibilidad: 1 si el cargo declarado en P10 es
+    # dueno/a o socio/a, gerente o director/a, subgerente, o jefe/a o supervisor/a (codigos 1 a 4);
+    # 0 si es administrativo/a, asistente u "otro cargo". No elimina casos, solo los marca, y no
+    # usa P13 (participacion en contrataciones) ni P14 (personal a cargo). Uso: repetir los modelos
+    # solo con CARGO_DIRECCION_O_JEFATURA == 1 y comparar con la muestra completa.
+    CARGO_DIRECCION_O_JEFATURA = as.integer(filtro_cargo_actual %in% 1:4)
   ) %>%
   # flag_atencion_fallida (de 01_...) queda reemplazado por FAILED_ATTENTION_CHECK, que es
   # equivalente pero mas confiable al usar la etiqueta en vez del codigo numerico.
@@ -417,7 +451,7 @@ qc_summary <- tibble(
     "n_long_rows",
     "n_respondents",
     "n_profiles_per_respondent_expected",
-    "netquest_extra_blocks_flagged",
+    "respondents_extra_slot_arrival",
     "respondents_with_time_capture_error_2plus",
     "respondents_under_p10_all_3_tasks",
     "respondents_duration_lt_6min",
@@ -428,7 +462,7 @@ qc_summary <- tibble(
     nrow(base_labeled_flags),
     n_distinct(base_labeled_flags$key),
     2,
-    paste(extra_blocks, collapse = "; "),
+    base_labeled_flags %>% distinct(key, .keep_all = TRUE) %>% summarise(n = sum(NETQUEST_EXTRA_SLOT_FLAG, na.rm = TRUE)) %>% pull(n),
     raw_time_checks %>% summarise(n = sum(TIME_CAPTURE_ERROR_2PLUS, na.rm = TRUE)) %>% pull(n),
     base_labeled_flags %>% distinct(key, .keep_all = TRUE) %>% summarise(n = sum(UNDER_P10_ALL_3_TASKS, na.rm = TRUE)) %>% pull(n),
     base_labeled_flags %>% distinct(key, .keep_all = TRUE) %>% summarise(n = sum(DURATION_LT_6MIN, na.rm = TRUE)) %>% pull(n),
@@ -442,6 +476,6 @@ write_csv(qc_summary, out_path("qc_summary.csv"))
 print(qc_summary)
 print(time_p10)
 print(duration_thresholds)
-print(block_counts %>% filter(NETQUEST_EXTRA_BLOCK_FLAG))
+print(block_counts %>% filter(BLOCK_EXCESS_2PLUS))
 print(attention_check_summary)
 finish_output()

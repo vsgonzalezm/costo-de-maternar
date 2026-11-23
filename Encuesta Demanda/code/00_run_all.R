@@ -15,7 +15,10 @@ steps <- c(
   # Robustez
   "12_robustness_ceiling", "13_robustness_stochastic_dominance", "14_robustness_attention_check",
   # Analisis split por ocupacion
-  "15_fit_models_split", "16_tables_split", "17_figures_coefficients_split", "18_marginal_means_split"
+  "15_fit_models_split", "16_tables_split", "17_figures_coefficients_split", "18_marginal_means_split",
+  # Contrastes corregidos para el paper (H1/H2, H16, grupo mas penalizado) y analisis exploratorio
+  # (leen los modelos de 07 y la tabla de 10; reemplazan las filas H1, H2, H4-H7 y H16 de 10)
+  "20_contrasts_corrected", "21_exploratory_conversion"
 )
 for (s in steps) {
   cat("\n######## ", s, " ########\n")

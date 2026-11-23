@@ -7,6 +7,7 @@
   # arreglar recodificacion attention check
   # ampliar categorias de preguntas abiertas
 # Date: agosto 2026
+# Nov 2026: se ampliaron las reglas de abierta_costoso_simple / abierta_inversion_simple (ver 4B).
 # Purpose: Reads the updated Netquest Excel file, builds the respondent-profile long dataset, cleans profile
 # ============================================================================
 
@@ -319,21 +320,40 @@ base_long_final <- base_long_final %>%
 
 base_long_final <- base_long_final %>%
   mutate(
+    # Respuestas abiertas -> categorias. Gana la primera regla que calza.
+    # Se revisaron todas las respuestas que caian en "Otro" (nov 2026): las reglas originales
+    # quedan primero y sin cambios, salvo "car" (calzaba con cargo/carrera/caracteristica) que
+    # paso a \\bcaro\\b|\\bcara\\b|cuest. Las reglas "ampliadas" van despues, asi que solo reparten
+    # lo que antes era "Otro". En abierta_inversion_simple se agrega la categoria "Ausencias/familia".
     abierta_costoso_simple = case_when(
       is.na(abierta_costoso) | str_squish(as.character(abierta_costoso)) == "" ~ NA_character_,
+      # --- reglas originales ---
       str_detect(normalizar_texto(abierta_costoso), "licenc|permis|ausenc|matern|post natal|pre y post natal|embaraz|hij|madr|famili") ~ "Licencias/ausencias/maternidad",
       str_detect(normalizar_texto(abierta_costoso), "capacit|experienc|estudi|conocim|formacion|aprendiz|ensen|entrena|titulo|universitari|magister|doctorado") ~ "Capacitacion/experiencia",
       str_detect(normalizar_texto(abierta_costoso), "productiv|desempen|rendim|motiv|eficienc") ~ "Desempeno/productividad",
-      str_detect(normalizar_texto(abierta_costoso), "cost|car|sueldo|remuner|inversion|gasto|viatic|hora extra|bono") ~ "Costo/sueldo",
+      str_detect(normalizar_texto(abierta_costoso), "cost|\\bcaro\\b|\\bcara\\b|cuest|sueldo|remuner|inversion|gasto|viatic|hora extra|bono") ~ "Costo/sueldo",
       str_detect(normalizar_texto(abierta_costoso), "confiab|leal|compromis|responsab|seriedad|estabil|riesgo|incierto|rotacion|inestab") ~ "Confianza/compromiso",
+      # --- reglas ampliadas ---
+      str_detect(normalizar_texto(abierta_costoso), "ausent|reemplaz|suplen|incapacid|indemniz|finiquit|despid|guarderi|sala cuna|cuidado|embarac|licensia") ~ "Licencias/ausencias/maternidad",
+      str_detect(normalizar_texto(abierta_costoso), "adapt|induc|orienta|curva|apr[a-z]{0,3}ndiz|aprend|instru|capacid|capas|curso|diplomad|entren|habilid|competen|calific|prepar|trayectoria|curricul|\\bcv\\b|especial|exper|expert|formar|reforz|supervis|acompan|asesor|tard[ao]|demor|aptitud|educativ|educacion|anos de servicio|antigued|historial") ~ "Capacitacion/experiencia",
+      str_detect(normalizar_texto(abierta_costoso), "salari|sueldo|surldo|suelo|\\bpag[aeiou]|dinero|plata|renta|\\bvalor\\b(?! agregado)|precio|presupuesto|recurso|insumo|equipamiento|herramienta|implement|infraestructura|software|tecnolog|notebook|computador|\\bpc\\b|celular|beneficio|nomina|regalia|monetari|econom|financ|cobr|aument|invert|egreso|sale a la empresa|prestacion|\\bley(es)?\\b|seguro|gast|bonific|\\bcta\\b|impuest|movilizac|laptop|iphone|material|comida|salud|pierd|contrato|pretensi|e[sx]pectativ|solicit|porcentaje|vale la pena|\\bvale\\b|valga|piden|\\busar|cubrir|ofrec") ~ "Costo/sueldo",
+      str_detect(normalizar_texto(abierta_costoso), "equipo|integr|clima|cultura|relacion|liderazg|actitud|comport|disponib|dispos|flexib|segur|honest|honrad|idone|respon[ds]abil|temporal|continuidad|permanen|ambicio|proactiv|comunic|cliente|fiel") ~ "Confianza/compromiso",
+      str_detect(normalizar_texto(abierta_costoso), "error|falla|\\bfalt|eficac|eficien|efectiv|rapid|lent|rind|rend|solucion|resol|valios|ascenso|avanz|crecim|promoc|carrera|proyecc|probabilidad|resultado|calidad|autonom|cumpl|funcion|labor|tarea|gestion|operati|operac|optimiz|produc|produz|tiempo|jornada|horario|proceso|exigen|desgaste|retrabajo|esfuerzo|aport|valor agregado|gener|logro|objetivo|meta|ejecu|trabaj|dano|accident|perdida|demand|complej|requer|necesit") ~ "Desempeno/productividad",
       TRUE ~ "Otro"
     ),
     abierta_inversion_simple = case_when(
       is.na(abierta_inversion) | str_squish(as.character(abierta_inversion)) == "" ~ NA_character_,
+      # --- reglas originales ---
       str_detect(normalizar_texto(abierta_inversion), "habilid|competenc|capacit|experienc|conocim|titulo|profesional") ~ "Habilidades/experiencia",
       str_detect(normalizar_texto(abierta_inversion), "productiv|aporte|benefic|rentab|inversion|resultado|crecimiento|crecer|proyeccion|ambicio|proactiv|desafio|ganan|utilidad") ~ "Aporte/productividad",
       str_detect(normalizar_texto(abierta_inversion), "responsab|compromis|actitud|confiab|seriedad|estabil") ~ "Compromiso/confianza",
       str_detect(normalizar_texto(abierta_inversion), "carga|complej|tarea|funcion|trabajo") ~ "Carga/complejidad",
+      # --- reglas ampliadas ---
+      str_detect(normalizar_texto(abierta_inversion), "capacid|aptitud|calific|estudi|curricul|trayectoria|formacion|prepar|expert|exper|expei|especializ|sabiduri|talento|destreza|habil|aprend|apto|apta|capaz|competen|creativ|objetiv[ia]dad|skill|background|perfil|academ|inteligen|versatil|instruc|certific|curso|ensen|conocieminto|sepa\\b|desenvolv|tecnolog|calidad|puntaje") ~ "Habilidades/experiencia",
+      str_detect(normalizar_texto(abierta_inversion), "aport|valor|rend|desempen|efici|efect|produc|prodcc|ingreso|gane|ganar|ganancia|suelo|pagad|valga|gastar|\\bgast|proyecto|entregar|requerid|prestacion|vale la pena|salen|retorno|redito|cliente|idea|innov|ahorr|abarat|barat|econom|costo|gasto|sueldo|salari|\\bpag[aeiou]|dinero|plata|activo|numero|exito|meta|objetivo|logr|potencial|desarrollo|mejor|prosper|progres|avanc|ascend|perdida|oportunidad|\\bvale\\b|retribu|invert|invers|imvers|cobr|cuest|\\bcaro\\b|\\bcara\\b|capital|marca|gestion|getsion|emprend|optimiz|solucion|buen|excelente|gran\\b|conveniente|positiv|prometedor|valios|elemento|impacto|ayuda|fruto|prospecto|negocio|venta|expand|finanza|surgir|surguir|superacion|crec|provecho|incorporacion|contratacion|genera|gener|dara|tiempo|orden|ambision") ~ "Aporte/productividad",
+      str_detect(normalizar_texto(abierta_inversion), "fiel|lealt|fidel|permanec|permanez|continuidad|quede|quedar|mantenga|mantener|estab|motiv|content|feliz|honorab|disciplina|cumpl|disponib|dispos|adapt|dapatr|equipo|segur|empat|confian|honest|retencion|retener|largo plazo|se ira|dedic|comprometid|compromet|constancia|ganas|energia|agil|activ|participacion|futuro|normas|carrera|puesto|trabajador|empleado|persona|postulante|colaborador") ~ "Compromiso/confianza",
+      str_detect(normalizar_texto(abierta_inversion), "labor|operac|operacion|operacional|operaciones|\\btare|entrenam|supervis|supervic|cargo|puesto") ~ "Carga/complejidad",
+      str_detect(normalizar_texto(abierta_inversion), "ausen|permiso|licenc|soltero|soltera|hijo|famili|materni|casad|embaraz|edad|joven|papa|madre|faltar|reemplaz|suplir|debilidad") ~ "Ausencias/familia",
       TRUE ~ "Otro"
     ),
     # NOTA: los patrones de filtro_cargo_simple / filtro_rubro_simple se ampliaron con

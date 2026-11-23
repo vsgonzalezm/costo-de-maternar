@@ -1,6 +1,6 @@
 [1] ""
 [1] "=== BASE STRUCTURE ==="
-[1] 2898  136
+[1] 2898  137
 [1] 1449
 # A tibble: 2 × 2
   pantalla_orden     n
@@ -34,24 +34,24 @@
 [1] ""
 [1] "=== RESPONDENT CHARACTERISTICS: Region/zone ==="
 # A tibble: 16 × 3
-   value                                                        n   pct
-   <chr>                                                    <int> <dbl>
- 1 XIII Región Metropolitana                                  782  54  
- 2 V Región de Valparaíso                                     181  12.5
- 3 VIII Región del Bío Bío                                    114   7.9
- 4 IX Región de La Araucanía                                   61   4.2
- 5 VI Región del Libertador General Bernardo O&apos;Higgins    54   3.7
- 6 VII Región del Maule                                        51   3.5
- 7 IV Región de Coquimbo                                       47   3.2
- 8 X Región de los Lagos                                       46   3.2
- 9 XIV Región Los Ríos                                         27   1.9
-10 II Región de Antofagasta                                    20   1.4
-11 XVI Región Ñuble                                            19   1.3
-12 III Región de Atacama                                       15   1  
-13 I Región de Tarapacá                                        12   0.8
-14 XII Región de Magallanes y la Antártica Chilena              9   0.6
-15 XV Región Arica y Parinacota                                 8   0.6
-16 XI Región de Aysén del General Carlos Ibañez del Campo       3   0.2
+   value                                                      n   pct
+   <chr>                                                  <int> <dbl>
+ 1 XIII Región Metropolitana                                782  54  
+ 2 V Región de Valparaíso                                   181  12.5
+ 3 VIII Región del Bío Bío                                  114   7.9
+ 4 IX Región de La Araucanía                                 61   4.2
+ 5 VI Región del Libertador General Bernardo O'Higgins       54   3.7
+ 6 VII Región del Maule                                      51   3.5
+ 7 IV Región de Coquimbo                                     47   3.2
+ 8 X Región de los Lagos                                     46   3.2
+ 9 XIV Región Los Ríos                                       27   1.9
+10 II Región de Antofagasta                                  20   1.4
+11 XVI Región Ñuble                                          19   1.3
+12 III Región de Atacama                                     15   1  
+13 I Región de Tarapacá                                      12   0.8
+14 XII Región de Magallanes y la Antártica Chilena            9   0.6
+15 XV Región Arica y Parinacota                               8   0.6
+16 XI Región de Aysén del General Carlos Ibañez del Campo     3   0.2
 [1] ""
 [1] "=== RESPONDENT CHARACTERISTICS: Age ==="
 # A tibble: 1 × 8
@@ -185,6 +185,7 @@
  9 8        32   2.2
 10 43       23   1.6
 # ℹ 48 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== PROFILE STRUCTURE: Order ==="
 # A tibble: 2 × 3
@@ -208,6 +209,7 @@
  9 58       32   1.1
 10 7        32   1.1
 # ℹ 90 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== PROFILE STRUCTURE: Context template ==="
 # A tibble: 2 × 3
@@ -470,56 +472,59 @@
 [1] ""
 [1] "=== OPEN-ENDED RAW RESPONSES: Costly ==="
 # A tibble: 1,444 × 3
-   value                                                                 n   pct
-   <chr>                                                             <int> <dbl>
- 1 En su desempeño                                                       6   0.2
- 2 En el salario mensual                                                 4   0.1
- 3 Presupuesto de la empresa                                             4   0.1
- 4 licencias medicas                                                     4   0.1
- 5 - - - . . . . .                                                       2   0.1
- 6 - Que ambas son mujeres jóvenes en edad reproductiva, lo cual pu…     2   0.1
- 7 A ambas se les pregunto si querían ser madre lo cual no se deber…     2   0.1
- 8 A largo plazo debe ser caro                                           2   0.1
- 9 A los años de servicio                                                2   0.1
-10 A mayor experiencia se requiere un sueldo más elevado para mante…     2   0.1
+   value                                                                                   n   pct
+   <chr>                                                                               <int> <dbl>
+ 1 En su desempeño                                                                         6   0.2
+ 2 En el salario mensual                                                                   4   0.1
+ 3 Presupuesto de la empresa                                                               4   0.1
+ 4 licencias medicas                                                                       4   0.1
+ 5 - - - . . . . .                                                                         2   0.1
+ 6 - Que ambas son mujeres jóvenes en edad reproductiva, lo cual puede traer licencia…     2   0.1
+ 7 A ambas se les pregunto si querían ser madre lo cual no se debería de preguntar pe…     2   0.1
+ 8 A largo plazo debe ser caro                                                             2   0.1
+ 9 A los años de servicio                                                                  2   0.1
+10 A mayor experiencia se requiere un sueldo más elevado para mantener motivado y 'le…     2   0.1
 # ℹ 1,434 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== OPEN-ENDED RAW RESPONSES: Investment ==="
 # A tibble: 1,447 × 3
-   value                                                                 n   pct
-   <chr>                                                             <int> <dbl>
- 1 Buen elemento para la empresa                                         4   0.1
- 2 En sus habilidades                                                    4   0.1
- 3 -.-.-.- . . .- -. -.                                                  2   0.1
- 4 A futuro es muy rentable para la empresa.                             2   0.1
- 5 A la experiencia que tiene cada una y los conocimiento que pueda…     2   0.1
- 6 A la larga sera conveniente para la empresa tener todo en orden …     2   0.1
- 7 A largo 0lazo el postulante le dará beneficios a la empresa recl…     2   0.1
- 8 A largo plazo se ven buenos resultados                                2   0.1
- 9 A largo plazo será más beneficio que inversión, a medida que vay…     2   0.1
-10 A largo plazo será un gran aporte a la empresa.                       2   0.1
+   value                                                                                   n   pct
+   <chr>                                                                               <int> <dbl>
+ 1 Buen elemento para la empresa                                                           4   0.1
+ 2 En sus habilidades                                                                      4   0.1
+ 3 -.-.-.- . . .- -. -.                                                                    2   0.1
+ 4 A futuro es muy rentable para la empresa.                                               2   0.1
+ 5 A la experiencia que tiene cada una y los conocimiento que puedan aportar               2   0.1
+ 6 A la larga sera conveniente para la empresa tener todo en orden por alguien compet…     2   0.1
+ 7 A largo 0lazo el postulante le dará beneficios a la empresa reclutadora                 2   0.1
+ 8 A largo plazo se ven buenos resultados                                                  2   0.1
+ 9 A largo plazo será más beneficio que inversión, a medida que vaya conociendo su tr…     2   0.1
+10 A largo plazo será un gran aporte a la empresa.                                         2   0.1
 # ℹ 1,437 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== OPEN-ENDED THEMES: Costly ==="
 # A tibble: 6 × 3
   value                            n   pct
   <chr>                        <int> <dbl>
-1 Other                          854  29.5
-2 Cost / salary                  698  24.1
-3 Training / experience          612  21.1
-4 Leave / absences / maternity   534  18.4
-5 Performance / productivity     162   5.6
-6 Trust / commitment              38   1.3
+1 Cost / salary                  924  31.9
+2 Training / experience          854  29.5
+3 Leave / absences / maternity   570  19.7
+4 Performance / productivity     354  12.2
+5 Trust / commitment             100   3.5
+6 Other                           96   3.3
 [1] ""
 [1] "=== OPEN-ENDED THEMES: Investment ==="
-# A tibble: 5 × 3
+# A tibble: 6 × 3
   value                           n   pct
   <chr>                       <int> <dbl>
-1 Other                         976  33.7
-2 Contribution / productivity   870  30  
-3 Skills / experience           788  27.2
-4 Workload / complexity         174   6  
-5 Commitment / trust             90   3.1
+1 Contribution / productivity  1436  49.6
+2 Skills / experience          1002  34.6
+3 Commitment / trust            190   6.6
+4 Workload / complexity         186   6.4
+5 Other                          64   2.2
+6 Ausencias/familia              20   0.7
 [1] ""
 [1] "=== OTHER OPEN FIELDS: Job title ==="
 # A tibble: 132 × 3
@@ -536,6 +541,7 @@
  9 Operario          6   0.2
 10 Pensionado        6   0.2
 # ℹ 122 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== OTHER OPEN FIELDS: Industry sector ==="
 # A tibble: 177 × 3
@@ -552,6 +558,7 @@
  9 Agrícola        4   0.1
 10 Derecho         4   0.1
 # ℹ 167 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== OTHER OPEN FIELDS: Cleaned job title ==="
 # A tibble: 98 × 3
@@ -568,6 +575,7 @@
  9 Analista                         4   0.1
 10 Ingeniero                        4   0.1
 # ℹ 88 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== OTHER OPEN FIELDS: Cleaned industry sector ==="
 # A tibble: 141 × 3
@@ -584,6 +592,7 @@
  9 Comercio y Alimentos              6   0.2
 10 Independiente                     6   0.2
 # ℹ 131 more rows
+# ℹ Use `print(n = ...)` to see more rows
 [1] ""
 [1] "=== OTHER OPEN FIELDS: Simplified job title ==="
 # A tibble: 7 × 3
@@ -644,10 +653,11 @@
 1  1448  29.5  45.2    10    12     21    34   879
 [1] ""
 [1] "=== BEHAVIOR FLAGS: Under p10 in all 3 timing tasks ==="
-# A tibble: 1 × 3
+# A tibble: 2 × 3
   value     n   pct
   <chr> <int> <dbl>
-1 FALSE  1449   100
+1 FALSE  1418  97.9
+2 TRUE     31   2.1
 [1] ""
 [1] "=== BEHAVIOR FLAGS: Time capture error count ==="
 # A tibble: 2 × 3
@@ -676,12 +686,12 @@
 1 FALSE  1087    75
 2 TRUE    362    25
 [1] ""
-[1] "=== BEHAVIOR FLAGS: Netquest extra block ==="
+[1] "=== BEHAVIOR FLAGS: Netquest extra slot arrival ==="
 # A tibble: 2 × 3
   value     n   pct
   <chr> <int> <dbl>
-1 FALSE  1381  95.3
-2 TRUE     68   4.7
+1 FALSE  1400  96.6
+2 TRUE     49   3.4
 [1] ""
 [1] "=== BEHAVIOR: Postulante 1 screen time ==="
 # A tibble: 1 × 8
