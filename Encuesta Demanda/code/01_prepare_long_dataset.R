@@ -7,7 +7,9 @@
   # arreglar recodificacion attention check
   # ampliar categorias de preguntas abiertas
 # Date: agosto 2026
-# Nov 2026: se ampliaron las reglas de abierta_costoso_simple / abierta_inversion_simple (ver 4B).
+# Nov 2026 (Valentina): edite la seccion 4B. Revise todas las respuestas abiertas que quedaban en "Otro" y amplie las reglas de
+#   abierta_costoso_simple y abierta_inversion_simple para que casi ninguna quede sin categoria. Corregi el patron "car", que
+#   clasificaba como costo cualquier palabra con esas letras (cargo, carrera, caracteristica).
 # Purpose: Reads the updated Netquest Excel file, builds the respondent-profile long dataset, cleans profile
 # ============================================================================
 

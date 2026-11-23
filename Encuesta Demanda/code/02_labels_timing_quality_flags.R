@@ -3,8 +3,10 @@
 # Author: valentinagonzalez
 # Modified: Tania Hutt - arreglo de errores
 # Date: agosto 2026
-# Nov 2026: flags de tiempo con <=, variable CARGO_DIRECCION_O_JEFATURA, flag de llegadas repetidas a una viñeta
-#   (NETQUEST_EXTRA_SLOT_FLAG, reemplaza al de bloques) y decodificacion de entidades HTML en labels.
+# Nov 2026 (Valentina): edite este script al validar la base de Netquest. Cambie los flags de tiempo para que usen <= (los
+#   tiempos tienen un piso y con < el flag de TAREA no marcaba a nadie); cree CARGO_DIRECCION_O_JEFATURA para poder repetir los
+#   modelos solo con quienes dirigen o supervisan; reemplace el flag de bloques por NETQUEST_EXTRA_SLOT_FLAG (marca solo a
+#   quienes llegaron a una vineta ya usada, no a bloques completos); y corregi las entidades HTML en las etiquetas (O&apos;Higgins).
 # Purpose: Adds value labels from Netquest codebook sheets, cleans NULL markers, creates timing/duration/attention/block flags, and exports the final analysis CSV.
 # ============================================================================
 

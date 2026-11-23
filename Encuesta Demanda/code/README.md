@@ -34,13 +34,13 @@ de los scripts antes de esta limpieza).
 `00_setup.R`; todos los scripts de modelos parten de ella). Es la única base que hay que usar: 2.898 filas
 (1.449 encuestados x 2 perfiles). `base_demanda_long_final.csv` y `..._with_labels_and_flags.csv` son pasos intermedios.
 
-Cambios de noviembre 2026 en 01 y 02 (copia de los scripts anteriores en `archive/2026-11-23_pre_validacion/`):
+Cambios que hice en noviembre 2026 en 01 y 02 al validar la base de Netquest (guardé los scripts anteriores en `archive/2026-11-23_pre_validacion/`):
 
-- `CARGO_DIRECCION_O_JEFATURA` (02): 1 si el cargo de P10 es dueño/a, gerente o director/a, subgerente o jefe/a-supervisor/a; 0 si es administrativo/a, asistente u otro cargo. No elimina casos. Sirve para repetir los modelos solo con ese grupo.
-- `NETQUEST_EXTRA_SLOT_FLAG` (02): marca a los 49 encuestados que llegaron después a una viñeta (`VISITAS_1`) ya usada por otra persona. Reemplaza a `NETQUEST_EXTRA_BLOCK_FLAG`, que marcaba bloques completos (68 personas).
-- Flags `UNDER_P10_*` con `<=`: los tiempos de Netquest tienen un piso (10 s en CARGO y TAREA, 20 s en el perfil 2) y con `<` el flag de TAREA no marcaba a nadie.
-- Etiquetas con entidades HTML (`O&apos;Higgins` en `ZONA_label`) corregidas.
-- `abierta_costoso_simple` y `abierta_inversion_simple` (01): reglas ampliadas tras revisar las respuestas que caían en "Otro"; el patrón `car` ya no captura cargo/carrera. En inversión hay una categoría nueva, "Ausencias/familia".
+- Agregué `CARGO_DIRECCION_O_JEFATURA` (02): vale 1 si el cargo de P10 es dueño/a, gerente o director/a, subgerente o jefe/a-supervisor/a, y 0 si es administrativo/a, asistente u otro cargo. Lo hice para poder repetir los modelos solo con quienes cumplen el marco muestral; no elimina casos.
+- Reemplacé `NETQUEST_EXTRA_BLOCK_FLAG` por `NETQUEST_EXTRA_SLOT_FLAG` (02). El anterior marcaba a las 68 personas de los 4 bloques con 17 encuestados, aunque la mayoría no era "extra". El nuevo marca solo a las 49 personas que llegaron después a una viñeta (`VISITAS_1`) ya usada por otra.
+- Cambié los flags `UNDER_P10_*` a `<=` (02). Los tiempos de Netquest tienen un piso (10 s en CARGO y TAREA, 20 s en el perfil 2), así que con `<` el flag de TAREA no marcaba a nadie.
+- Corregí las etiquetas con entidades HTML (`O&apos;Higgins` en `ZONA_label`), que venían así desde la hoja Labels de Netquest.
+- Amplié las reglas de `abierta_costoso_simple` y `abierta_inversion_simple` (01) después de revisar una por una las respuestas que caían en "Otro". Arreglé el patrón `car`, que capturaba cargo/carrera/característica como si fueran "caro". En inversión agregué la categoría "Ausencias/familia".
 - `UNDER_P10_ALL_3_TASKS` es un flag por perfil, no por persona: 64 filas TRUE (46 personas con algun perfil TRUE), pero los resumenes por encuestado (02, 03, 04) cuentan solo el primer perfil (31). Para filtrar personas usar `max()` por `key`.
 
 Pendiente: la variable `CAMBIO20260729` de Netquest (159 casos del 29-30 jul) no se conserva en la base; falta confirmar con Tania qué cambió ese día.
