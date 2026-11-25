@@ -118,7 +118,7 @@ Table 5. Experimental-design family by discipline: number of papers and percenta
 
 Table 6. Top three topics by discipline in the Latin America-affiliated corpus, using average topic proportion (mean gamma) as the primary measure and dominant-topic counts as a complementary simplification. Report the full topic distribution in the appendix. The final model uses k = 8, selected by held-out perplexity, coherence, exclusivity and stability across seeds. Topics remain numbered until manual review of one representative paper and the most substantively distant pair within each topic.
 
-Figure 2. Experimental-method papers per 1,000 social-science papers, by region of affiliation and year, 1995--2025 (U.S., Europe and Latin America). Regional mentions are not mutually exclusive. Show annual values and a three-year moving-average alternative, and interpret the rates alongside the absolute counts in Table 2. Validate the European query before using this comparison in the manuscript.
+Figure 2. Experimental-method papers per 1,000 social-science papers, by region of affiliation and year, 1995--2025 (U.S., Europe and Latin America). Regional mentions are not mutually exclusive. Show annual values and a three-year moving-average alternative, and interpret the rates alongside the absolute counts in Table 2. The European and U.S. experimental series and the European general series were re-exported on 2026-11-25 with the same filters (articles and early access, 1990 to July 1, 2026, counts by publication year). Repeat the U.S. and Latin American general series on the same date and interpret the 2021 step in the Latin American denominator before using the comparison in the manuscript.
 
 Figure 3. Latin America-affiliated experimental-method papers per 1,000 papers in each discipline, over time, 1995--2025. Show annual values and a three-year moving-average alternative. Disciplines are not mutually exclusive. The denominator sums country-level WoS counts, so a multi-country paper may contribute to more than one country total; disclose this counting rule.
 
@@ -134,7 +134,7 @@ Figure 7. Top words for the k = 8 topic model in the Latin America-affiliated co
 
 - Complete Figure 1 and Table 1 with the query and filtering flow, including the overlap and deduplication stages.
 - Produce the in-text regional counts for the full period and 2016--2025 directly from the final denominators.
-- Validate the European experimental and general-production queries before interpreting Figure 2.
+- Repeat the U.S. and Latin American general-production exports on the same date as the European ones, and test the 2021 step in the Latin American denominator with SSCI-only exports, before interpreting Figure 2. The European queries are recorded in docs/regional_series_search_record.md.
 - Complete the manual review of papers classified as Other/not classified before finalizing Table 5 and Figure 4.
 - Complete the substantive review and labeling of the eight topics before finalizing Table 6 and Figure 7.
 - Implement the appendix robustness results excluding ESCI; the current ESCI audit identifies coverage but does not yet re-estimate the main outputs without ESCI.

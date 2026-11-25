@@ -73,6 +73,32 @@ leer_conteo_wos <- function(path) {
     mutate(year = as.integer(year), n = as.numeric(n))
 }
 
+# Comprueba una exportacion regional antes de usarla. Debe venir por
+# "Publication Years" (no "Final Publication Year", que omite registros sin
+# anio final) y la suma de las filas debe coincidir con el total del
+# encabezado ("% of N"; WoS usa punto o coma como separador de miles).
+# Detecta descargas incompletas o con el campo de anio equivocado.
+verificar_conteo_wos <- function(path) {
+  encabezado <- read_lines(path) |>
+    keep(~ str_detect(.x, "Publication Year")) |>
+    first()
+  if (is.na(encabezado) || str_detect(encabezado, "Final Publication Year")) {
+    stop("Exportar por 'Publication Years': ", basename(path))
+  }
+  total_encabezado <- encabezado |>
+    str_extract("(?<=% of )[0-9.,]+") |>
+    str_remove_all("[.,]") |>
+    as.numeric()
+  total_filas <- sum(leer_conteo_wos(path)$n)
+  if (!is.na(total_encabezado) && total_encabezado != total_filas) {
+    warning(
+      "La suma de filas (", total_filas, ") no coincide con el total del ",
+      "encabezado (", total_encabezado, ") en ", basename(path)
+    )
+  }
+  invisible(path)
+}
+
 # Media movil centrada de 3 anios (en extremos usa los anios disponibles)
 mm3 <- function(x) {
   (coalesce(lag(x), x) + x + coalesce(lead(x), x)) / 3
@@ -89,6 +115,9 @@ regiones <- tribble(
   "USA",           file.path(raw_dir, "experimental", "usa_exp.txt"),    file.path(dir_region, "usa_gral.txt"),
   "Europe",        file.path(raw_dir, "experimental", "europa_exp.txt"), file.path(dir_region, "europa_gral.txt")
 )
+
+# Las seis exportaciones regionales se revisan antes de calcular las tasas.
+walk(c(regiones$num_file, regiones$den_file), verificar_conteo_wos)
 
 fig2_data <- regiones |>
   mutate(
@@ -125,8 +154,8 @@ tema_base <- theme_minimal(base_size = 13) +
   )
 
 nota_fig2 <- paste(
-  "Note: Web of Science Core Collection, social sciences. Regions by author affiliation; a paper can count in more than one region.",
-  "\nLatin America numerator rebuilt from the validated corpus (unique UT); USA and Europe numerators are direct WoS counts. Analysis period: 1995-2025."
+  "Note: Web of Science Core Collection, social sciences; articles and early access, counts by publication year. Regions by author affiliation; a paper can count in more than one region.",
+  "\nLatin America numerator rebuilt from the validated corpus (unique UT); USA and Europe numerators are direct WoS counts. The Latin American denominator more than doubles in 2021. Analysis period: 1995-2025."
 )
 
 fig2_plot <- ggplot(fig2_data, aes(year, rate_per_1000, color = region)) +

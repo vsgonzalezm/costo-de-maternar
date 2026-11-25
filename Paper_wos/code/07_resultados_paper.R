@@ -225,6 +225,30 @@ read_wos_year_counts <- function(path) {
     transmute(year = as.integer(year), n = as.numeric(n))
 }
 
+verify_wos_year_counts <- function(path) {
+  # Comprueba que la exportacion venga por "Publication Years" (no "Final
+  # Publication Year") y que la suma de filas coincida con el total del
+  # encabezado ("% of N"; WoS usa punto o coma como separador de miles).
+  header <- read_lines(path) |>
+    keep(~ str_detect(.x, "Publication Year")) |>
+    first()
+  if (is.na(header) || str_detect(header, "Final Publication Year")) {
+    stop("Exportar por 'Publication Years': ", basename(path))
+  }
+  header_total <- header |>
+    str_extract("(?<=% of )[0-9.,]+") |>
+    str_remove_all("[.,]") |>
+    as.numeric()
+  rows_total <- sum(read_wos_year_counts(path)$n)
+  if (!is.na(header_total) && header_total != rows_total) {
+    warning(
+      "La suma de filas (", rows_total, ") no coincide con el total del ",
+      "encabezado (", header_total, ") en ", basename(path)
+    )
+  }
+  invisible(path)
+}
+
 regional_files <- tribble(
   ~region, ~experimental_file, ~total_file,
   "Latin America",
@@ -237,6 +261,9 @@ regional_files <- tribble(
   file.path(raw_dir, "experimental", "europa_exp.txt"),
   file.path(region_dir, "europa_gral.txt")
 )
+
+# Las seis exportaciones regionales se revisan antes de sumar.
+walk(c(regional_files$experimental_file, regional_files$total_file), verify_wos_year_counts)
 
 table2_regions <- regional_files |>
   mutate(
@@ -1421,7 +1448,7 @@ esci_audit <- papers |>
 notes <- tribble(
   ~output, ~note,
   "All", "The official database contains 675 papers; the main analysis uses 611 papers published in 1995-2025. No eligible records occur before 1995 and 2026 is excluded because it is incomplete.",
-  "Table 2", "Regional totals sum annual Web of Science counts over 1995-2025.",
+  "Table 2", "Regional totals sum annual Web of Science counts over 1995-2025 (articles and early access; counts by publication year). The Latin American experimental series is rebuilt from the validated corpus.",
   "Table 3", "Core disciplines are not mutually exclusive; a paper can contribute to more than one discipline.",
   "Table 4", "Country mentions are not mutually exclusive. Percentages use the 611 analytical papers as denominator and therefore do not sum to 100%.",
   "Table 5 / Figure 4", "Design families are not mutually exclusive. Other contains papers without a label mapped to the four predefined families and is retained for audit, but is not plotted in Figure 4.",
