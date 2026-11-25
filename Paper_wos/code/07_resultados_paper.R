@@ -1382,7 +1382,7 @@ figure_topic_prevalence <- ggplot(
     y = "Mean topic proportion (gamma)",
     caption = paste(
       "Expected papers is the sum of gamma weights, not a hard assignment.",
-      "The five topic shares sum to 100%."
+      str_c("The ", recommended_k, " topic shares sum to 100%.")
     )
   ) +
   theme_paper

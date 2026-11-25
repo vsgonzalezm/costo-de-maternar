@@ -126,7 +126,7 @@ Figure 4. Number of papers by experimental-design family over time, 1995--2025, 
 
 Figure 5. Origin and international collaboration of Latin America-affiliated experimental papers, shown (a) over time and (b) by discipline, 1995--2025. Use mutually exclusive categories: Latin America only, Latin America--Europe, Latin America--U.S., Latin America--Europe and U.S., and Latin America--other. Disciplines are not mutually exclusive.
 
-Figure 6. Leadership measured by first-author affiliation (Latin America, U.S./Europe, or other/unknown) among Latin America-affiliated experimental papers, shown for the total over time and by discipline, 1995--2025. Report the corresponding-author comparison separately in Table A2.
+Figure 6. Leadership measured by first-author affiliation (Latin America, U.S./Europe, or other/unknown) among Latin America-affiliated experimental papers, by discipline, 1995--2025. Report first-author country counts separately and present the corresponding-author comparison in Table A2.
 
 Figure 7. Top words for the k = 8 topic model in the Latin America-affiliated corpus. The x-axis reports beta, the probability of a word conditional on a topic. Keep topics numbered until the substantive validation and labeling stage; treat topic prevalence and assignment-strength plots as diagnostics rather than additional numbered manuscript figures.
 
