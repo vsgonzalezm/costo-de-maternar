@@ -47,8 +47,8 @@ topic_path <- file.path(tables_dir, "topic_model_affi_latam.xlsx")
 
 analysis_first_year <- 1995L
 analysis_last_year <- 2025L
-expected_analysis_papers <- 611L
-# La base oficial conserva 675 papers hasta julio de 2026. Todos los outputs
+expected_analysis_papers <- 603L
+# La base oficial conserva 667 papers hasta julio de 2026. Todos los outputs
 # principales usan 1995-2025: no hay registros antes de 1995 y 2026 es parcial.
 
 five_year_levels <- c(
@@ -127,8 +127,8 @@ if (length(missing_official) > 0L) {
   )
 }
 
-if (nrow(base_oficial) != 675L || anyDuplicated(base_oficial$UT) > 0L) {
-  stop("La base oficial debe contener 675 UT unicas.")
+if (nrow(base_oficial) != 667L || anyDuplicated(base_oficial$UT) > 0L) {
+  stop("La base oficial debe contener 667 UT unicas.")
 }
 
 authors_long <- read_excel(descriptive_path, sheet = "Authors_long")
@@ -154,9 +154,11 @@ if (length(recommended_k) != 1L || is.na(recommended_k) || recommended_k < 2L) {
 if (
   n_distinct(topic_gamma$UT) != expected_analysis_papers ||
     nrow(topic_gamma) != expected_analysis_papers * recommended_k ||
-    n_distinct(paper_dominant$UT) != expected_analysis_papers
+    n_distinct(paper_dominant$UT) != expected_analysis_papers ||
+    !setequal(topic_gamma$UT, paper_dominant$UT) ||
+    any(!topic_gamma$UT %in% base_oficial$UT)
 ) {
-  stop("Los resultados de 06 no cubren los 611 papers de 1995-2025.")
+  stop("Los resultados de 06 no cubren los 603 papers de 1995-2025.")
 }
 
 papers <- base_oficial |>
@@ -190,7 +192,7 @@ if (
     any(is.na(papers$year)) ||
     anyDuplicated(papers$UT) > 0L
 ) {
-  stop("El universo analitico debe contener 611 UT unicas de 1995-2025.")
+  stop("El universo analitico debe contener 603 UT unicas de 1995-2025.")
 }
 
 core_area_long <- papers |>
@@ -281,6 +283,7 @@ table2_regions <- regional_files |>
       ~ sum(.x$n[between(.x$year, analysis_first_year, analysis_last_year)])
     )
   ) |>
+  mutate(experimental_n = if_else(region == "Latin America", as.numeric(nrow(papers)), experimental_n)) |>
   arrange(match(region, c("Latin America", "United States", "Europe")))
 
 # -----------------------------------------------------------------------------
@@ -308,7 +311,7 @@ table3_disciplines <- table3_long |>
     Percent_of_papers = round(100 * Total / expected_analysis_papers, 1)
   ) |>
   arrange(desc(Total), core_area)
-# El porcentaje usa como denominador los 611 papers analiticos. Como un paper
+# El porcentaje usa como denominador los 603 papers analiticos. Como un paper
 # puede pertenecer a mas de una disciplina, los porcentajes no suman 100%.
 
 # -----------------------------------------------------------------------------
@@ -411,7 +414,7 @@ method_families <- bind_rows(
   )
 
 if (n_distinct(method_families$UT) != expected_analysis_papers) {
-  stop("Table 5 debe clasificar los 611 papers en una familia u Other.")
+  stop("Table 5 debe clasificar los 603 papers en una familia u Other.")
 }
 
 other_method_audit <- method_families |>
@@ -578,7 +581,7 @@ if (
   nrow(paper_origin) != expected_analysis_papers ||
     !all(paper_origin$has_latam)
 ) {
-  stop("Figure 5: los 611 papers deben tener al menos un autor LatAm.")
+  stop("Figure 5: los 603 papers deben tener al menos un autor LatAm.")
 }
 
 table_figure5_origin <- paper_origin |>
@@ -610,7 +613,7 @@ table_figure5_origin <- table_figure5_origin |>
 
 # Origen por disciplina (total en el tiempo). Las disciplinas se superponen: un
 # paper cuenta en cada disciplina a la que pertenece, asi que la suma de filas
-# supera 611 (mismo criterio de conteo no excluyente que Table 3).
+# supera 603 (mismo criterio de conteo no excluyente que Table 3).
 table_figure5_by_discipline <- paper_origin |>
   select(UT, origin) |>
   inner_join(
@@ -1377,7 +1380,7 @@ figure_topic_prevalence <- ggplot(
   ) +
   labs(
     title = "Overall topic prevalence",
-    subtitle = "Average topic proportion across the 611 papers",
+    subtitle = "Average topic proportion across the 603 papers",
     x = NULL,
     y = "Mean topic proportion (gamma)",
     caption = paste(
@@ -1447,10 +1450,10 @@ esci_audit <- papers |>
 
 notes <- tribble(
   ~output, ~note,
-  "All", "The official database contains 675 papers; the main analysis uses 611 papers published in 1995-2025. No eligible records occur before 1995 and 2026 is excluded because it is incomplete.",
+  "All", "The official database contains 667 papers; the main analysis uses 603 papers published in 1995-2025. No eligible records occur before 1995 and 2026 is excluded because it is incomplete.",
   "Table 2", "Regional totals sum annual Web of Science counts over 1995-2025 (articles and early access; counts by publication year). The Latin American experimental series is rebuilt from the validated corpus.",
   "Table 3", "Core disciplines are not mutually exclusive; a paper can contribute to more than one discipline.",
-  "Table 4", "Country mentions are not mutually exclusive. Percentages use the 611 analytical papers as denominator and therefore do not sum to 100%.",
+  "Table 4", "Country mentions are not mutually exclusive. Percentages use the 603 analytical papers as denominator and therefore do not sum to 100%.",
   "Table 5 / Figure 4", "Design families are not mutually exclusive. Other contains papers without a label mapped to the four predefined families and is retained for audit, but is not plotted in Figure 4.",
   "Table 6", "Average gamma is the primary topic measure; dominant-topic counts are a complementary simplification. Topics remain numbered pending manual substantive review.",
   "Figure 5", figure5_origin_note,
@@ -1469,7 +1472,7 @@ review_instructions <- tribble(
   ~seccion, ~instruccion,
   "Objetivo general", "Este archivo reune solamente los papers que requieren revision manual para validar los topicos y clasificar los metodos que aun quedaron en Other/not classified. No reemplaza la base oficial ni las tablas del manuscrito.",
   "Regla general", "No modificar las columnas que ya contienen identificadores, texto del paper, probabilidades o distancias. Completar unicamente las columnas manuales indicadas en estas instrucciones.",
-  "Hoja Revision topicos", "Contiene 24 papers: tres casos por cada uno de los ocho topicos. Para cada topico se incluye un paper representativo y el par de papers mas diferentes entre si dentro de ese mismo topico.",
+  "Hoja Revision topicos", str_c("Contiene ", nrow(topic_manual_review), " papers. Por topico se incluye un paper representativo y el par mas diferente entre los restantes, segun distancia textual TF-IDF."),
   "Hoja Revision topicos", "topic identifica el topico numerado. review_reason indica por que se selecciono el paper: representative corresponde al caso mas representativo y distant_pair a uno de los dos casos mas diferentes. pair_id permite reconocer los dos integrantes del mismo par.",
   "Hoja Revision topicos", "UT, year, title, abstract, journal y keywords_analisis permiten identificar y leer el paper. dominant_gamma es la proporcion del paper asignada a su topico dominante. pair_cosine_distance mide cuan diferentes son los dos papers del par: un valor mayor indica mayor distancia entre sus perfiles tematicos.",
   "Tarea en Revision topicos", "Revisar juntos los tres papers de cada topic, leyendo al menos titulo, abstract y palabras clave. Si esos campos no bastan para decidir, consultar el texto completo del paper.",
@@ -1477,7 +1480,7 @@ review_instructions <- tribble(
   "Tarea en Revision topicos", "fits_topic: escribir yes, no o unclear segun si el paper comparte un tema sustantivo defendible con los otros dos papers del mismo topico.",
   "Tarea en Revision topicos", "proposed_topic_name: despues de revisar los tres casos, proponer un nombre breve y sustantivo para el topico. Si los tres son coherentes, repetir el mismo nombre en sus tres filas; si no lo son, dejar constancia de la diferencia en review_notes.",
   "Tarea en Revision topicos", "review_notes: explicar dudas, diferencias internas del topico, razones para marcar no o unclear y cualquier evidencia adicional utilizada para decidir.",
-  "Hoja Revision metodos", "Contiene los 41 papers que no pudieron asignarse automaticamente a una de las cuatro familias de diseno. experimental_method muestra la etiqueta disponible antes de la revision y puede estar vacia o ser demasiado general.",
+  "Hoja Revision metodos", str_c("Contiene ", nrow(other_method_audit), " papers sin familia de diseno automatica. experimental_method muestra la etiqueta disponible antes de la revision y puede estar vacia o ser demasiado general."),
   "Tarea en Revision metodos", "eligible_experimental: escribir yes, no o unclear tras comprobar si el paper realmente reporta un experimento. No basta con que mencione experimentos; excluir estudios solamente observacionales, teoricos, de revision, simulaciones, experimentos naturales o cuasiexperimentos.",
   "Tarea en Revision metodos", "specific_method: si eligible_experimental es yes, registrar todos los disenos aplicables usando exactamente las opciones de la hoja Etiquetas metodos. Separar mas de un metodo con punto y coma.",
   "Tarea en Revision metodos", "method_family: registrar todas las familias correspondientes usando la hoja Mapa familias. Separar mas de una familia con punto y coma.",
@@ -1560,7 +1563,7 @@ write_xlsx(
     `Etiquetas metodos` = method_labels,
     `Mapa familias` = method_family_map
   ),
-  file.path(tables_dir, "revision_isi.xlsx")
+  file.path(tables_dir, "revision_isi_final.xlsx")
 )
 
 save_publication_figure(

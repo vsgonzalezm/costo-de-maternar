@@ -2,7 +2,7 @@
 # 05 - Descriptivos bibliometricos del corpus con afiliacion latinoamericana
 # -----------------------------------------------------------------------------
 # Este script usa exclusivamente base_oficial.rds, creada por 00_inicial.R.
-# El universo analitico contiene 675 papers con al menos una afiliacion LatAm.
+# El universo analitico contiene 667 papers con al menos una afiliacion LatAm.
 # No reconstruye el universo ni vuelve a leer la revision manual.
 #
 # Output unico:
@@ -41,8 +41,8 @@ if (length(missing_columns) > 0L) {
   )
 }
 
-if (nrow(base_oficial) != 675L || n_distinct(base_oficial$UT) != 675L) {
-  stop("base_oficial.rds debe contener 675 papers con UT unica.")
+if (nrow(base_oficial) != 667L || n_distinct(base_oficial$UT) != 667L) {
+  stop("base_oficial.rds debe contener 667 papers con UT unica.")
 }
 
 # 2. Funciones de apoyo -------------------------------------------------------
@@ -468,8 +468,8 @@ paper_country_summary <- paper_countries |>
 papers_without_latam <- paper_country_summary |>
   filter(n_latam_countries == 0L)
 
-if (nrow(paper_country_summary) != 675L || nrow(papers_without_latam) > 0L) {
-  stop("El mapeo de paises no reproduce los 675 papers con afiliacion LatAm.")
+if (nrow(paper_country_summary) != 667L || nrow(papers_without_latam) > 0L) {
+  stop("El mapeo de paises no reproduce los 667 papers con afiliacion LatAm.")
 }
 
 # 7. Base larga autor-paper ---------------------------------------------------

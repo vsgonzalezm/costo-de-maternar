@@ -459,21 +459,37 @@ exclusiones_equipo <- tribble(
   "WOS:000412957000002",
   "Duplicado: excluir volumen 99 y conservar volumen 94",
   "WOS:001534810300002",
-  "Duplicado: excluir version del 9 de mayo y conservar la del 15 de febrero"
+  "Duplicado: excluir version del 9 de mayo y conservar la del 15 de febrero",
+  "WOS:000339942800009",
+  "Revision de topicos: evaluacion metodologica de la tecnica de conteo de items",
+  "WOS:001494600800001",
+  "Revision de topicos: analisis observacional con variables instrumentales",
+  "WOS:001233364700001",
+  "Revision de topicos: seguimiento de un experimento previo y cambio tarifario exogeno",
+  "WOS:000310753400003",
+  "Revision de topicos: estudio etnografico y de elicitacion fuera del alcance",
+  "WOS:000412853800003",
+  "Revision de topicos: comparacion metodologica de estimadores",
+  "WOS:001494264900003",
+  "Revision de topicos: reanalisis de experimentos publicados y recomendaciones de inferencia",
+  "WOS:000417488800004",
+  "Revision sistematica y metaanalisis de estudios existentes",
+  "WOS:001518615700022",
+  "Revision de literatura sobre rendicion de cuentas sin experimento primario"
 )
 
 papers_excluir <- union(exclusiones_revision$UT, exclusiones_equipo$UT)
 
-if (length(papers_excluir) != 48L) {
-  stop("Se esperaban 48 exclusiones unicas.")
+if (length(papers_excluir) != 56L) {
+  stop("Se esperaban 56 exclusiones unicas.")
 }
 
 candidatos_elegibles <- candidatos_corregidos |>
   filter(!UT %in% papers_excluir)
 
-if (nrow(candidatos_elegibles) != 1089L ||
+if (nrow(candidatos_elegibles) != 1081L ||
     anyDuplicated(candidatos_elegibles$UT) > 0L) {
-  stop("Despues de excluir deben quedar 1.089 candidatos con UT unica.")
+  stop("Despues de excluir deben quedar 1.081 candidatos con UT unica.")
 }
 
 # 4. Seleccion de papers con afiliacion LatAm -------------------------------
@@ -525,21 +541,21 @@ base_oficial <- candidatos_elegibles |>
   inner_join(paises_latam_por_paper, by = "UT") |>
   mutate(affi_latam = TRUE)
 
-if (nrow(base_oficial) != 675L || anyDuplicated(base_oficial$UT) > 0L) {
-  stop("La base oficial debe contener exactamente 675 papers con UT unica.")
+if (nrow(base_oficial) != 667L || anyDuplicated(base_oficial$UT) > 0L) {
+  stop("La base oficial debe contener exactamente 667 papers con UT unica.")
 }
 
-# Deben quedar 674 papers de la busqueda endogena original y un paper recuperado
+# Deben quedar 666 papers de la busqueda endogena original y un paper recuperado
 # desde la otra busqueda cuya afiliacion argentina fue completada manualmente.
 recuperados_fuera_busqueda_endogena <- base_oficial |>
   filter(!en_busqueda_endogena) |>
   pull(UT)
 
 if (
-  sum(base_oficial$en_busqueda_endogena) != 674L ||
+  sum(base_oficial$en_busqueda_endogena) != 666L ||
     !identical(recuperados_fuera_busqueda_endogena, "WOS:001488694300001")
 ) {
-  stop("No se reproduce la conciliacion esperada de 674 + 1 papers.")
+  stop("No se reproduce la conciliacion esperada de 666 + 1 papers.")
 }
 
 # Control especifico de los cinco falsos positivos encontrados.
@@ -555,7 +571,7 @@ if (any(falsos_new_mexico %in% base_oficial$UT)) {
   stop("Un paper afiliado solo a New Mexico fue clasificado como Mexico.")
 }
 
-# Desde este punto se trabaja exclusivamente con los 675 papers oficiales.
+# Desde este punto se trabaja exclusivamente con los 667 papers oficiales.
 
 # 5. Abstracts y keywords ---------------------------------------------------
 
@@ -818,8 +834,8 @@ base_oficial <- base_oficial |>
   select(any_of(columnas_oficiales)) |>
   arrange(as.integer(PY), UT)
 
-if (nrow(base_oficial) != 675L || n_distinct(base_oficial$UT) != 675L) {
-  stop("La base oficial final no conserva 675 papers unicos.")
+if (nrow(base_oficial) != 667L || n_distinct(base_oficial$UT) != 667L) {
+  stop("La base oficial final no conserva 667 papers unicos.")
 }
 
 # Verifica que el mapa anidado conserve una posicion unica por autor y que
@@ -843,9 +859,9 @@ n_c3_manuales <- sum(
 # script se detiene antes de sobrescribir la base oficial y obliga a revisar
 # si se modifico el archivo de entrada o el vinculo por posicion de autor.
 if (
-  n_filas_autor_paper != 2419L ||
-    n_c1_manuales != 1844L ||
-    n_c3_manuales != 1900L
+  n_filas_autor_paper != 2393L ||
+    n_c1_manuales != 1829L ||
+    n_c3_manuales != 1885L
 ) {
   stop(
     "El mapa autor-afiliacion no coincide con la revision manual vigente: ",

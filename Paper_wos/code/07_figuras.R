@@ -19,7 +19,7 @@
 # Entradas (Paper_wos/data/):
 #   raw/experimental/{latam,usa,europa}_exp.txt          -> numeradores Fig. 2
 #   raw/totales denominador/por region-año/*_gral.txt    -> denominadores Fig. 2
-#   intermediate/base_oficial.rds                        -> numeradores Fig. 3
+#   intermediate/base_oficial.rds                        -> numeradores LatAm en Figs. 2 y 3
 #   raw/totales denominador/por disciplina-pais-año/     -> denominadores Fig. 3
 # No se usan raw/endogeno ni raw/laboratorio.
 #
@@ -111,17 +111,22 @@ paleta_region <- c("Latin America" = "#D55E00", "USA" = "#0072B2", "Europe" = "#
 #-----------------------------------------------
 regiones <- tribble(
   ~region,         ~num_file,                                        ~den_file,
-  "Latin America", file.path(raw_dir, "experimental", "latam_exp.txt"),  file.path(dir_region, "latam_gral.txt"),
+  "Latin America", NA_character_,  file.path(dir_region, "latam_gral.txt"),
   "USA",           file.path(raw_dir, "experimental", "usa_exp.txt"),    file.path(dir_region, "usa_gral.txt"),
   "Europe",        file.path(raw_dir, "experimental", "europa_exp.txt"), file.path(dir_region, "europa_gral.txt")
 )
 
 # Las seis exportaciones regionales se revisan antes de calcular las tasas.
-walk(c(regiones$num_file, regiones$den_file), verificar_conteo_wos)
+# Usar el corpus curado para que el numerador LatAm refleje las exclusiones de 00.
+base_oficial <- readRDS(file.path(data_dir, "intermediate", "base_oficial.rds"))
+latam_anual <- base_oficial |>
+  transmute(year = as.integer(PY)) |>
+  count(year, name = "n")
+walk(na.omit(c(regiones$num_file, regiones$den_file)), verificar_conteo_wos)
 
 fig2_data <- regiones |>
   mutate(
-    num = map(num_file, leer_conteo_wos),
+    num = map2(region, num_file, ~ if (.x == "Latin America") latam_anual else leer_conteo_wos(.y)),
     den = map(den_file, leer_conteo_wos)
   ) |>
   mutate(datos = map2(num, den, ~ full_join(
@@ -223,7 +228,7 @@ if (any(faltantes$max_paises < 14)) {
 
 # Numerador: papers del corpus validado por disciplina (core_area) y anio.
 # Un paper puede estar en mas de una disciplina; se cuenta una vez en cada una.
-base_oficial <- readRDS(file.path(data_dir, "intermediate", "base_oficial.rds"))
+# El mismo corpus curado ya se cargo en la Figura 2.
 stopifnot(n_distinct(base_oficial$UT) == nrow(base_oficial))
 
 num_disciplina <- base_oficial |>

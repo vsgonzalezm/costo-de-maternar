@@ -98,9 +98,9 @@ tables_dir <- here("Paper_wos", "outputs", "tables")
 
 analysis_first_year <- 1995L
 analysis_last_year <- 2025L
-expected_analysis_papers <- 611L
+expected_analysis_papers <- 603L
 # El paper analiza 1995-2025: no hay registros antes de 1995 y 2026 se excluye
-# porque esta incompleto. La base oficial conserva sus 675 papers, pero el topic
+# porque esta incompleto. La base oficial conserva sus 667 papers, pero el topic
 # model principal usa solo el periodo comparable del manuscrito.
 
 
@@ -131,8 +131,8 @@ if (length(missing) > 0L) {
   )
 }
 
-if (nrow(corpus_raw) != 675L || anyDuplicated(corpus_raw$UT) > 0L) {
-  stop("La base oficial debe contener 675 UT unicas antes del corte temporal.")
+if (nrow(corpus_raw) != 667L || anyDuplicated(corpus_raw$UT) > 0L) {
+  stop("La base oficial debe contener 667 UT unicas antes del corte temporal.")
 }
 
 corpus <- corpus_raw |>
@@ -154,7 +154,7 @@ corpus <- corpus_raw |>
   filter(between(year, analysis_first_year, analysis_last_year))
 
 if (nrow(corpus) != expected_analysis_papers || anyDuplicated(corpus$UT) > 0L) {
-  stop("El corpus 1995-2025 debe contener 611 UT unicas.")
+  stop("El corpus 1995-2025 debe contener 603 UT unicas.")
 }
 
 # -----------------------------------------------------------------------------
@@ -820,7 +820,7 @@ dtm_sensitivity <- tokens_sensitivity |>
 # Esta segunda DTM agrega keywords y permite evaluar si ellas cambian los topics.
 
 if (nrow(dtm_primary) != nrow(corpus) || ncol(dtm_primary) < 10L) {
-  stop("La DTM principal debe contener los 675 papers y un vocabulario util.")
+  stop("La DTM principal debe contener los 603 papers y un vocabulario util.")
 }
 
 if (!requireNamespace("lpSolve", quietly = TRUE)) {
@@ -1167,7 +1167,7 @@ recommended_k <- model_selection |>
 # -----------------------------------------------------------------------------
 # 6. Estimar modelos finales y escoger una corrida estable
 # -----------------------------------------------------------------------------
-# Se vuelve a estimar sobre los 611 papers del periodo 1995-2025 solamente el k
+# Se vuelve a estimar sobre los 603 papers del periodo 1995-2025 solamente el k
 # recomendado. Se usan cinco semillas y se conserva la corrida mas central,
 # evitando presentar una solucion atipica dependiente de una inicializacion.
 
@@ -1332,7 +1332,10 @@ most_distant_pair <- function(topic_id) {
   topic_papers <- outputs_recommended$papers |>
     filter(dominant_topic == topic_id)
 
-  ids <- intersect(topic_papers$UT, rownames(tfidf_unit))
+  representative_id <- topic_papers |>
+    slice_max(topic_probability, n = 1L, with_ties = FALSE) |>
+    pull(UT)
+  ids <- setdiff(intersect(topic_papers$UT, rownames(tfidf_unit)), representative_id)
   if (length(ids) < 2L) {
     return(tibble())
   }
